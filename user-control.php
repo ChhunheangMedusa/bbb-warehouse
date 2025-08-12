@@ -1,0 +1,1793 @@
+<?php
+ob_start();
+
+// Includes in correct order
+require_once 'config/database.php';
+require_once 'includes/functions.php';
+require_once 'includes/auth.php';
+require_once 'includes/header.php';
+require_once  'translate.php'; 
+if (!isAdmin()) {
+  $_SESSION['error'] = "You don't have permission to access this page";
+  header('Location: dashboard-staff.php');
+  exit();
+}
+
+checkAuth();
+checkAdminAccess();
+
+
+
+
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
+  // Validate required fields
+  $required = ['username', 'password', 'user_type', 'email'];
+  foreach ($required as $field) {
+      if (empty($_POST[$field])) {
+          $_SESSION['error'] = "Please fill in all required fields";
+          redirect('user-control.php');
+          exit();
+      }
+  }
+
+  // Check password match
+  if ($_POST['password'] !== $_POST['confirm_password']) {
+      $_SESSION['error'] = "Passwords do not match";
+      redirect('user-control.php');
+      exit();
+  }
+
+  $username = sanitizeInput($_POST['username']);
+  $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+  $user_type = sanitizeInput($_POST['user_type']);
+  $phone_number = sanitizeInput($_POST['phone_number'] ?? '');
+  $email = sanitizeInput($_POST['email']);
+  
+  // Check for duplicate username
+  $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+  $stmt->execute([$username]);
+  if ($stmt->fetch()) {
+      $_SESSION['error'] = "Username already exists";
+      redirect('user-control.php');
+      exit();
+  }
+
+  // Check for duplicate email
+  $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+  $stmt->execute([$email]);
+  if ($stmt->fetch()) {
+      $_SESSION['error'] = "Email already exists";
+      redirect('user-control.php');
+      exit();
+  }
+
+  // Handle file upload
+  $picture = null;
+  if (isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
+      $file = $_FILES['picture'];
+      
+      // Validate file type
+      $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+      $file_type = mime_content_type($file['tmp_name']);
+      
+      if (!in_array($file_type, $allowed_types)) {
+          $_SESSION['error'] = "Only image files are allowed (JPEG, PNG, GIF)";
+          redirect('user-control.php');
+          exit();
+      }
+      
+      // Validate file size (e.g., 2MB max)
+      if ($file['size'] > 2097152) {
+          $_SESSION['error'] = "File size must be less than 2MB";
+          redirect('user-control.php');
+          exit();
+      }
+      
+      $picture = file_get_contents($file['tmp_name']);
+  }
+  
+  // Save to database
+  try {
+      $stmt = $pdo->prepare("INSERT INTO users (username, password, user_type, phone_number, email, picture) VALUES (?, ?, ?, ?, ?, ?)");
+      $stmt->execute([$username, $password, $user_type, $phone_number, $email, $picture]);
+      
+      $_SESSION['success'] = "User added successfully";
+      logActivity($_SESSION['user_id'], 'Create new user', "Created new user: $username");
+      
+      redirect('user-control.php');
+  } catch (PDOException $e) {
+      $_SESSION['error'] = "Database error: " . $e->getMessage();
+      redirect('user-control.php');
+  }
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
+  // Validate required fields
+  $required = ['id', 'username', 'user_type', 'email'];
+  foreach ($required as $field) {
+      if (empty($_POST[$field])) {
+          $_SESSION['error'] = "Please fill in all required fields";
+          redirect('user-control.php');
+          exit();
+      }
+  }
+
+  $id = $_POST['id'];
+  
+  // First get the current user data
+  $stmt = $pdo->prepare("SELECT username, user_type, email FROM users WHERE id = ?");
+  $stmt->execute([$id]);
+  $current_user = $stmt->fetch(PDO::FETCH_ASSOC);
+  
+  if (!$current_user) {
+      $_SESSION['error'] = "User not found";
+      redirect('user-control.php');
+      exit();
+  }
+
+  $username = sanitizeInput($_POST['username']);
+  $user_type = sanitizeInput($_POST['user_type']);
+  $phone_number = sanitizeInput($_POST['phone_number'] ?? '');
+  $email = sanitizeInput($_POST['email']);
+  
+  // Initialize change log
+  $changes = [];
+  
+  // Check for changes and log them
+  if ($current_user['username'] !== $username) {
+      $changes[] = "Updated username ({$current_user['username']}) : {$current_user['username']} → {$username}";
+  }
+  
+  if ($current_user['user_type'] !== $user_type) {
+      $changes[] = "Updated role ({$current_user['username']}) : {$current_user['username']} ({$current_user['user_type']} → {$user_type})";
+  }
+  
+  if ($current_user['email'] !== $email) {
+      $changes[] = "Updated email ({$current_user['username']}) : {$current_user['username']} ({$current_user['email']} → {$email})";
+  }
+
+  // Check for duplicate username (excluding current user)
+  $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+  $stmt->execute([$username, $id]);
+  if ($stmt->fetch()) {
+      $_SESSION['error'] = "Username already exists";
+      redirect('user-control.php');
+      exit();
+  }
+
+  // Check for duplicate email (excluding current user)
+  $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+  $stmt->execute([$email, $id]);
+  if ($stmt->fetch()) {
+      $_SESSION['error'] = "Email already exists";
+      redirect('user-control.php');
+      exit();
+  }
+
+  // Handle picture update
+  $picture = null;
+  $update_picture = false;
+  if (isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
+      $file = $_FILES['picture'];
+      
+      // Validate file type
+      $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+      $file_type = mime_content_type($file['tmp_name']);
+      
+      if (!in_array($file_type, $allowed_types)) {
+          $_SESSION['error'] = "Only image files are allowed (JPEG, PNG, GIF)";
+          redirect('user-control.php');
+          exit();
+      }
+      
+      // Validate file size (e.g., 2MB max)
+      if ($file['size'] > 2097152) {
+          $_SESSION['error'] = "File size must be less than 2MB";
+          redirect('user-control.php');
+          exit();
+      }
+      
+      $picture = file_get_contents($file['tmp_name']);
+      $update_picture = true;
+      $changes[] = "Updated image ({$current_user['username']})";
+  }
+  
+  try {
+      if ($update_picture) {
+          $stmt = $pdo->prepare("UPDATE users SET 
+                               username = ?,
+                               user_type = ?,
+                               phone_number = ?,
+                               email = ?,
+                               picture = ?
+                               WHERE id = ?");
+          $stmt->execute([$username, $user_type, $phone_number, $email, $picture, $id]);
+      } else {
+          $stmt = $pdo->prepare("UPDATE users SET 
+                               username = ?,
+                               user_type = ?,
+                               phone_number = ?,
+                               email = ?
+                               WHERE id = ?");
+          $stmt->execute([$username, $user_type, $phone_number, $email, $id]);
+      }
+      
+      // Log the changes if any
+      if (!empty($changes)) {
+          $activity_details = " " . implode(", ", $changes);
+          logActivity($_SESSION['user_id'], 'Edit user', $activity_details);
+      }
+      
+      $_SESSION['success'] = "User updated successfully";
+      redirect('user-control.php');
+  } catch (PDOException $e) {
+      $_SESSION['error'] = "Error updating user: " . $e->getMessage();
+      redirect('user-control.php');
+  }
+}
+if (isset($_GET['unblock'])) {
+  $id = $_GET['unblock'];
+  $succ= t('unblock_success');
+  $fail= t('unblock_success');
+  try {
+      $stmt = $pdo->prepare("UPDATE users SET is_blocked = FALSE, block_reason = NULL WHERE id = ?");
+      $stmt->execute([$id]);
+      
+      logActivity($_SESSION['user_id'], 'User', "Unblocked user ID: $id");
+      $_SESSION['success'] = "$succ";
+  } catch (PDOException $e) {
+      $_SESSION['error'] = "$fail";
+  }
+  
+  redirect('user-control.php');
+}
+// Handle delete request
+// Inside the delete section
+if (isset($_GET['delete'])) {
+  $id = $_GET['delete'];
+  $succ= t('del_success');
+  $fail=t('del_fail');
+  // First get user info
+  $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+  $stmt->execute([$id]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  
+  if ($user) {
+      // Delete the user
+      $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+      $stmt->execute([$id]);
+      
+      logActivity($_SESSION['user_id'], 'Delete user', "Deleted user: {$user['username']} ");
+      $_SESSION['success'] = "$succ";
+  } else {
+      $_SESSION['error'] = "$fail";
+  }
+  
+  redirect('user-control.php');
+}
+
+// Pagination settings
+$records_per_page = 10;
+$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($current_page < 1) $current_page = 1;
+$offset = ($current_page - 1) * $records_per_page;
+
+// Get all users with pagination
+$count_query = "SELECT COUNT(*) as total FROM users";
+$stmt = $pdo->query($count_query);
+$total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_records / $records_per_page);
+
+$query = "SELECT id, username, user_type, phone_number, email, picture, is_blocked 
+          FROM users ORDER BY username LIMIT :limit OFFSET :offset";
+$stmt = $pdo->prepare($query);
+$stmt->bindValue(':limit', $records_per_page, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
+$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<style>
+    :root {
+  --primary: #4e73df;
+  --primary-dark: #2e59d9;
+  --primary-light: #f8f9fc;
+  --secondary: #858796;
+  --success: #1cc88a;
+  --info: #36b9cc;
+  --warning: #f6c23e;
+  --danger: #e74a3b;
+  --light: #f8f9fa;
+  --dark: #5a5c69;
+  --white: #ffffff;
+  --gray: #b7b9cc;
+  --gray-dark: #7b7d8a;
+  --font-family: "Khmer OS Siemreap", sans-serif;
+}
+
+/* Base Styles */
+body {
+  font-family: var(--font-family);
+  background-color: var(--light);
+  color: var(--dark);
+  overflow-x: hidden;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 14rem;
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
+  color: var(--white);
+  transition: all 0.3s;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  z-index: 1000;
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo {
+  height: 150px;
+  width: auto;
+}
+
+.sidebar-nav {
+  padding: 0.5rem 0;
+}
+
+.sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0.75rem 1.5rem;
+  margin: 0.25rem 1rem;
+  border-radius: 0.35rem;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.sidebar .nav-link:hover {
+  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar .nav-link.active {
+  color: var(--primary);
+  background-color: var(--white);
+  font-weight: 600;
+}
+
+.sidebar .nav-link i {
+  margin-right: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Main Content Styles */
+.main-content {
+  width: calc(100% - 14rem);
+  min-height: 100vh;
+  transition: all 0.3s;
+  background-color: #f5f7fb;
+}
+
+/* Top Navigation */
+.navbar {
+  height: 4.375rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  background-color: var(--white);
+}
+
+.navbar .dropdown-menu {
+  border: none;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  border-radius: 0.35rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  background-color: var(--white);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.35rem;
+  font-weight: 600;
+  border-radius: 0.35rem 0.35rem 0 0 !important;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Alert Styles */
+.alert {
+  border-radius: 0.35rem;
+  border: none;
+}
+
+/* Button Styles */
+.btn {
+  border-radius: 0.35rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.btn-outline-primary {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Table Styles */
+.table {
+  color: var(--dark);
+  margin-bottom: 0;
+}
+
+.table th {
+  background-color: var(--light);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom-width: 1px;
+}
+
+.table > :not(:first-child) {
+  border-top: none;
+}
+
+/* Form Styles */
+.form-control,
+.form-select {
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d3e2;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+/* Badge Styles */
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+  border-radius: 0.25rem;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-dark);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .sidebar {
+    margin-left: -14rem;
+    position: fixed;
+  }
+
+  .sidebar.show {
+    margin-left: 0;
+  }
+
+  .main-content {
+    width: 100%;
+  }
+
+  .main-content.show {
+    margin-left: 14rem;
+  }
+
+  #sidebarToggle {
+    display: block;
+  }
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Utility Classes */
+.text-khmer {
+  font-family: var(--font-family);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.shadow-sm {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Image Styles */
+.img-thumbnail {
+  padding: 0.25rem;
+  background-color: var(--white);
+  border: 1px solid #d1d3e2;
+  border-radius: 0.35rem;
+  max-width: 100%;
+  height: auto;
+  transition: all 0.2s;
+}
+
+.img-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Styles */
+.modal-content {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Pagination Styles */
+.pagination .page-item .page-link {
+  border-radius: 0.35rem;
+  margin: 0 0.25rem;
+  color: var(--primary);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+/* Custom Toggle Switch */
+.form-switch .form-check-input {
+  width: 2.5em;
+  height: 1.5em;
+  cursor: pointer;
+}
+
+/* Custom File Upload */
+.form-control-file::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+.form-control-file::before {
+  content: "ជ្រើសរើសឯកសារ";
+  display: inline-block;
+  background: var(--light);
+  border: 1px solid #d1d3e2;
+  border-radius: 0.35rem;
+  padding: 0.375rem 0.75rem;
+  outline: none;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--dark);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.form-control-file:hover::before {
+  background: #e9ecef;
+}
+
+
+
+    :root {
+  --primary: #4e73df;
+  --primary-dark: #2e59d9;
+  --primary-light: #f8f9fc;
+  --secondary: #858796;
+  --success: #1cc88a;
+  --info: #36b9cc;
+  --warning: #f6c23e;
+  --danger: #e74a3b;
+  --light: #f8f9fa;
+  --dark: #5a5c69;
+  --white: #ffffff;
+  --gray: #b7b9cc;
+  --gray-dark: #7b7d8a;
+  --font-family: "Khmer OS Siemreap", sans-serif;
+}
+
+/* Base Styles */
+body {
+  font-family: var(--font-family);
+  background-color: var(--light);
+  color: var(--dark);
+  overflow-x: hidden;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 220px;
+  min-width:220px;
+  min-height: 100vh;
+  background: #005064;
+  color: var(--white);
+  transition: all 0.3s;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  z-index: 1000;
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo {
+  height: 150px;
+  width: auto;
+}
+
+.sidebar-nav {
+  padding: 0.5rem 0;
+}
+
+.sidebar .nav-link {
+    white-space: nowrap;       /* Prevent text wrapping */
+    overflow: hidden;          /* Hide overflow */
+    text-overflow: ellipsis;   /* Show ... if text is too long */
+    padding: 0.75rem 1rem;     /* Adjust padding as needed */
+    margin: 0.25rem 0;         /* Reduce margin */
+    font-size: 0.875rem;       /* Slightly smaller font */
+    display: flex;             /* Use flexbox for alignment */
+    align-items: center;  
+    color: var(--white);     /* Center items vertically */
+}
+
+.sidebar .nav-link:hover {
+  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar .nav-link.active {
+  color: var(--primary);
+  background-color: var(--white);
+  font-weight: 600;
+}
+
+.sidebar .nav-link i {
+  margin-right: 0.5rem;
+  font-size: 0.85rem;
+  min-width: 1.25rem;       /* Fixed width for icons */
+  text-align: center;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Main Content Styles */
+.main-content {
+  width: calc(100% - 14rem);
+  min-height: 100vh;
+  transition: all 0.3s;
+  background-color: #f5f7fb;
+}
+
+/* Top Navigation */
+.navbar {
+  height: 4.375rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  background-color: var(--white);
+}
+
+.navbar .dropdown-menu {
+  border: none;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  border-radius: 0.35rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  background-color: var(--white);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.35rem;
+  font-weight: 600;
+  border-radius: 0.35rem 0.35rem 0 0 !important;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Alert Styles */
+.alert {
+  border-radius: 0.35rem;
+  border: none;
+}
+
+/* Button Styles */
+.btn {
+  border-radius: 0.35rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.btn-outline-primary {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Table Styles */
+.table {
+  color: var(--dark);
+  margin-bottom: 0;
+}
+
+.table th {
+  background-color: var(--light);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom-width: 1px;
+}
+
+.table > :not(:first-child) {
+  border-top: none;
+}
+
+/* Form Styles */
+.form-control,
+.form-select {
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d3e2;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+/* Badge Styles */
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+  border-radius: 0.25rem;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-dark);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .sidebar {
+    margin-left: -14rem;
+    position: fixed;
+  }
+
+  .sidebar.show {
+    margin-left: 0;
+  }
+
+  .main-content {
+    width: 100%;
+  }
+
+  .main-content.show {
+    margin-left: 14rem;
+  }
+
+  #sidebarToggle {
+    display: block;
+  }
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Utility Classes */
+.text-khmer {
+  font-family: var(--font-family);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.shadow-sm {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Image Styles */
+.img-thumbnail {
+  padding: 0.25rem;
+  background-color: var(--white);
+  border: 1px solid #d1d3e2;
+  border-radius: 0.35rem;
+  max-width: 100%;
+  height: auto;
+  transition: all 0.2s;
+}
+
+.img-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Styles */
+.modal-content {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Pagination Styles */
+.pagination .page-item .page-link {
+  border-radius: 0.35rem;
+  margin: 0 0.25rem;
+  color: var(--primary);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+/* Custom Toggle Switch */
+.form-switch .form-check-input {
+  width: 2.5em;
+  height: 1.5em;
+  cursor: pointer;
+}
+/* Delete Confirmation Modal Styles */
+#deleteConfirmModal .modal-content {
+    border: 2px solid #dc3545;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
+}
+
+#deleteConfirmModal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#deleteConfirmModal .modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+#deleteConfirmModal .btn-danger {
+    min-width: 120px;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+#deleteUserInfo {
+    text-align: left;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+}
+
+#unblockConfirmModal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+#unblockUserInfo{
+  text-align:left;
+  background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+}
+/* Custom File Upload */
+.form-control-file::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+.form-control-file::before {
+  content: "ជ្រើសរើសឯកសារ";
+  display: inline-block;
+  background: var(--light);
+  border: 1px solid #d1d3e2;
+  border-radius: 0.35rem;
+  padding: 0.375rem 0.75rem;
+  outline: none;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--dark);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.form-control-file:hover::before {
+  background: #e9ecef;
+}
+/* Mobile-specific styles */
+@media (max-width: 767.98px) {
+    /* Adjust main content width when sidebar is hidden */
+    .main-content {
+        width: 100%;
+        margin-left: 0;
+    }
+    
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Optional: Add some padding to table cells for better mobile readability */
+    .table td, .table th {
+        padding: 8px 12px;
+        white-space: nowrap; /* Prevent text wrapping */
+    }
+    
+    /* Optional: Make the table a bit more compact on mobile */
+    .table {
+        font-size: 0.9rem;
+    }
+    /* Make modals full width */
+    .modal-dialog {
+        margin: 0.5rem auto;
+        max-width: 95%;
+    }
+    
+    /* Adjust card padding */
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Make buttons full width */
+    .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Adjust form controls */
+    .form-control, .form-select {
+        font-size: 16px; /* prevents iOS zoom */
+    }
+}
+#passwordMismatchModal {
+    z-index: 1060 !important; /* Higher than Bootstrap's default 1050 */
+}
+
+/* Ensure the modal backdrop is also above the transfer modal */
+.modal-backdrop.show:nth-of-type(even) {
+    z-index: 1055 !important;
+}
+#duplicateEmailModal{
+  z-index: 1060 !important; 
+}
+
+#duplicateUsernameModal {
+    z-index: 1070 !important;
+}
+
+/* Animation for duplicate username modal */
+@keyframes pulseWarning {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+#duplicateUsernameModal .modal-content {
+    animation: pulseWarning 1.5s infinite;
+    border: 2px solid #ffc107;
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
+}
+</style>
+
+
+<div class="container-fluid">
+    <h2 class="mb-4"><?php echo t('dashboard_titles');?></h2>
+    
+    <div class="card mb-4">
+        <div class="card-header  text-white" style="background-color:#ce7e00;">
+            <button class="btn btn-light btn-sm float-end" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="bi bi-plus-circle"></i> <?php echo t('add_user');?>
+            </button>
+            <h5 class="mb-0"><?php echo t('list_user');?></h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th><?php echo t('column_picture');?></th>
+                            <th><?php echo t('column_user');?></th>
+                            <th><?php echo t('column_type');?></th>
+                            <th><?php echo t('column_phone');?></th>
+                            <th><?php echo t('column_email');?></th>
+                            <th><?php echo t('column_action');?></th>
+                            <th><?php echo t('column_status');?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($users as $user): ?>
+                            <tr>
+                            <td>
+    <?php
+    $image_src = 'get_user_image.php?id=' . $user['id'];
+    ?>
+    <img src="<?php echo $image_src; ?>" 
+         alt="<?php echo htmlspecialchars($user['username']); ?>" 
+         class="rounded-circle" 
+         width="50" 
+         height="50"
+         style="object-fit: cover;"
+         onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2250%22%20height%3D%2250%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2050%2050%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_18a5f8a8b0a%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_18a5f8a8b0a%22%3E%3Crect%20width%3D%2250%22%20height%3D%2250%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2210%22%20y%3D%2227%22%3E50x50%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'">
+</td>
+                                <td><?php echo $user['username']; ?></td>
+                                <td><?php echo $user['user_type']; ?></td>
+                                <td><?php echo $user['phone_number'] ?? 'N/A'; ?></td>
+                                <td><?php echo $user['email']; ?></td>
+                                <td>
+                                <button class="btn btn-sm btn-warning edit-user" 
+        data-id="<?php echo $user['id']; ?>"
+        data-username="<?php echo $user['username']; ?>"
+        data-user_type="<?php echo $user['user_type']; ?>"
+        data-phone_number="<?php echo $user['phone_number']; ?>"
+        data-email="<?php echo $user['email']; ?>"
+        data-picture="<?php echo isset($user['picture']) ? '1' : '0'; ?>">
+    <i class="bi bi-pencil"></i> <?php echo t('update_button')?>
+</button>
+    <button class="btn btn-sm btn-danger delete-user" 
+        data-id="<?php echo $user['id']; ?>"
+        data-username="<?php echo htmlspecialchars($user['username']); ?>">
+    <i class="bi bi-trash"></i> <?php echo t('delete_button')?>
+</button>
+</td>
+<td>
+    <?php 
+    $is_blocked = $user['is_blocked'] ?? false; // Use null coalescing operator
+    if ($is_blocked): ?>
+        <span class="badge bg-danger"><?php echo t('block_status')?></span>
+        <button class="btn btn-sm btn-success unblock-user" 
+                data-id="<?php echo $user['id']; ?>"
+                data-username="<?php echo htmlspecialchars($user['username']); ?>">
+            <i class="bi bi-unlock"></i> <?php echo t('unblock_button')?>
+        </button>
+    <?php else: ?>
+        <span class="badge bg-success"><?php echo t('active_status')?></span>
+    <?php endif; ?>
+</td>
+                            </tr>
+                        <?php endforeach; ?>
+          
+                    </tbody>
+                </table>
+            </div>
+         <!-- Pagination -->
+<nav aria-label="Page navigation" class="mt-3">
+    <ul class="pagination justify-content-center">
+        <li class="page-item <?php echo $current_page <= 1 ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+            </a>
+        </li>
+        <li class="page-item <?php echo $current_page <= 1 ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+
+        <?php 
+        // Show page numbers
+        $start_page = max(1, $current_page - 2);
+        $end_page = min($total_pages, $current_page + 2);
+        
+        if ($start_page > 1) {
+            echo '<li class="page-item"><span class="page-link">...</span></li>';
+        }
+        
+        for ($i = $start_page; $i <= $end_page; $i++): ?>
+            <li class="page-item <?php echo $i == $current_page ? 'active' : ''; ?>">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+            </li>
+        <?php endfor;
+        
+        if ($end_page < $total_pages) {
+            echo '<li class="page-item"><span class="page-link">...</span></li>';
+        }
+        ?>
+
+        <li class="page-item <?php echo $current_page >= $total_pages ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        <li class="page-item <?php echo $current_page >= $total_pages ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+            </a>
+        </li>
+    </ul>
+      </nav>
+<div class="text-center text-muted">
+    <?php echo t('page')?> <?php echo $current_page; ?> <?php echo t('page_of')?> <?php echo $total_pages; ?> 
+</div>
+        </div>
+    </div>
+</div>
+<!-- Duplicate Email Modal -->
+<div class="modal fade" id="duplicateEmailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('error_email');?>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-envelope-exclamation-fill text-danger" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-danger mb-3"><?php echo t('email_duplicate1');?></h4>
+                <p><?php echo t('email_duplicate2');?></p>
+                <div class="alert alert-danger mt-3">
+                    <i class="bi bi-info-circle-fill"></i> <?php echo t('email_duplicate3');?>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree');?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Duplicate Username Modal (Reusable) -->
+<div class="modal fade" id="duplicateUsernameModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('error_user');?>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-person-x-fill text-danger " style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-danger  mb-3"><?php echo t('user_duplicate1');?></h4>
+                <p><?php echo t('user_duplicate2');?></p>
+                <div class="alert alert-danger  mt-3">
+                    <i class="bi bi-info-circle-fill"></i> <?php echo t('user_duplicate3');?>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-danger " data-bs-dismiss="modal">
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree');?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Password Mismatch Modal -->
+<div class="modal fade" id="passwordMismatchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('error_psw');?>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-exclamation-octagon-fill text-danger" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-danger mb-3"><?php echo t('psw_error1');?></h4>
+                <p><?php echo t('psw_error2');?></p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree');?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addUserModalLabel"><?php echo t('add_user');?></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="username" class="form-label"><?php echo t('form_user');?></label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label"><?php echo t('form_psw');?></label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label"><?php echo t('form_cpsw');?></label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user_type" class="form-label"><?php echo t('form_type');?></label>
+                        <select class="form-select" id="user_type" name="user_type" required>
+                            <option value="admin"><?php echo t('form_admin');?></option>
+                            <option value="staff"><?php echo t('form_staff');?></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label"><?php echo t('form_phone');?></label>
+                        <input type="text" class="form-control" id="phone_number" name="phone_number">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label"><?php echo t('form_email');?></label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+               <div class="mb-3">
+    <label for="picture" class="form-label"><?php echo t('form_picture');?></label>
+    <input type="file" class="form-control" id="picture" name="picture" accept="image/*"  onchange="previewAddImage(this)">
+    <div class="mt-2">
+        <img id="addPreviewImage" src="../assets/images/users/default.png" alt="Preview" class="img-thumbnail" width="100" style="display: none;">
+    </div>
+</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
+                    <button type="submit" name="add_user" class="btn btn-primary"><?php echo t('form_save');?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('del_usr');?>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-exclamation-octagon-fill text-danger" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-danger mb-3"><?php echo t('del_usr1');?></h4>
+                <p><?php echo t('del_usr2');?></p>
+                <div id="deleteUserInfo" class="alert alert-light mt-3">
+                    <!-- User info will be inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close');?>
+                </button>
+                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Unblock Confirmation Modal -->
+<div class="modal fade" id="unblockConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle-fill"></i> <?php echo t('unblock_usr');?>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-question-circle-fill text-success" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-success mb-3" id="unblockModalMessage"><?php echo t('unblock_usr1');?></h4>
+                <p><?php echo t('unblock_usr3');?></p>
+                <div id="unblockUserInfo" class="alert alert-light mt-3">
+                    <!-- User info will be inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close');?>
+                </button>
+                <a href="#" id="confirmUnblockBtn" class="btn btn-success">
+                    <i class="bi bi-unlock"></i> <?php echo t('unblock_button');?>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data" >
+                <input type="hidden" name="id" id="edit_id">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="editUserModalLabel"><?php echo t('form_updateusr');?></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_username" class="form-label"><?php echo t('form_user')?></label>
+                        <input type="text" class="form-control" id="edit_username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_user_type" class="form-label"><?php echo t('form_type')?></label>
+                        <select class="form-select" id="edit_user_type" name="user_type" required>
+                            <option value="admin"><?php echo t('form_admin')?></option>
+                            <option value="staff"><?php echo t('form_staff')?></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_phone_number" class="form-label"><?php echo t('form_phone')?></label>
+                        <input type="text" class="form-control" id="edit_phone_number" name="phone_number">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_email" class="form-label"><?php echo t('form_email')?></label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+    <label for="edit_picture" class="form-label"><?php echo t('form_picture')?></label>
+    <input type="file" class="form-control" id="edit_picture" name="picture" accept="image/*" onchange="previewEditImage(this)">
+    <div class="mt-2">
+        <img id="editPreviewImage" src="" alt="Current Picture" class="img-thumbnail" width="100">
+    </div>
+</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
+                    <button type="submit" name="edit_user" class="btn btn-warning"><?php echo t('form_update');?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+
+  // Add this to your existing JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Unblock user confirmation
+    const unblockButtons = document.querySelectorAll('.unblock-user');
+    const unblockModal = new bootstrap.Modal(document.getElementById('unblockConfirmModal'));
+    
+    unblockButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-id');
+            const username = this.getAttribute('data-username');
+     
+            document.getElementById('unblockModalMessage').textContent = 
+                `<?php echo t('unblock_usr1');?>`;
+            
+            document.getElementById('unblockUserInfo').innerHTML = `
+                <strong><?php echo t('form_user');?>:</strong> ${username}<br>
+               
+            `;
+            
+            
+            document.getElementById('confirmUnblockBtn').href = `user-control.php?unblock=${userId}`;
+            
+            unblockModal.show();
+        });
+    });
+});
+    // Auto-hide success messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const successMessages = document.querySelectorAll('.alert-success');
+    
+    successMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.5s ease';
+            message.style.opacity = '0';
+            
+            // Remove the element after fade out
+            setTimeout(() => {
+                message.remove();
+            }, 500);
+        }, 5000); // 5000 milliseconds = 5 seconds
+    });
+});
+// Delete confirmation modal handling
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    let deleteUrl = '';
+    
+    // Handle delete button clicks
+    document.querySelectorAll('.delete-user').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const userId = this.getAttribute('data-id');
+            const username = this.getAttribute('data-username');
+            
+            // Set the delete URL
+            deleteUrl = `user-control.php?delete=${userId}`;
+            
+           
+            
+            document.getElementById('deleteUserInfo').innerHTML = `
+                <strong><?php echo t('form_user');?>:</strong> ${username}
+            `;
+            
+            // Show the modal
+            deleteModal.show();
+        });
+    });
+    
+    // Handle confirm delete button click
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        window.location.href = deleteUrl;
+    });
+});
+// Image preview for Add User Modal
+function previewAddImage(input) {
+    const preview = document.getElementById('addPreviewImage');
+    const file = input.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+        preview.src = '../assets/images/users/default.png';
+    }
+}
+
+// Reset preview when modal is closed
+document.getElementById('addUserModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('addPreviewImage').style.display = 'none';
+    document.getElementById('addPreviewImage').src = '../assets/images/users/default.png';
+    document.getElementById('picture').value = '';
+});
+// Handle edit user button click
+document.querySelectorAll('.edit-user').forEach(button => {
+    button.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const username = this.getAttribute('data-username');
+        const user_type = this.getAttribute('data-user_type');
+        const phone_number = this.getAttribute('data-phone_number');
+        const email = this.getAttribute('data-email');
+        const has_picture = this.getAttribute('data-picture') === '1';
+        
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_username').value = username;
+        document.getElementById('edit_user_type').value = user_type;
+        document.getElementById('edit_phone_number').value = phone_number || '';
+        document.getElementById('edit_email').value = email;
+        
+        // Set the preview image
+        const imgElement = document.getElementById('editPreviewImage');
+        if (has_picture) {
+            imgElement.src = 'get_user_image.php?id=' + id;
+        } else {
+            imgElement.src = 'assets/images/users/default.png';
+        }
+        
+        const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        editModal.show();
+    });
+});
+document.getElementById('editUserModal').addEventListener('hidden.bs.modal', function() {
+    const preview = document.getElementById('editPreviewImage');
+    const currentSrc = preview.getAttribute('data-current-src');
+    preview.src = currentSrc;
+    document.getElementById('edit_picture').value = '';
+});
+// Password confirmation validation
+
+document.querySelector('#addUserModal form').addEventListener('submit', async function(e) {
+    // Check password match first
+    const password = document.getElementById('password').value;
+    const confirm_password = document.getElementById('confirm_password').value;
+    
+    if (password !== confirm_password) {
+        e.preventDefault();
+        const mismatchModal = new bootstrap.Modal(document.getElementById('passwordMismatchModal'));
+        mismatchModal.show();
+        return;
+    }
+
+    // Validate username and email
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    
+    try {
+        const [usernameValid, emailValid] = await Promise.all([
+            validateUsername(username),
+            validateEmail(email)
+        ]);
+        
+        if (!usernameValid || !emailValid) {
+            e.preventDefault();
+            return;
+        }
+        
+        // If all validations pass, allow the form to submit normally
+    } catch (error) {
+        console.error('Validation error:', error);
+        e.preventDefault();
+    }
+});
+document.querySelector('#editUserModal form').addEventListener('submit', async function(e) {
+    const username = document.getElementById('edit_username').value.trim();
+    const currentId = document.getElementById('edit_id').value;
+    const email = document.getElementById('edit_email').value.trim();
+    
+    try {
+        const [usernameValid, emailValid] = await Promise.all([
+            validateUsername(username, currentId),
+            validateEmail(email, currentId)
+        ]);
+        
+        if (!usernameValid || !emailValid) {
+            e.preventDefault();
+            return;
+        }
+        
+        // If all validations pass, allow the form to submit normally
+    } catch (error) {
+        console.error('Validation error:', error);
+        e.preventDefault();
+    }
+});
+// Real-time validation for Add User form
+document.getElementById('username').addEventListener('blur', async function() {
+    const username = this.value.trim();
+    if (username) {
+        await validateUsername(username);
+    }
+});
+
+// Real-time validation for Edit User form
+document.getElementById('edit_username').addEventListener('blur', async function() {
+    const username = this.value.trim();
+    const currentId = document.getElementById('edit_id').value;
+    if (username) {
+        await validateUsername(username, currentId);
+    }
+});
+// Real-time validation for Add User form email
+document.getElementById('email').addEventListener('blur', async function() {
+    const email = this.value.trim();
+    if (email) {
+        await validateEmail(email);
+    }
+});
+
+// Real-time validation for Edit User form email
+document.getElementById('edit_email').addEventListener('blur', async function() {
+    const email = this.value.trim();
+    const currentId = document.getElementById('edit_id').value;
+    if (email) {
+        await validateEmail(email, currentId);
+    }
+});
+
+async function checkUsernameExists(username, currentId = null) {
+    try {
+        const response = await fetch('check_username.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `username=${encodeURIComponent(username)}&current_id=${currentId || ''}`
+        });
+        
+        const data = await response.json();
+        return data.exists;
+    } catch (error) {
+        console.error('Error checking username:', error);
+        return false;
+    }
+}
+
+// Function to check email and show modal if duplicate exists
+async function validateEmail(email, currentId = null) {
+    if (!email) return true; // Skip if empty
+    
+    const exists = await checkEmailExists(email, currentId);
+    if (exists) {
+        const duplicateModal = new bootstrap.Modal(document.getElementById('duplicateEmailModal'));
+        
+        // Center the modal within the current open modal
+        const currentModal = document.querySelector('.modal.show');
+        if (currentModal) {
+            duplicateModal._element.style.zIndex = currentModal.style.zIndex + 1;
+        }
+        
+        duplicateModal.show();
+        return false;
+    }
+    return true;
+}
+
+async function checkEmailExists(email, currentId = null) {
+    try {
+        const response = await fetch('check_email.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `email=${encodeURIComponent(email)}&current_id=${currentId || ''}`
+        });
+        
+        const data = await response.json();
+        return data.exists;
+    } catch (error) {
+        console.error('Error checking email:', error);
+        return false;
+    }
+}
+// Function to check username and show modal if duplicate exists
+async function validateUsername(username, currentId = null) {
+    if (!username) return true; // Skip if empty
+    
+    const exists = await checkUsernameExists(username, currentId);
+    if (exists) {
+        const duplicateModal = new bootstrap.Modal(document.getElementById('duplicateUsernameModal'));
+        
+        // Center the modal within the current open modal
+        const currentModal = document.querySelector('.modal.show');
+        if (currentModal) {
+            duplicateModal._element.style.zIndex = currentModal.style.zIndex + 1;
+        }
+        
+        duplicateModal.show();
+        return false;
+    }
+    return true;
+}
+function previewEditImage(input) {
+    const preview = document.getElementById('editPreviewImage');
+    const file = input.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+        };
+        
+        reader.readAsDataURL(file);
+    } else {
+        // If no file selected, revert to original image
+        preview.src = preview.getAttribute('data-original-src');
+    }
+}
+</script>
+
+<?php
+require_once 'includes/footer.php';
+?>
