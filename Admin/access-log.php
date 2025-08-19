@@ -1,11 +1,6 @@
 <?php
-ob_start();
-
-// Includes in correct order
-require_once 'config/database.php';
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
-require_once 'includes/header.php';
+require_once '../includes/header.php';
+require_once '../includes/db.php';
 require_once  'translate.php'; 
 if (!isAdmin()) {
   $_SESSION['error'] = "You don't have permission to access this page";
@@ -13,6 +8,16 @@ if (!isAdmin()) {
   exit();
 }
 checkAuth();
+checkAdminAccess();
+
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Get filter parameters
+$type_filter = isset($_GET['type']) ? sanitizeInput($_GET['type']) : '';
+$month_filter = isset($_GET['month']) ? sanitizeInput($_GET['month']) : '';
+$year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
 
 // Pagination settings
 $records_per_page = 10;
@@ -20,31 +25,98 @@ $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($current_page < 1) $current_page = 1;
 $offset = ($current_page - 1) * $records_per_page;
 
-// Get total count of low stock items
-$count_stmt = $pdo->prepare("SELECT COUNT(*) as total 
-                           FROM items i 
-                           JOIN locations l ON i.location_id = l.id 
-                           WHERE i.quantity < 10");
-$count_stmt->execute();
-$total_records = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $records_per_page);
+try {
+    // Build query for access logs
+    $query = "SELECT al.*, 
+              IFNULL(u.username, CONCAT('User ID ', al.user_id)) as username 
+              FROM access_logs al 
+              LEFT JOIN users u ON al.user_id = u.id 
+              WHERE 1=1";
+    $count_query = "SELECT COUNT(*) as total 
+                    FROM access_logs al 
+                    LEFT JOIN users u ON al.user_id = u.id 
+                    WHERE 1=1";
+    $params = [];
 
-// Get low stock items with pagination
-$stmt = $pdo->prepare("SELECT i.id, i.name, i.quantity, i.size, l.name as location 
-                      FROM items i 
-                      JOIN locations l ON i.location_id = l.id 
-                      WHERE i.quantity < 10 
-                      ORDER BY i.quantity ASC
-                      LIMIT :limit OFFSET :offset");
-$stmt->bindValue(':limit', $records_per_page, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->execute();
-$low_stock_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($type_filter) {
+        $query .= " AND al.activity_type = :type";
+        $count_query .= " AND al.activity_type = :type";
+        $params[':type'] = $type_filter;
+    }
 
-// Mark alerts as read
-if (isAdmin()) {
-    $pdo->query("UPDATE low_stock_alerts SET notified = 1");
+    // Add month filter condition
+    if ($month_filter && $month_filter !== 'all') {
+        $query .= " AND MONTH(al.created_at) = :month";
+        $count_query .= " AND MONTH(al.created_at) = :month";
+        $params[':month'] = $month_filter;
+    }
+
+    // Add year filter condition
+    if ($year_filter && $year_filter !== 'all') {
+        $query .= " AND YEAR(al.created_at) = :year";
+        $count_query .= " AND YEAR(al.created_at) = :year";
+        $params[':year'] = $year_filter;
+    }
+
+    // Get total count
+    $stmt = $pdo->prepare($count_query);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    if (!$stmt->execute()) {
+        throw new Exception("Count query failed: " . implode(" ", $stmt->errorInfo()));
+    }
+    $total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    $total_pages = ceil($total_records / $records_per_page);
+
+    // Add sorting and pagination to main query
+    $query .= " ORDER BY al.created_at DESC LIMIT :limit OFFSET :offset";
+
+    // Get access logs
+    $stmt = $pdo->prepare($query);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $records_per_page, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Main query failed: " . implode(" ", $stmt->errorInfo()));
+    }
+    $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get distinct activity types for filter
+    $stmt = $pdo->query("SELECT DISTINCT activity_type FROM access_logs ORDER BY activity_type");
+    if (!$stmt) {
+        throw new Exception("Activity types query failed: " . implode(" ", $pdo->errorInfo()));
+    }
+    $activity_types = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Get available years from the logs
+    $stmt = $pdo->query("SELECT DISTINCT YEAR(created_at) as year FROM access_logs ORDER BY year DESC");
+    $available_years = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+} catch (PDOException $e) {
+    die("Database error: " . $e->getMessage());
+} catch (Exception $e) {
+    die("Error: " . $e->getMessage());
 }
+
+// Month names for the dropdown
+$months = [
+    '1' => 'January',
+    '2' => 'February',
+    '3' => 'March',
+    '4' => 'April',
+    '5' => 'May',
+    '6' => 'June',
+    '7' => 'July',
+    '8' => 'August',
+    '9' => 'September',
+    '10' => 'October',
+    '11' => 'November',
+    '12' => 'December'
+];
 ?>
 <style>
     :root {
@@ -75,13 +147,16 @@ body {
 /* Sidebar Styles */
 .sidebar {
   width: 220px;
-  min-width:220px;
-  min-height: 100vh;
+  min-width: 220px;
+  height: 100vh;
   background: #005064;
   color: var(--white);
-  transition: all 0.3s;
   box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
   z-index: 1000;
+  position: fixed; /* Add this */
+  left: 0; /* Add this */
+  top: 0; /* Add this */
+  overflow-y: auto; /* Add scroll if content is taller than viewport */
 }
 
 .sidebar-brand {
@@ -133,18 +208,22 @@ body {
 }
 
 /* Main Content Styles */
+
 .main-content {
-  width: calc(100% - 14rem);
+  width: calc(100% - 220px); /* Adjust width to account for fixed sidebar */
   min-height: 100vh;
-  transition: all 0.3s;
+  margin-left: 220px; /* Push content to the right of the fixed sidebar */
   background-color: #f5f7fb;
 }
+
 
 /* Top Navigation */
 .navbar {
   height: 4.375rem;
   box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
   background-color: var(--white);
+  margin-left: 220px;
+  width: calc(100% - 220px);
 }
 
 .navbar .dropdown-menu {
@@ -273,7 +352,8 @@ body {
 /* Responsive Styles */
 @media (max-width: 768px) {
   .sidebar {
-    margin-left: -14rem;
+    margin-left: -220px; /* Same as width */
+    transition: margin 0.3s ease;
     position: fixed;
   }
 
@@ -291,6 +371,17 @@ body {
 
   #sidebarToggle {
     display: block;
+  }
+  .main-content,
+  .navbar {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .main-content.show,
+  .navbar.show {
+    margin-left: 220px;
+    width: calc(100% - 220px);
   }
 }
 
@@ -400,104 +491,125 @@ body {
 .form-control-file:hover::before {
   background: #e9ecef;
 }
-/* Mobile-specific styles */
-@media (max-width: 576px) {
-    /* Adjust container padding */
-    .container-fluid {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-    
-    /* Card adjustments */
-    .card-header h5 {
-        font-size: 1rem;
-    }
-    
-    /* Table adjustments */
+@media (max-width: 768px) {
+    /* Make table display as cards on mobile */
     .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
     
-    .table th, .table td {
-        padding: 0.5rem;
-        font-size: 0.8rem;
-    }
-    
-    /* Pagination adjustments */
-    .pagination {
-        flex-wrap: wrap;
-    }
-    
-    .page-item {
-        margin-bottom: 0.25rem;
-    }
-    
-    .page-link {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8rem;
-    }
-    
-    /* Text adjustments */
-    h2 {
-        font-size: 1.25rem;
-    }
-    
-    /* Main content width */
-    .main-content {
+    .table-striped {
+        display: block;
         width: 100%;
-        margin-left: 0;
     }
     
-    /* Sidebar adjustments */
-    .sidebar {
-        margin-left: -220px;
-        position: fixed;
-        z-index: 1040;
+    .table-striped thead {
+        display: none;
     }
     
-    .sidebar.show {
-        margin-left: 0;
+    .table-striped tbody,
+    .table-striped tr,
+    .table-striped td {
+        display: block;
+        width: 100%;
     }
     
-    /* Navbar adjustments */
-    .navbar {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-}
-
-/* Additional touch targets for mobile */
-@media (pointer: coarse) {
-    .btn, .page-link, .nav-link {
-        min-width: 44px;
-        min-height: 44px;
-        padding: 0.5rem 1rem;
+    .table-striped tr {
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.35rem;
+        box-shadow: 0 0.15rem 0.75rem rgba(0, 0, 0, 0.1);
     }
     
-    .form-control, .form-select {
-        min-height: 44px;
-    }
-}
-
-/* Very small devices (portrait phones) */
-@media (max-width: 360px) {
-    .table th, .table td {
-        padding: 0.3rem;
-        font-size: 0.75rem;
-    }
-    
-    .card-body {
+    .table-striped td {
         padding: 0.75rem;
+        border: none;
+        border-bottom: 1px solid #dee2e6;
+        position: relative;
+        padding-left: 40%;
     }
     
-    .btn {
+    .table-striped td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0.75rem;
+        width: 35%;
+        padding-right: 1rem;
+        font-weight: 600;
+        text-align: left;
+        color: #495057;
+    }
+    
+    .table-striped td:last-child {
+        border-bottom: none;
+    }
+    
+    /* Adjust filter form for mobile */
+    .card-body .row.g-2 {
+        flex-direction: column;
+    }
+    
+    .card-body .col-md-3,
+    .card-body .col-md-2 {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Make pagination more compact */
+    .pagination .page-item .page-link {
         padding: 0.25rem 0.5rem;
+        margin: 0 0.1rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Adjust card padding */
+    .card-body {
+        padding: 1rem;
+    }
+}
+@media (max-width: 576px) {
+    /* Make header smaller */
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    /* Adjust card header */
+    .card-header h5 {
+        font-size: 1.1rem;
+    }
+    
+    /* Make table cells more compact */
+    .table-striped td {
+        padding-left: 35%;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    .table-striped td:before {
+        width: 30%;
+        font-size: 0.85rem;
+    }
+    
+    /* Hide some less important columns if needed */
+    .table-striped td:nth-child(3) {  /* activity type column */
+        display: none;
+    }
+    
+    /* Adjust filter dropdown */
+    .form-select {
+        font-size: 0.9rem;
+    }
+    
+    /* Make pagination info single line */
+    .text-center.text-muted {
         font-size: 0.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }
 @media (max-width: 768px) {
-    /* Make table display as cards on mobile */
+    /* Force table to not be a table anymore */
     .table-responsive table, 
     .table-responsive thead, 
     .table-responsive tbody, 
@@ -566,56 +678,101 @@ body {
 }
 </style>
 <div class="container-fluid">
-    <h2 class="mb-4"><?php echo t('low_stock_button');?></h2>
+    <h2 class="mb-4"><?php echo t('access_log');?></h2>
     
     <div class="card mb-4">
-        <div class="card-header bg-danger text-white">
-            <h5 class="mb-0"><?php echo t('list_low_stock');?></h5>
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><?php echo t('log_list');?></h5>
         </div>
         <div class="card-body">
-        <div class="table-responsive">
-    <table class="table table-striped">
-        <thead>
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <form method="GET" class="row g-2">
+                        <div class="col-md-3">
+                            <select name="type" class="form-select">
+                                <option value=""><?php echo t('type_all');?></option>
+                                <?php foreach ($activity_types as $type): ?>
+                                    <option value="<?php echo $type; ?>" <?php echo $type_filter == $type ? 'selected' : ''; ?>>
+                                        <?php echo $type; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="month" class="form-select">
+                                <option value="all"><?php echo t('all_months');?></option>
+                                <?php foreach ($months as $num => $name): ?>
+                                    <option value="<?php echo $num; ?>" <?php echo $month_filter == $num ? 'selected' : ''; ?>>
+                                        <?php echo t(strtolower($name)); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="year" class="form-select">
+                                <option value="all"><?php echo t('all_years');?></option>
+                                <?php foreach ($available_years as $year): ?>
+                                    <option value="<?php echo $year; ?>" <?php echo $year_filter == $year ? 'selected' : ''; ?>>
+                                        <?php echo $year; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100"><?php echo t('filter');?></button>
+                        </div>
+                        <div class="col-md-1">
+                            <a href="access-log.php" class="btn btn-secondary w-100"><?php echo t('reset');?></a>
+                        </div>
+                        <input type="hidden" name="page" value="1">
+                    </form>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+            <table class="table table-striped">
+    <thead>
+        <tr>
+            <th><?php echo t('item_no');?></th>
+            <th><?php echo t('users_button');?></th>
+            <th><?php echo t('activity_type_column');?></th>
+            <th><?php echo t('activity_column');?></th>
+            <th><?php echo t('item_date');?></th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php if (empty($logs)): ?>
             <tr>
-                <th><?php echo t('item_no');?></th>
-                <th><?php echo t('item_name');?></th>
-                <th><?php echo t('item_qty');?></th>
-                <th><?php echo t('item_size');?></th>
-                <th><?php echo t('item_location');?></th>
+                <td colspan="5" class="text-center"><?php echo t('acc_n_rec');?></td>
             </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($low_stock_items)): ?>
+        <?php else: ?>
+            <?php foreach ($logs as $index => $log): ?>
                 <tr>
-                    <td colspan="5" class="text-center"><?php echo t('no_low_stock');?></td>
+                    <td data-label="ល.រ"><?php echo $index + 1 + $offset; ?></td>
+                    <td data-label="អ្នកប្រើប្រាស់"><?php echo $log['username'] ?? 'System'; ?></td>
+                    <td data-label="ប្រភេទសកម្មភាព"><?php echo $log['activity_type']; ?></td>
+                    <td data-label="សកម្មភាព"><?php echo $log['activity_detail']; ?></td>
+                    <td data-label="កាលបរិច្ឆេទ"><?php echo date('d/m/Y H:i:s', strtotime($log['created_at'])); ?></td>
                 </tr>
-            <?php else: ?>
-                <?php foreach ($low_stock_items as $index => $item): ?>
-                    <tr>
-                        <td data-label="ល.រ"><?php echo $index + 1 + $offset; ?></td>
-                        <td data-label="ឈ្មោះទំនិញ"><?php echo $item['name']; ?></td>
-                        <td data-label="បរិមាណ" class="text-danger"><?php echo $item['quantity']; ?></td>
-                        <td data-label="ទំហំ"><?php echo !empty($item['size']) ? $item['size'] : 'N/A'; ?></td>
-                        <td data-label="ទីតាំង"><?php echo $item['location']; ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </tbody>
+</table>
+            </div>
 
-            <?php if ($total_pages > 0): ?>
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
                 <nav aria-label="Page navigation" class="mt-3">
                     <ul class="pagination justify-content-center">
                         <?php if ($current_page > 1): ?>
                             <li class="page-item">
                                 <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
-                                    <span aria-hidden="false">&laquo;&laquo;</span>
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
                                 </a>
                             </li>
                             <li class="page-item">
                                 <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>" aria-label="Previous">
-                                    <span aria-hidden="false">&laquo;</span>
+                                    <span aria-hidden="true">&laquo;</span>
                                 </a>
                             </li>
                         <?php else: ?>
@@ -671,11 +828,11 @@ body {
                 <div class="text-center text-muted">
                 <?php echo t('page');?> <?php echo $current_page; ?> <?php echo t('page_of');?> <?php echo $total_pages; ?> 
                 </div>
-            <?php endif; ?> 
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

@@ -58,7 +58,15 @@ function sendEmail($to, $subject, $body) {
         return false;
     }
 }
-
+function getLocationName($pdo, $locationId) {
+    if (!$locationId) return 'N/A';
+    
+    $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
+    $stmt->execute([$locationId]);
+    $location = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $location ? $location['name'] : 'N/A';
+}
 // General utility functions
 function logActivity($userId, $activityType, $activityDetail) {
     global $pdo;
@@ -69,7 +77,12 @@ function logActivity($userId, $activityType, $activityDetail) {
                           VALUES (?, ?, ?, ?)");
     $stmt->execute([$userId, $activityType, $activityDetail, $ip]);
 }
-
+function getCategoryName($pdo, $category_id) {
+    $stmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+    $stmt->execute([$category_id]);
+    $category = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $category ? $category['name'] : 'Unknown';
+}
 function checkLowStock() {
     global $pdo;
     

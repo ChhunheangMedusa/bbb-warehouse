@@ -1,6 +1,6 @@
 <?php
 ob_start();
-require_once 'includes/header.php';
+require_once '../includes/header.php';
 require_once  'translate.php'; 
 
 if (!isAdmin()) {
@@ -26,21 +26,47 @@ $stmt = $pdo->prepare("SELECT COUNT(*) as qty_increases FROM addqtyitems WHERE D
 $stmt->execute();
 $qty_increases = $stmt->fetch(PDO::FETCH_ASSOC)['qty_increases'];
 
+
+
 // Total is the sum of both
 $total_items = $new_items + $qty_increases;
 
-
-
-$stmt = $pdo->prepare("SELECT COUNT(*) as total_transfers FROM stock_transfers WHERE DATE(created_at) = CURDATE()");
+// Count of quantity deductions today
+$stmt = $pdo->prepare("SELECT COUNT(*) as qty_deductions FROM deductqtyitems WHERE DATE(deducted_at) = CURDATE()");
 $stmt->execute();
-$total_transfers = $stmt->fetch(PDO::FETCH_ASSOC)['total_transfers'];
+$qty_deductions = $stmt->fetch(PDO::FETCH_ASSOC)['qty_deductions'];
 
-// Count of repairs today (excluding quantity = 0)
-$stmt = $pdo->prepare("SELECT COUNT(*) as total_repairs FROM items i JOIN locations l ON i.location_id = l.id 
-                      WHERE l.type = 'Repair' AND DATE(i.created_at) = CURDATE()
-                      AND i.quantity > 0");
+
+
+
+// Count of new deductions today (if you have a separate table for new deductions)
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_deductions FROM stock_out_history WHERE DATE(action_at) = CURDATE() AND action_type = 'deduct'");
 $stmt->execute();
-$total_repairs = $stmt->fetch(PDO::FETCH_ASSOC)['total_repairs'];
+$new_deductions = $stmt->fetch(PDO::FETCH_ASSOC)['new_deductions'];
+
+// Count of new transfer today (if you have a separate table for new deductions)
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_transfer FROM transfer_history WHERE DATE(action_at) = CURDATE()");
+$stmt->execute();
+$new_transfer = $stmt->fetch(PDO::FETCH_ASSOC)['new_transfer'];
+
+
+// Count of new repair today (if you have a separate table for new deductions)
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_repair FROM repair_items WHERE DATE(action_at) = CURDATE() AND action_type = 'send_for_repair'");
+$stmt->execute();
+$new_repair = $stmt->fetch(PDO::FETCH_ASSOC)['new_repair'];
+
+
+$total_new_repair = $new_repair;
+$total_new_transfer=$new_transfer;
+
+
+
+
+
+// Total deductions is the sum of both
+$total_items_out = $qty_deductions;
+
+
 
 // Get recent access logs
 $stmt = $pdo->prepare("SELECT al.activity_type, al.activity_detail, al.created_at, u.username 
@@ -172,7 +198,7 @@ body {
   font-family: var(--font-family);
   background-color: var(--light);
   color: var(--dark);
-  overflow: hidden;
+  overflow: scroll;
   height: 100vh;
 }
 .pagination-container {
@@ -209,6 +235,7 @@ body {
   transition: all 0.3s;
   box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
   z-index: 1000;
+  overflow: scroll;
 }
 
 .sidebar-brand {
@@ -265,6 +292,7 @@ body {
   min-height: 100vh;
   transition: all 0.3s;
   background-color: #f5f7fb;
+  overflow: scroll;
 }
 /* Default (desktop) - no scrolling */
 body {
@@ -275,8 +303,14 @@ body {
 .main-content {
     overflow: hidden;
     height: calc(100vh - 4.375rem); /* Adjust for navbar height */
+    overflow: scroll;
+    
 }
-
+.dashboard-container {
+        height: calc(100vh - 4.375rem); /* Full height minus navbar */
+        overflow-y: auto; /* Enable vertical scrolling */
+        padding: 20px;
+    }
 
 /* Mobile devices - allow scrolling */
 @media (max-width: 768px) {
@@ -324,7 +358,12 @@ body {
   height: 4.375rem;
   box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
   background-color: var(--white);
+  position: sticky;
+  top: 0;
+  z-index: 1020;
 }
+
+
 
 .navbar .dropdown-menu {
   border: none;
@@ -764,13 +803,14 @@ body {
 .table td{
  
 }
+
 </style>
 
 <div class="container-fluid">
 <h2 class="mb-4"><?php echo t('dashboard_title'); ?></h2>
     
-    <div class="row mb-3">
-    <div class="col-md-4">
+    <div class="row mb-2">
+    <div class="col-md-3">
     <a href="today_items.php" style="text-decoration: none;">
         <div class="card bg-primary text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayItemsModal">
             <div class="card-body">
@@ -785,8 +825,22 @@ body {
         </div>
     </a>
 </div>
-
-        <div class="col-md-4">
+<div class="col-md-3">
+    <a href="today_items_out.php" style="text-decoration: none;">
+        <div class="card bg-danger text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayItemsModal">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title"><?php echo t('stock_out'); ?></h5>
+                        <h2 class="mb-0"><?php echo $total_items_out; ?></h2>
+                    </div>
+                    <i class="bi bi-box-seam fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </a>
+</div>
+        <div class="col-md-3">
           <a href="today_transfer.php" style="text-decoration:none;">
           <div class="card bg-success text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayTransfersModal">
           
@@ -795,21 +849,21 @@ body {
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="card-title"><?php echo t('transfers_card'); ?></h5>
-                            <h2 class="mb-0"><?php echo $total_transfers; ?></h2>
+                            <h2 class="mb-0"><?php echo $total_new_transfer; ?></h2>
                         </div>
                         <i class="bi bi-arrow-left-right fs-1"></i>
                     </div>
                 </div>
             </div></a>
         </div>
-<div class="col-md-4">
+<div class="col-md-3">
     <a href="today_repairs.php" style="text-decoration: none;">
         <div class="card bg-warning text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayRepairsModal">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h5 class="card-title"><?php echo t('repairs_card'); ?></h5>
-                        <h2 class="mb-0"><?php echo $total_repairs; ?></h2>
+                        <h2 class="mb-0"><?php echo $total_new_repair; ?></h2>
                     </div>
                     <i class="bi bi-tools fs-1"></i>
                 </div>
@@ -946,5 +1000,5 @@ body {
     
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

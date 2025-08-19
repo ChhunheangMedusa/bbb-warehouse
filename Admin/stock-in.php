@@ -2,10 +2,10 @@
 ob_start();
 
 // Includes in correct order
-require_once 'config/database.php';
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
-require_once 'includes/header.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once '../includes/auth.php';
+require_once '../includes/header.php';
 require_once  'translate.php'; 
 if (!isAdmin()) {
     $_SESSION['error'] = "You don't have permission to access this page";
@@ -28,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Loop through each item
             foreach ($_POST['name'] as $index => $name) {
+                $item_code = sanitizeInput($_POST['item_code'][$index]);
+$category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
                 $location_id = (int)$_POST['location_id'][$index];
                 $name = sanitizeInput($name);
                 $quantity = (float)$_POST['quantity'][$index];
@@ -47,9 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception("$dupli");
             }
                 // Insert the item into the database
-                $stmt = $pdo->prepare("INSERT INTO items (invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
-                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
+                $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
                 $item_id = $pdo->lastInsertId();
                    // Also insert into addnewitems table
             $stmt = $pdo->prepare("INSERT INTO addnewitems 
@@ -67,6 +69,11 @@ $location_id,
 $remark,
 $_SESSION['user_id']
 ]);
+// In the add_item section, after inserting the item:
+$stmt = $pdo->prepare("INSERT INTO stock_in_history 
+    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)");
+$stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark, $quantity, $_SESSION['user_id']]);
          // Replace the file upload section with this:
          if (!empty($_FILES['images']['name'][$index][0])) {
             foreach ($_FILES['images']['tmp_name'][$index] as $key => $tmp_name) {
@@ -104,7 +111,7 @@ $_SESSION['user_id']
             $dupli3=t('item_succ1');
             $dupli4=t('item_succ2');
             $_SESSION['success'] = "$dupli3";
-            redirect('item-control.php');
+            redirect('stock-in.php');
         } catch (PDOException $e) {
             $pdo->rollBack();
             
@@ -157,6 +164,14 @@ $size,
 $remark,
 $_SESSION['user_id']
 ]);
+// After updating the item quantity, add to history:
+$stmt = $pdo->prepare("INSERT INTO stock_in_history 
+    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+    SELECT 
+        id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'add', ?, ?
+    FROM items 
+    WHERE id = ?");
+$stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
                 // Get location name for log
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
                 $stmt->execute([$location_id]);
@@ -171,281 +186,99 @@ $_SESSION['user_id']
             $add_qty2=t('add_qty2');
             
             $_SESSION['success'] = "$add_qty1";
-            redirect('item-control.php');
+            redirect('stock-in.php');
         } catch (PDOException $e) {
             $pdo->rollBack();
             $_SESSION['error'] = "$add_qty2";
         }
     } 
-    
-    elseif (isset($_POST['deduct_qty'])) {
-        // Deduct quantity from items
-        $invoice_no = sanitizeInput($_POST['invoice_no']);
-        $date = sanitizeInput($_POST['date']);
-        $location_id = (int)$_POST['location_id'];
-        
-        try {
-            $pdo->beginTransaction();
-            
-            // Loop through each item
-            foreach ($_POST['item_id'] as $index => $item_id) {
-                $item_id = (int)$item_id;
-                $quantity = (float)$_POST['quantity'][$index];
-                $size = sanitizeInput($_POST['size'][$index] ?? '');
-                $remark = sanitizeInput($_POST['remark'][$index] ?? '');
-                
-                // Get current quantity
-                $stmt = $pdo->prepare("SELECT quantity, name FROM items WHERE id = ?");
-                $stmt->execute([$item_id]);
-                $item = $stmt->fetch(PDO::FETCH_ASSOC);
-                $old_qty = $item['quantity'];
-                $item_name = $item['name'];
-                $deduct_qty1=t('deduct_qty1');
-                if ($quantity > $old_qty) {
-                    throw new Exception("$deduct_qty1: $item_name");
-                }
-                
-                // Update quantity
-                $new_qty = $old_qty - $quantity;
-                $stmt = $pdo->prepare("UPDATE items SET quantity = ?, invoice_no = ?, date = ?, remark = ? WHERE id = ?");
-                $stmt->execute([$new_qty, $invoice_no, $date, $remark, $item_id]);
-                
-                // Get location name for log
-                $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
-                $stmt->execute([$location_id]);
-                $location = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                // Log each item update
-                logActivity($_SESSION['user_id'], 'Stock Out', "Decrease stock: $item_name ($quantity $size) at {$location['name']} (Total: $old_qty-$quantity=$new_qty)");
-            }
-            
-            $pdo->commit();
-            $deduct_qty2=t('deduct_qty2');
-            $deduct_qty3=t('deduct_qty3');
-            $_SESSION['success'] = "$deduct_qty2";
-            redirect('item-control.php');
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $_SESSION['error'] = "$deduct_qty3";
-        } catch (Exception $e) {
-            $_SESSION['error'] = $e->getMessage();
-        }
-    }
-    // In the edit_item section of your PHP code
-    elseif (isset($_POST['edit_item'])) {
-        // Edit item
-        $id = (int)$_POST['id'];
-        $invoice_no = sanitizeInput($_POST['invoice_no']);
-        $date = sanitizeInput($_POST['date']);
-        $name = sanitizeInput($_POST['name']);
-        $quantity = (float)$_POST['quantity'];
-        $size = sanitizeInput($_POST['size']);
-        $location_id = (int)$_POST['location_id'];
-        $remark = sanitizeInput($_POST['remark']);
-        
-        try {
-            $pdo->beginTransaction();
-            
-            // Get old item data for logging
-            $stmt = $pdo->prepare("SELECT i.*, l.name as location_name 
-                                  FROM items i 
-                                  JOIN locations l ON i.location_id = l.id 
-                                  WHERE i.id = ?");
-            $stmt->execute([$id]);
-            $old_item = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // Get old images
-            $stmt = $pdo->prepare("SELECT * FROM item_images WHERE item_id = ?");
-            $stmt->execute([$id]);
-            $old_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-    // In the edit_item section, replace the image handling with this:
-    if (!empty($_FILES['images']['name'][0])) {
-        try {
-            // Delete all old image records first
-            $stmt = $pdo->prepare("DELETE FROM item_images WHERE item_id = ?");
-            $stmt->execute([$id]);
-            
-            // Handle new image uploads
-            foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
-                if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                    // Validate and process image (same as add item)
-                    $imageData = file_get_contents($tmp_name);
-                    $stmt = $pdo->prepare("INSERT INTO item_images (item_id, image_path) VALUES (?, ?)");
-                    $stmt->execute([$id, $imageData]);
-                }
-            }
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $_SESSION['error'] = "Image upload failed: " . $e->getMessage();
-            redirect('item-control.php');
-        }
-    }
-            // Get new location name for comparison
-            $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
-            $stmt->execute([$location_id]);
-            $new_location = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-            // Update item details
-            $stmt = $pdo->prepare("UPDATE items SET invoice_no=?, date=?, name=?, quantity=?, size=?, location_id=?, remark=? WHERE id=?");
-            $stmt->execute([$invoice_no, $date, $name, $quantity, $size, $location_id, $remark, $id]);
-    
    
-          
-            
-            $pdo->commit();
-            
-            // Prepare log message with changes
-            $log_message = "";
-            $changes = [];
-            
-            if ($old_item['invoice_no'] != $invoice_no) {
-                $old_invoice = $old_item['invoice_no'] ?: 'N/A';
-                $new_invoice = $invoice_no ?: 'N/A';
-                $changes[] = "Updated item invoice ($name) : $old_invoice → $new_invoice";
-            }
-            if ($old_item['date'] != $date) {
-                $changes[] = "Updated item date ($name) : {$old_item['date']} → $date";
-            }
-            if ($old_item['name'] != $name) {
-                $changes[] = "Updated item name ({$old_item['name']}) : {$old_item['name']} → $name";
-            }
-            if ($old_item['quantity'] != $quantity) {
-                $changes[] = "Updated item quantity ({$old_item['name']}) : {$old_item['quantity']} → $quantity";
-            }
-            if ($old_item['size'] != $size) {
-                $old_size = $old_item['size'] ?: 'N/A';
-                $new_size = $size ?: 'N/A';
-                $changes[] = "Updated item size ($name) : $old_size → $new_size";
-            }
-            if ($old_item['location_id'] != $location_id) {
-                $changes[] = "Updated item location ($name) : {$old_item['location_name']} → {$new_location['name']}";
-            }
-            if ($old_item['remark'] != $remark) {
-                $old_remark = $old_item['remark'] ?: 'N/A';
-                $new_remark = $remark ?: 'N/A';
-                $changes[] = "Updated item remark ($name) : $old_remark → $new_remark";
-            }
-            
-            if (!empty($_POST['delete_images'])) {
-                $changes[] = "Deleted " . count($_POST['delete_images']) . " images";
-            }
-            
-            if (!empty($_FILES['images']['name'][0])) {
-                $changes[] = "Updated item ({$old_item['name']})  " .  " new images";
-            }
-            
-            if (empty($changes)) {
-                $log_message .= "No changes detected";
-            } else {
-                $log_message .= implode(', ', $changes);
-            }
-            $update_item1=t('update_item1');
-            $update_item2=t('update_item2');
-            
-            $_SESSION['success'] = "$update_item1";
-            logActivity($_SESSION['user_id'], 'Edit Item', $log_message);
-            
-            redirect('item-control.php');
-            
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $_SESSION['error'] = "$update_item2: " . $e->getMessage();
-        }
-    }
     }
 
 
-// Handle delete request
-if (isset($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
-    
-    try {
-        $pdo->beginTransaction();
-        
-        // Get item info for log
-        $stmt = $pdo->prepare("SELECT i.name,i.quantity, l.name as location 
-                              FROM items i 
-                              JOIN locations l ON i.location_id = l.id 
-                              WHERE i.id = ?");
-        $stmt->execute([$id]);
-        $item = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($item) {
-            // Delete item images first
-            $stmt = $pdo->prepare("DELETE FROM item_images WHERE item_id = ?");
-            $stmt->execute([$id]);
 
-            // Delete from addnewitems table
-            $stmt = $pdo->prepare("DELETE FROM addnewitems WHERE item_id = ?");
-            $stmt->execute([$id]);
-            
-            // Delete from addqtyitems table
-            $stmt = $pdo->prepare("DELETE FROM addqtyitems WHERE item_id = ?");
-            $stmt->execute([$id]);
-            
-            // Then delete the item from main table
-            $stmt = $pdo->prepare("DELETE FROM items WHERE id = ?");
-            $stmt->execute([$id]);
-            $delete_item1=t('delete_item1');
-            $delete_item2=t('delete_item2');
-            $delete_item3=t('delete_item3');
-
-
-            logActivity($_SESSION['user_id'], 'Delete Item', "Removed item: {$item['name']} ({$item['quantity']}) from {$item['location']} ");
-            $_SESSION['success'] = "$delete_item1";
-        } else {
-            $_SESSION['error'] = "$delete_item2";
-        }
-        
-        $pdo->commit();
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        $_SESSION['error'] = "$delete_item3";
-    }
-    
-    redirect('item-control.php');
-}
-
-// Get filter parameters
+$year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
+$month_filter = isset($_GET['month']) && $_GET['month'] != 0 ? (int)$_GET['month'] : null;
 $location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
-$month_filter = isset($_GET['month']) ? (int)$_GET['month'] : date('n');
-$year_filter = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 
-// Build query for items
-$query = "SELECT i.*, l.name as location_name 
-          FROM items i 
-          JOIN locations l ON i.location_id = l.id 
-          WHERE YEAR(i.date) = :year";
-$params = [':year' => $year_filter];
+// Build query for stock history
+$query = "SELECT 
+    si.id,
+    si.item_id,
+    si.item_code, 
+    si.category_id,
+    c.name as category_name,
+    si.invoice_no,
+    si.date,
+    si.name,
+    i.quantity as current_quantity,
+    si.quantity as history_quantity,
+    si.action_quantity,
+    si.action_type,
+    si.alert_quantity,
+    si.size,
+    si.location_id,
+    l.name as location_name,
+    si.remark,
+    si.action_by,
+    si.action_at,
+    (SELECT id FROM item_images WHERE item_id = si.item_id ORDER BY id DESC LIMIT 1) as image_id
+FROM 
+    stock_in_history si
+LEFT JOIN 
+    items i ON si.item_id = i.id
+LEFT JOIN 
+    categories c ON si.category_id = c.id
+JOIN 
+    locations l ON si.location_id = l.id
+WHERE 1=1";
 
-// Add month filter if not "All Months"
-if ($month_filter && $month_filter != 0) {
-    $query .= " AND MONTH(i.date) = :month";
+$params = [];
+
+// Add filters
+if ($year_filter !== null) {
+    $query .= " AND YEAR(si.date) = :year";
+    $params[':year'] = $year_filter;
+}
+
+if ($month_filter !== null) {
+    $query .= " AND MONTH(si.date) = :month";
     $params[':month'] = $month_filter;
 }
 
-
 if ($location_filter) {
-    $query .= " AND i.location_id = :location_id";
+    $query .= " AND si.location_id = :location_id";
     $params[':location_id'] = $location_filter;
 }
 
 if ($search_query) {
-    $query .= " AND (i.name LIKE :search OR i.invoice_no LIKE :search OR i.remark LIKE :search)";
+    $query .= " AND (si.name LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
     $params[':search'] = "%$search_query%";
 }
 
-$query .= " ORDER BY i.date DESC, i.created_at DESC";
+// Order by action date (newest first)
+$query .= " ORDER BY si.action_at DESC";
 
-// Get pagination parameters
+// Pagination setup
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
-// Get total count for pagination
-$stmt = $pdo->prepare(str_replace('SELECT i.*, l.name as location_name', 'SELECT COUNT(*) as total', $query));
+// Count total records
+$count_query = "SELECT COUNT(*) as total FROM stock_in_history si
+                LEFT JOIN items i ON si.item_id = i.id
+                LEFT JOIN categories c ON si.category_id = c.id
+                JOIN locations l ON si.location_id = l.id
+                WHERE 1=1";
+
+// Apply same filters to count query
+if ($year_filter !== null) $count_query .= " AND YEAR(si.date) = :year";
+if ($month_filter !== null) $count_query .= " AND MONTH(si.date) = :month";
+if ($location_filter) $count_query .= " AND si.location_id = :location_id";
+if ($search_query) $count_query .= " AND (si.name LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
+
+$stmt = $pdo->prepare($count_query);
 foreach ($params as $key => $value) {
     $stmt->bindValue($key, $value);
 }
@@ -453,7 +286,7 @@ $stmt->execute();
 $total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 $total_pages = ceil($total_items / $limit);
 
-// Get items with pagination
+// Get paginated results
 $query .= " LIMIT :limit OFFSET :offset";
 $stmt = $pdo->prepare($query);
 foreach ($params as $key => $value) {
@@ -477,959 +310,7 @@ if ($locations) {
         $items_by_location[$location['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
-?>
-<style>
-    :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
-  --primary-light: #f8f9fc;
-  --secondary: #858796;
-  --success: #1cc88a;
-  --info: #36b9cc;
-  --warning: #f6c23e;
-  --danger: #e74a3b;
-  --light: #f8f9fa;
-  --dark: #5a5c69;
-  --white: #ffffff;
-  --gray: #b7b9cc;
-  --gray-dark: #7b7d8a;
-  --font-family: "Khmer OS Siemreap", sans-serif;
-}
-
-/* Base Styles */
-body {
-  font-family: var(--font-family);
-  background-color: var(--light);
-  color: var(--dark);
-  overflow-x: hidden;
-}
-
-/* Sidebar Styles */
-.sidebar {
-  width: 14rem;
-  min-height: 100vh;
-  background: linear-gradient(
-    180deg,
-    var(--primary) 0%,
-    var(--primary-dark) 100%
-  );
-  color: var(--white);
-  transition: all 0.3s;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-  z-index: 1000;
-}
-
-.sidebar-brand {
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sidebar-logo {
-    height: 150px;
-  width: auto;
-}
-.form-label{
-    margin-top:10px;
-}
-.sidebar-nav {
-  padding: 0.5rem 0;
-}
-
-.sidebar .nav-link {
-  color: rgba(255, 255, 255, 0.8);
-  padding: 0.75rem 1.5rem;
-  margin: 0.25rem 1rem;
-  border-radius: 0.35rem;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.sidebar .nav-link:hover {
-  color: var(--white);
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.sidebar .nav-link.active {
-  color: var(--primary);
-  background-color: var(--white);
-  font-weight: 600;
-}
-
-.sidebar .nav-link i {
-  margin-right: 0.5rem;
-  font-size: 0.85rem;
-}
-
-.sidebar-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Main Content Styles */
-.main-content {
-  width: calc(100% - 14rem);
-  min-height: 100vh;
-  transition: all 0.3s;
-  background-color: #f5f7fb;
-}
-
-/* Top Navigation */
-.navbar {
-  height: 4.375rem;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-  background-color: var(--white);
-}
-
-.navbar .dropdown-menu {
-  border: none;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-}
-
-/* Card Styles */
-.card {
-  border: none;
-  border-radius: 0.35rem;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
-  margin-bottom: 1.5rem;
-}
-
-.card-header {
-  background-color: var(--white);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 1rem 1.35rem;
-  font-weight: 600;
-  border-radius: 0.35rem 0.35rem 0 0 !important;
-}
-
-.card-body {
-  padding: 1.5rem;
-}
-
-/* Alert Styles */
-.alert {
-  border-radius: 0.35rem;
-  border: none;
-}
-
-/* Button Styles */
-.btn {
-  border-radius: 0.35rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
-
-.btn-outline-primary {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-outline-primary:hover {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-/* Table Styles */
-.table {
-  color: var(--dark);
-  margin-bottom: 0;
-}
-
-.table th {
-  background-color: var(--light);
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  border-bottom-width: 1px;
-}
-
-.table > :not(:first-child) {
-  border-top: none;
-}
-
-/* Form Styles */
-.form-control,
-.form-select {
-  border-radius: 0.35rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d3e2;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
-}
-
-/* Badge Styles */
-.badge {
-  font-weight: 500;
-  padding: 0.35em 0.65em;
-  border-radius: 0.25rem;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--gray);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-dark);
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-  .sidebar {
-    margin-left: -14rem;
-    position: fixed;
-  }
-
-  .sidebar.show {
-    margin-left: 0;
-  }
-
-  .main-content {
-    width: 100%;
-  }
-
-  .main-content.show {
-    margin-left: 14rem;
-  }
-
-  #sidebarToggle {
-    display: block;
-  }
-}
-
-/* Animation Classes */
-.fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Utility Classes */
-.text-khmer {
-  font-family: var(--font-family);
-}
-
-.cursor-pointer {
-  cursor: pointer;
-}
-
-.shadow-sm {
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
-}
-
-/* Image Styles */
-.img-thumbnail {
-  padding: 0.25rem;
-  background-color: var(--white);
-  border: 1px solid #d1d3e2;
-  border-radius: 0.35rem;
-  max-width: 100%;
-  height: auto;
-  transition: all 0.2s;
-}
-
-.img-thumbnail:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-}
-
-/* Modal Styles */
-.modal-content {
-  border: none;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 1rem 1.5rem;
-}
-
-.modal-footer {
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-/* Pagination Styles */
-.pagination .page-item .page-link {
-  border-radius: 0.35rem;
-  margin: 0 0.25rem;
-  color: var(--primary);
-}
-
-.pagination .page-item.active .page-link {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  color: var(--white);
-}
-
-/* Custom Toggle Switch */
-.form-switch .form-check-input {
-  width: 2.5em;
-  height: 1.5em;
-  cursor: pointer;
-}
-
-/* Custom File Upload */
-.form-control-file::-webkit-file-upload-button {
-  visibility: hidden;
-}
-
-.form-control-file::before {
-  content: "ជ្រើសរើសឯកសារ";
-  display: inline-block;
-  background: var(--light);
-  border: 1px solid #d1d3e2;
-  border-radius: 0.35rem;
-  padding: 0.375rem 0.75rem;
-  outline: none;
-  white-space: nowrap;
-  cursor: pointer;
-  color: var(--dark);
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.form-control-file:hover::before {
-  background: #e9ecef;
-}
-
-
-    :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
-  --primary-light: #f8f9fc;
-  --secondary: #858796;
-  --success: #1cc88a;
-  --info: #36b9cc;
-  --warning: #f6c23e;
-  --danger: #e74a3b;
-  --light: #f8f9fa;
-  --dark: #5a5c69;
-  --white: #ffffff;
-  --gray: #b7b9cc;
-  --gray-dark: #7b7d8a;
-  --font-family: "Khmer OS Siemreap", sans-serif;
-}
-
-/* Base Styles */
-body {
-  font-family: var(--font-family);
-  background-color: var(--light);
-  color: var(--dark);
-  overflow-x: hidden;
-}
-
-/* Sidebar Styles */
-.sidebar {
-  width: 220px;
-  min-width:220px;
-  min-height: 100vh;
-  background: #005064;
-  color: var(--white);
-  transition: all 0.3s;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-  z-index: 1000;
-}
-
-.sidebar-brand {
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sidebar-logo {
-    height: 150px;
-  width: auto;
-}
-
-.sidebar-nav {
-  padding: 0.5rem 0;
-}
-
-.sidebar .nav-link {
-    white-space: nowrap;       /* Prevent text wrapping */
-    overflow: hidden;          /* Hide overflow */
-    text-overflow: ellipsis;   /* Show ... if text is too long */
-    padding: 0.75rem 1rem;     /* Adjust padding as needed */
-    margin: 0.25rem 0;         /* Reduce margin */
-    font-size: 0.875rem;       /* Slightly smaller font */
-    display: flex;             /* Use flexbox for alignment */
-    align-items: center;  
-    color: var(--white);     /* Center items vertically */
-}
-
-.sidebar .nav-link:hover {
-  color: var(--white);
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.sidebar .nav-link.active {
-  color: var(--primary);
-  background-color: var(--white);
-  font-weight: 600;
-}
-
-.sidebar .nav-link i {
-  margin-right: 0.5rem;
-  font-size: 0.85rem;
-  min-width: 1.25rem;       /* Fixed width for icons */
-  text-align: center;
-}
-
-.sidebar-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Main Content Styles */
-.main-content {
-  width: calc(100% - 14rem);
-  min-height: 100vh;
-  transition: all 0.3s;
-  background-color: #f5f7fb;
-}
-
-/* Top Navigation */
-.navbar {
-  height: 4.375rem;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-  background-color: var(--white);
-}
-
-.navbar .dropdown-menu {
-  border: none;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-}
-
-/* Card Styles */
-.card {
-  border: none;
-  border-radius: 0.35rem;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
-  margin-bottom: 1.5rem;
-}
-
-.card-header {
-  background-color: var(--white);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 1rem 1.35rem;
-  font-weight: 600;
-  border-radius: 0.35rem 0.35rem 0 0 !important;
-}
-
-.card-body {
-  padding: 1.5rem;
-}
-
-/* Alert Styles */
-.alert {
-  border-radius: 0.35rem;
-  border: none;
-}
-
-/* Button Styles */
-.btn {
-  border-radius: 0.35rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
-
-.btn-outline-primary {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-outline-primary:hover {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-/* Table Styles */
-.table {
-  color: var(--dark);
-  margin-bottom: 0;
-}
-@media (max-width: 768px) {
-    table th {
-        padding: 0.5rem 0.3rem;
-        font-size: 0.85rem;
-    }
-}
-
-
-
-/* Make all table cells single line by default */
-.table td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-}
-
-/* Specifically allow the action column to expand */
-.table td:last-child {
-    overflow: visible;
-    white-space: normal;
-    text-overflow: clip;
-    max-width: none;
-    min-width: 150px; /* Ensure enough space for buttons */
-}
-table th{
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0.75rem 0.5rem;
-    line-height: 1.2;
-}
-.table th {
-  background-color: var(--light);
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  border-bottom-width: 1px;
-}
-
-.table > :not(:first-child) {
-  border-top: none;
-}
-
-/* Form Styles */
-.form-control,
-.form-select {
-  border-radius: 0.35rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d3e2;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
-}
-
-/* Badge Styles */
-.badge {
-  font-weight: 500;
-  padding: 0.35em 0.65em;
-  border-radius: 0.25rem;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--gray);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-dark);
-}
-/* Duplicate Item Modal Styles */
-#duplicateItemModal .modal-content {
-    border: 2px solid #dc3545;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
-}
-
-#duplicateItemModal .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-#duplicateItemModal .modal-footer {
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-#duplicateItemModal .btn-danger {
-    min-width: 120px;
-    padding: 8px 20px;
-    font-weight: 600;
-}
-/* Responsive Styles */
-@media (max-width: 768px) {
-  .sidebar {
-    margin-left: -14rem;
-    position: fixed;
-  }
-
-  .sidebar.show {
-    margin-left: 0;
-  }
-
-  .main-content {
-    width: 100%;
-  }
-
-  .main-content.show {
-    margin-left: 14rem;
-  }
-
-  #sidebarToggle {
-    display: block;
-  }
-}
-
-/* Animation Classes */
-.fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Utility Classes */
-.text-khmer {
-  font-family: var(--font-family);
-}
-
-.cursor-pointer {
-  cursor: pointer;
-}
-
-.shadow-sm {
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
-}
-
-/* Image Styles */
-.img-thumbnail {
-  padding: 0.25rem;
-  background-color: var(--white);
-  border: 1px solid #d1d3e2;
-  border-radius: 0.35rem;
-  max-width: 100%;
-  height: auto;
-  transition: all 0.2s;
-}
-
-.img-thumbnail:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-}
-
-/* Modal Styles */
-.modal-content {
-  border: none;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 1rem 1.5rem;
-}
-
-.modal-footer {
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-/* Pagination Styles */
-.pagination .page-item .page-link {
-  border-radius: 0.35rem;
-  margin: 0 0.25rem;
-  color: var(--primary);
-}
-
-.pagination .page-item.active .page-link {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  color: var(--white);
-}
-
-/* Custom Toggle Switch */
-.form-switch .form-check-input {
-  width: 2.5em;
-  height: 1.5em;
-  cursor: pointer;
-}
-
-/* Custom File Upload */
-.form-control-file::-webkit-file-upload-button {
-  visibility: hidden;
-}
-
-.form-control-file::before {
-  content: "ជ្រើសរើសឯកសារ";
-  display: inline-block;
-  background: var(--light);
-  border: 1px solid #d1d3e2;
-  border-radius: 0.35rem;
-  padding: 0.375rem 0.75rem;
-  outline: none;
-  white-space: nowrap;
-  cursor: pointer;
-  color: var(--dark);
-  font-weight: 500;
-  transition: all 0.2s;
-}
-/* Select Location Modal Styles */
-#selectLocationModal .modal-content {
-    border: 2px solid #ffc107;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
-}
-
-#selectLocationModal .modal-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-#selectLocationModal .modal-footer {
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-#selectLocationModal .btn-warning {
-    min-width: 120px;
-    padding: 8px 20px;
-    font-weight: 600;
-    color: #212529;
-}
-.form-control-file:hover::before {
-  background: #e9ecef;
-}
-/* Image Preview Styles */
-.image-preview-container {
-    min-height: 150px;
-}
-
-.image-preview-wrapper {
-    position: relative;
-    width: 150px;
-    height: 150px;
-    margin-right: 5px;
-    margin-bottom: 5px;
-    display: inline-block;
-}
-
-.image-preview {
-   
-    height: 100%;
-    object-fit: cover;
-    border-radius: 4px;
-}
-
-.remove-preview {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: rgba(255,0,0,0.7);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-}
-/* Delete Confirmation Modal Styles */
-#deleteConfirmModal .modal-content {
-    border: 2px solid #dc3545;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
-}
-
-#deleteConfirmModal .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-#deleteConfirmModal .modal-footer {
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-#deleteConfirmModal .btn-danger {
-    min-width: 120px;
-    padding: 8px 20px;
-    font-weight: 600;
-}
-
-#deleteItemInfo {
-    text-align: left;
-    background-color: #f8f9fa;
-    border-radius: 0.35rem;
-    padding: 1rem;
-}
-@media (max-width: 768px) {
-    .modal-dialog {
-        margin: 0.5rem;
-        width: auto;
-    }
-}
-@media (max-width: 768px) {
-    .form-row > .col, 
-    .form-row > [class*="col-"] {
-        padding-right: 0;
-        padding-left: 0;
-        margin-bottom: 10px;
-    }
-    
-    .form-control, .form-select {
-        width: 100%;
-    }
-}
-@media (max-width: 768px) {
-    .sidebar {
-        position: fixed;
-        z-index: 1000;
-        width: 250px;
-        height: 100vh;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-    
-    .sidebar.show {
-        transform: translateX(0);
-    }
-    
-    .main-content {
-        width: 100%;
-        margin-left: 0;
-    }
-    
-    #sidebarToggle {
-        display: block !important;
-    }
-}
-/* Mobile-specific styles */
-@media (max-width: 768px) {
-    /* Make buttons full width */
-    .btn {
-        width: 100%;
-        margin-bottom: 5px;
-    }
-    
-    /* Adjust card padding */
-    .card-body {
-        padding: 1rem;
-    }
-    
-    /* Make form controls easier to tap */
-    .form-control, .form-select {
-        padding: 0.75rem;
-        font-size: 16px; /* Prevent iOS zoom */
-    }
-    
-    /* Adjust modal padding */
-    .modal-body {
-        padding: 1rem;
-    }
-    
-    /* Make pagination more compact */
-    .pagination .page-item .page-link {
-        padding: 0.375rem 0.5rem;
-        font-size: 0.875rem;
-    }
-    
-    /* Stack filter form elements */
-    .filter-form .col-md-3, 
-    .filter-form .col-md-2 {
-        margin-bottom: 10px;
-    }
-}
-
-/* Prevent text input zoom on iOS */
-@media screen and (-webkit-min-device-pixel-ratio:0) {
-    select:focus,
-    textarea:focus,
-    input:focus {
-        font-size: 16px;
-    }
-}
-@media (max-width: 576px) {
-    .card-header h5 {
-        font-size: 1rem;
-        white-space: nowrap;
-       
-        display: block;
-        margin-top:1px;
-        width: 100%;
-    }
-}
-.custom-dropdown-menu {
-        width: 100%;
-        min-width: 15rem;
-    }
-
-    .dropdown-item-container {
-        max-height: 200px;
-        overflow-y: auto;
-    }
-
-    .dropdown-item-container .dropdown-item {
-        white-space: normal;
-        padding: 0.5rem 1rem;
-    }
-
-    .dropdown-item-container .dropdown-item:hover {
-        background-color: #f8f9fa;
-        color: #000;
-    }
-
-    .dropdown-item-container .dropdown-item.active {
-        background-color: var(--primary);
-        color: white;
-    }
-    #quantityExceedModal{
-        z-index: 1060 !important;
-    }
-</style>
+?>\
 
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('item_management');?></h2>
@@ -1444,9 +325,7 @@ table th{
         <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addQtyModal">
             <i class="bi bi-plus-lg"></i> <?php echo t('add_qty');?>
         </button>
-        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#deductQtyModal">
-            <i class="bi bi-dash-lg"></i> <?php echo t('deduct_qty');?>
-        </button>
+  
     </div>
 </div>
         <div class="card-body">
@@ -1478,183 +357,167 @@ table th{
         <?php endfor; ?>
     </select>
 </div>
-                        <div class="col-md-2">
-                            <select name="year" class="form-select">
-                                <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-                                    <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
-                                        <?php echo $y; ?>
-                                    </option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
+<div class="col-md-2">
+    <select name="year" class="form-select">
+        <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_year');?></option>
+        <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+            <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
+                <?php echo $y; ?>
+            </option>
+        <?php endfor; ?>
+    </select>
+</div>
                         
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-primary w-100">Filter</button>
                         </div>
                         <div class="col-md-2">
-            <a href="item-control.php" class="btn btn-danger w-100">Reset</a>
+            <a href="stock-in.php" class="btn btn-danger w-100">Reset</a>
         </div>
                     </form>
                 </div>
             </div>
             
             <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th><?php echo t('item_no');?></th>
-                            <th><?php echo t('item_invoice');?></th>
-                            <th><?php echo t('item_date');?></th>
-                            <th><?php echo t('item_name');?></th>
-                            <th><?php echo t('item_qty');?></th>
-                            <th><?php echo t('item_size');?></th>
-                            <th><?php echo t('item_location');?></th>
-                            <th><?php echo t('item_remark');?></th>
-                            <th><?php echo t('item_photo');?></th>
-                            <th><?php echo t('column_action');?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($items)): ?>
-                            <tr>
-                                <td colspan="10" class="text-center"><?php echo t('no_itemss');?></td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($items as $index => $item): ?>
-                                <tr>
-                                    <td><?php echo $index + 1 + $offset; ?></td>
-                                    <td><?php echo $item['invoice_no']; ?></td>
-                                    <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                    <td><?php echo $item['name']; ?></td>
-                                    <td class="<?php echo $item['quantity'] <= $item['alert_quantity'] ? 'text-danger fw-bold' : ''; ?>">
-    <?php echo $item['quantity']; ?>
-    <?php if ($item['quantity'] <= $item['alert_quantity']): ?>
-        <span class="badge bg-danger"><?php echo t('low_stock_title');?></span>
-    <?php endif; ?>
-</td>
-                                    <td><?php echo $item['size']; ?></td>
-                                    <td><?php echo $item['location_name']; ?></td>
-                                    <td><?php echo $item['remark']; ?></td>
-
-                 
-
-                                    <td>
-    <?php 
-    $stmt = $pdo->prepare("SELECT id FROM item_images WHERE item_id = ? ORDER BY id DESC LIMIT 1");
-    $stmt->execute([$item['id']]);
-    $image = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($image): ?>
-        <img src="display_image.php?id=<?php echo $image['id']; ?>" 
-             alt="<?php echo htmlspecialchars($item['name']); ?>" 
-             class="img-thumbnail" 
-             width="50"
-             data-bs-toggle="modal" 
-             data-bs-target="#imageGalleryModal"
-             data-item-id="<?php echo $item['id']; ?>">
-    <?php else: ?>
-        <span class="badge bg-secondary">No image</span>
-    <?php endif; ?>
-</td>
-                                    <td>
-                                    <button class="btn btn-sm btn-info view-item" 
-            data-id="<?php echo $item['id']; ?>">
-        <i class="bi bi-eye"></i> <?php echo t('view_button');?>
-    </button>
-                                        <button class="btn btn-sm btn-warning edit-item" 
-                                                data-id="<?php echo $item['id']; ?>"
-                                                data-invoice_no="<?php echo $item['invoice_no']; ?>"
-                                                data-date="<?php echo $item['date']; ?>"
-                                                data-name="<?php echo $item['name']; ?>"
-                                                data-quantity="<?php echo $item['quantity']; ?>"
-                                                data-size="<?php echo $item['size']; ?>"
-                                                data-location_id="<?php echo $item['location_id']; ?>"
-                                                data-remark="<?php echo $item['remark']; ?>">
-                                            <i class="bi bi-pencil"></i> <?php echo t('update_button');?>
-                                        </button>
-                                        <?php if (isAdmin()): ?>
-                                        <a href="#" class="btn btn-sm btn-danger delete-item" 
-   data-id="<?php echo $item['id']; ?>"
-   data-name="<?php echo htmlspecialchars($item['name']); ?>"
-   data-location="<?php echo htmlspecialchars($item['location_name']); ?>">
-    <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
-</a><?php endif?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-            
-           <!-- Pagination -->
-<?php if ($total_pages > 1): ?>
-    <nav aria-label="Page navigation" class="mt-3">
-        <ul class="pagination justify-content-center">
-            <?php if ($page > 1): ?>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
-                        <span aria-hidden="true">&laquo;&laquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th><?php echo t('item_no');?></th>
+                <th><?php echo t('item_code');?></th>
+                <th><?php echo t('category');?></th>
+                <th><?php echo t('item_invoice');?></th>
+                <th><?php echo t('item_date');?></th>
+                <th><?php echo t('item_name');?></th>
+                <th>Current Qty</th>
+                <th>History Qty</th>
+                <th>Action</th>
+                <th><?php echo t('item_size');?></th>
+                <th><?php echo t('item_location');?></th>
+                <th><?php echo t('item_remark');?></th>
+                <th><?php echo t('item_photo');?></th>
+                <th>Action By</th>
+                <th>Action At</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($items)): ?>
+                <tr>
+                    <td colspan="15" class="text-center">No stock history found</td>
+                </tr>
             <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link">&laquo;&laquo;</span>
-                </li>
-                <li class="page-item disabled">
-                    <span class="page-link">&laquo;</span>
-                </li>
+                <?php foreach ($items as $index => $item): ?>
+                    <tr>
+                        <td><?php echo $index + 1 + $offset; ?></td>
+                        <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
+                        <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
+                        <td><?php echo $item['invoice_no']; ?></td>
+                        <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
+                        <td><?php echo $item['name']; ?></td>
+                        <td><?php echo $item['current_quantity']; ?></td>
+                        <td class="<?php echo $item['action_type'] === 'deduct' ? 'text-danger' : 'text-success'; ?>">
+                            <?php echo ($item['action_type'] === 'deduct' ? '-' : '+') . $item['action_quantity']; ?>
+                        </td>
+                        <td>
+                            <span class="badge bg-<?php echo $item['action_type'] === 'new' ? 'primary' : ($item['action_type'] === 'add' ? 'success' : 'danger'); ?>">
+                                <?php echo ucfirst($item['action_type']); ?>
+                            </span>
+                        </td>
+                        <td><?php echo $item['size']; ?></td>
+                        <td><?php echo $item['location_name']; ?></td>
+                        <td><?php echo $item['remark']; ?></td>
+                        <td>
+                            <?php if ($item['image_id']): ?>
+                                <img src="display_image.php?id=<?php echo $item['image_id']; ?>" 
+                                     class="img-thumbnail" width="50"
+                                     data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
+                                     data-item-id="<?php echo $item['item_id']; ?>">
+                            <?php else: ?>
+                                <span class="badge bg-secondary">No image</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php 
+                            $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+                            $stmt->execute([$item['action_by']]);
+                            echo $stmt->fetchColumn() ?: 'System';
+                            ?>
+                        </td>
+                        <td><?php echo date('d/m/Y H:i', strtotime($item['action_at'])); ?></td>
+                    </tr>
+                <?php endforeach; ?>
             <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+            
+<?php if ($total_pages > 0): ?>
+<!-- Pagination -->
+<nav aria-label="Page navigation" class="mt-3">
+    <ul class="pagination justify-content-center">
+        <?php if ($page > 1): ?>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        <?php else: ?>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;&laquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+        <?php endif; ?>
 
-            <?php 
-            // Show page numbers
-            $start_page = max(1, $page - 2);
-            $end_page = min($total_pages, $page + 2);
-            
-            if ($start_page > 1) {
-                echo '<li class="page-item"><span class="page-link">...</span></li>';
-            }
-            
-            for ($i = $start_page; $i <= $end_page; $i++): ?>
-                <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                </li>
-            <?php endfor;
-            
-            if ($end_page < $total_pages) {
-                echo '<li class="page-item"><span class="page-link">...</span></li>';
-            }
-            ?>
+        <?php 
+        // Show page numbers
+        $start_page = max(1, $page - 2);
+        $end_page = min($total_pages, $page + 2);
+        
+        if ($start_page > 1) {
+            echo '<li class="page-item"><span class="page-link">...</span></li>';
+        }
+        
+        for ($i = $start_page; $i <= $end_page; $i++): ?>
+            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+            </li>
+        <?php endfor;
+        
+        if ($end_page < $total_pages) {
+            echo '<li class="page-item"><span class="page-link">...</span></li>';
+        }
+        ?>
 
-            <?php if ($page < $total_pages): ?>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
-                        <span aria-hidden="true">&raquo;&raquo;</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link">&raquo;</span>
-                </li>
-                <li class="page-item disabled">
-                    <span class="page-link">&raquo;&raquo;</span>
-                </li>
-            <?php endif; ?>
-        </ul>
-    </nav>
-    <div class="text-center text-muted">
+        <?php if ($page < $total_pages): ?>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+        <?php else: ?>
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;&raquo;</span>
+            </li>
+        <?php endif; ?>
+    </ul>
+</nav>
+<div class="text-center text-muted">
     <?php echo t('page');?> <?php echo $page; ?> <?php echo t('page_of');?> <?php echo $total_pages; ?> 
-    </div>
+</div>
 <?php endif; ?>
 <!-- View Item Modal -->
 <div class="modal fade" id="viewItemModal" tabindex="-1" aria-labelledby="viewItemModalLabel" aria-hidden="true">
@@ -1666,6 +529,7 @@ table th{
             </div>
             <div class="modal-body">
                 <div class="row">
+                    <!-- Left Table (Basic Info) -->
                     <div class="col-md-6">
                         <table class="table table-bordered">
                             <tr>
@@ -1688,14 +552,29 @@ table th{
                                 <th><?php echo t('item_size');?></th>
                                 <td id="view_size"></td>
                             </tr>
+                             <tr>
+                                <th><?php echo t('item_remark');?></th>
+                                <td id="view_remark"></td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Right Table (Code/Category) -->
+                    <div class="col-md-6">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="40%"><?php echo t('item_code');?></th>
+                                <td id="view_item_code"></td>
+                            </tr>
+                            <tr>
+                                <th><?php echo t('category');?></th>
+                                <td id="view_category"></td>
+                            </tr>
                             <tr>
                                 <th><?php echo t('item_location');?></th>
                                 <td id="view_location"></td>
                             </tr>
-                            <tr>
-                                <th><?php echo t('item_remark');?></th>
-                                <td id="view_remark"></td>
-                            </tr>
+                           
                         </table>
                     </div>
                 </div>
@@ -1741,7 +620,7 @@ table th{
                         <!-- First item row -->
                         <div class="item-row mb-3 border p-3">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label for="location_id" class="form-label"><?php echo t('location_column');?></label>
                                     <select class="form-select" id="location_id" name="location_id[]" required>
                                         <option value=""><?php echo t('item_locations');?></option>
@@ -1750,34 +629,49 @@ table th{
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('item_code');?></label>
+                                    <input type="text" class="form-control" name="item_code[]">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('category');?></label>
+                                    <select class="form-select" name="category_id[]" required>
+                                        <option value=""><?php echo t('select_category');?></option>
+                                        <?php 
+                                        $stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
+                                        $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                        foreach ($categories as $category): ?>
+                                            <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6">
                                     <label class="form-label"><?php echo t('item_name');?></label>
                                     <input type="text" class="form-control" name="name[]" required>
                                 </div>
-                            </div>
-                            <div class="row">
                                 <div class="col-md-6">
                                     <label class="form-label"><?php echo t('item_qty');?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
                                 </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-4">
-                                <label class="form-label"><?php echo t('low_stock_title');?></label>
-                                 <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
-                                 </div>
-                                <div class="col-md-6">
+                                    <label class="form-label"><?php echo t('low_stock_title');?></label>
+                                    <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
+                                </div>
+                                <div class="col-md-4">
                                     <label class="form-label"><?php echo t('item_size');?></label>
                                     <input type="text" class="form-control" name="size[]">
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-10 mb-3">
+                                <div class="col-md-4">
                                     <label class="form-label"><?php echo t('item_remark');?></label>
                                     <input type="text" class="form-control" name="remark[]">
                                 </div>
-                                
                             </div>
                             <div class="row">
-                            <div class="col-md-2 mb-3">
+                                <div class="col-md-12 mb-3">
                                     <label class="form-label"><?php echo t('item_photo');?></label>
                                     <input type="file" class="form-control" name="images[0][]" multiple accept="image/*">
                                     <div class="image-preview-container mt-2 row g-1" id="image-preview-0"></div>
@@ -1827,76 +721,7 @@ table th{
         </div>
     </div>
 </div>
-<!-- Edit Item Modal -->
-<div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="id" id="edit_id">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="editItemModalLabel"><?php echo t('edit_item');?></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_invoice_no" class="form-label"><?php echo t('item_invoice');?></label>
-                            <input type="text" class="form-control" id="edit_invoice_no" name="invoice_no" >
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_date" class="form-label"><?php echo t('item_date');?></label>
-                            <input type="date" class="form-control" id="edit_date" name="date" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_name" class="form-label"><?php echo t('item_name');?></label>
-                            <input type="text" class="form-control" id="edit_name" name="name" required>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="edit_quantity" class="form-label"><?php echo t('item_qty');?></label>
-                            <input type="number" class="form-control" id="edit_quantity" name="quantity" step="0.5" min="0.5" required>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="edit_size" class="form-label"><?php echo t('item_size');?></label>
-                            <input type="text" class="form-control" id="edit_size" name="size">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_location_id" class="form-label"><?php echo t('location_column');?></label>
-                            <select class="form-select" id="edit_location_id" name="location_id" required>
-                                <option value=""><?php echo t('item_locations');?></option>
-                                <?php foreach ($locations as $location): ?>
-                                    <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_remark" class="form-label"><?php echo t('item_remark');?></label>
-                            <input type="text" class="form-control" id="edit_remark" name="remark">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_images" class="form-label"><?php echo t('item_photo');?></label>
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> <?php echo t('item_photo2');?>
-                        </div>
-                        <input type="file" class="form-control" id="edit_images" name="images[]" multiple accept="image/*">
-                        <small class="text-muted"><?php echo t('item_photo1');?></small>
-                        <div class="mt-3 row" id="current_images">
-                            <!-- Current images will be loaded here -->
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
-                    <button type="submit" name="edit_item" class="btn btn-warning"><?php echo t('form_update');?></button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+
 <!-- Add Quantity Modal -->
 <div class="modal fade" id="addQtyModal" tabindex="-1" aria-labelledby="addQtyModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -2353,28 +1178,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Handle confirm delete button click
-document.getElementById('confirmImageDeleteBtn').addEventListener('click', function() {
-    if (pendingImageDelete && pendingImageElement) {
-        // Create hidden input to mark image for deletion
-        const deleteInput = document.createElement('input');
-        deleteInput.type = 'hidden';
-        deleteInput.name = 'delete_images[]';
-        deleteInput.value = pendingImageDelete;
-        document.querySelector('#editItemModal form').appendChild(deleteInput);
-        
-        // Remove the image element
-        pendingImageElement.remove();
-        
-        // Hide the modal
-        const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteImageConfirmModal'));
-        deleteModal.hide();
-        
-        // Reset variables
-        pendingImageDelete = null;
-        pendingImageElement = null;
-    }
-});
+
     // Delete confirmation modal handler
 document.addEventListener('DOMContentLoaded', function() {
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
@@ -2390,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const itemLocation = this.getAttribute('data-location');
             
             // Set the delete URL
-            deleteUrl = `item-control.php?delete=${itemId}`;
+            deleteUrl = `stock-in.php?delete=${itemId}`;
             
             // Update modal content
             document.getElementById('deleteItemInfo').innerHTML = `
@@ -2498,7 +1302,7 @@ document.getElementById('add-more-row').addEventListener('click', function() {
     newRow.className = 'item-row mb-3 border p-3';
     newRow.innerHTML = `
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label"><?php echo t('location_column');?></label>
                 <select class="form-select" name="location_id[]" required>
                     <option value=""><?php echo t('item_locations');?></option>
@@ -2509,16 +1313,31 @@ document.getElementById('add-more-row').addEventListener('click', function() {
                     <?php endforeach; ?>
                 </select>
             </div>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('item_code');?></label>
+                <input type="text" class="form-control" name="item_code[]">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('category');?></label>
+                <select class="form-select" name="category_id[]">
+                    <option value=""><?php echo t('select_category');?></option>
+                    <?php foreach ($categories as $category): ?>
+                        <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+        <div class="row">
             <div class="col-md-6">
                 <label class="form-label"><?php echo t('item_name');?></label>
                 <input type="text" class="form-control" name="name[]" required>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label class="form-label"><?php echo t('item_qty');?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
             </div>
+        </div>
+        <div class="row">
             <div class="col-md-4">
                 <label class="form-label"><?php echo t('low_stock_title');?></label>
                 <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10">
@@ -2527,23 +1346,18 @@ document.getElementById('add-more-row').addEventListener('click', function() {
                 <label class="form-label"><?php echo t('item_size');?></label>
                 <input type="text" class="form-control" name="size[]">
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-10 mb-3">
+            <div class="col-md-4">
                 <label class="form-label"><?php echo t('item_remark');?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
-            
         </div>
         <div class="row">
-
-        <div class="col-md-2 mb-3">
+            <div class="col-md-12 mb-3">
                 <label class="form-label"><?php echo t('item_photo');?></label>
                 <input type="file" class="form-control item-images-input" name="images[${rowCount}][]" multiple accept="image/*">
                 <div class="image-preview-container mt-2 row g-1" id="image-preview-${rowCount}"></div>
             </div>
-
-            </div>
+        </div>
         <button type="button" class="btn btn-danger btn-sm remove-row">
             <i class="bi bi-trash"></i> <?php echo t('del_row');?>
         </button>
@@ -2661,96 +1475,6 @@ function updateDeductItemSelect(selectElement, locationId) {
     }
 }
 
-// Handle add more row for deduct quantity modal
-document.getElementById('deduct-qty-more-row').addEventListener('click', function() {
-    const container = document.getElementById('deduct_qty_items_container');
-    const locationId = document.getElementById('deduct_location_id').value;
-    const rowCount = container.querySelectorAll('.deduct-qty-item-row').length;
-
-    if (!locationId) {
-        const locationAlertModal = new bootstrap.Modal(document.getElementById('selectLocationModal'));
-        locationAlertModal.show();
-        return;
-    }
-    
-    const newRow = document.createElement('div');
-    newRow.className = 'deduct-qty-item-row mb-3 border p-3';
-    newRow.innerHTML = `
-        <div class="row">
-            <div class="col-md-8 mb-3">
-                <label class="form-label"><?php echo t('item_name');?></label>
-                <div class="dropdown item-dropdown">
-                    <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <?php echo t('select_item');?>
-                    </button>
-                    <input type="hidden" name="item_id[]" class="item-id-input" value="">
-                    <ul class="dropdown-menu custom-dropdown-menu p-2">
-                        <li>
-                            <div class="px-2 mb-2">
-                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item');?>...">
-                            </div>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <div class="dropdown-item-container">
-                            <!-- Items will be populated here -->
-                        </div>
-                    </ul>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label"><?php echo t('item_qty');?></label>
-                <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label"><?php echo t('item_size');?></label>
-                <input type="text" class="form-control" name="size[]"readonly>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label"><?php echo t('item_remark');?></label>
-                <input type="text" class="form-control" name="remark[]">
-            </div>
-        </div>
-        <button type="button" class="btn btn-danger btn-sm remove-row">
-            <i class="bi bi-trash"></i> <?php echo t('del_row');?>
-        </button>
-    `;
-    
-    container.appendChild(newRow);
-    
-    // Initialize the dropdown for the new row
-    const dropdown = newRow.querySelector('.item-dropdown');
-    populateItemDropdown(dropdown, locationId);
-    
-    // Initialize Bootstrap dropdown
-    new bootstrap.Dropdown(newRow.querySelector('.dropdown-toggle'));
-    
-    // Add event listener for the remove button
-    newRow.querySelector('.remove-row').addEventListener('click', function() {
-        newRow.remove();
-    });
-
-    // Add validation for quantity input
-    const newQuantityInput = newRow.querySelector('input[name="quantity[]"]');
-    if (newQuantityInput) {
-        newQuantityInput.addEventListener('input', function() {
-            const itemIdInput = newRow.querySelector('.item-id-input');
-            if (itemIdInput && itemIdInput.value) {
-                const selectedItem = itemsByLocation[locationId].find(item => item.id == itemIdInput.value);
-                if (selectedItem) {
-                    const max = parseFloat(selectedItem.quantity);
-                    const value = parseFloat(this.value);
-                    
-                    if (!isNaN(max) && !isNaN(value) && value > max) {
-                        this.value = max;
-                        alert('You cannot deduct more than the available quantity');
-                    }
-                }
-            }
-        });
-    }
-});
 
 // Setup search functionality for a specific row
 function setupSearchableDropdownForRow(searchInput, selectElement) {
@@ -2898,90 +1622,6 @@ if (!locationId) {
     });
 });
 
-// Handle edit item button click - fixed version
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.edit-item').forEach(button => {
-        button.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const invoice_no = this.getAttribute('data-invoice_no');
-            const date = this.getAttribute('data-date');
-            const name = this.getAttribute('data-name');
-            const quantity = this.getAttribute('data-quantity');
-            const size = this.getAttribute('data-size');
-            const location_id = this.getAttribute('data-location_id');
-            const remark = this.getAttribute('data-remark');
-            
-            // Set basic form values
-            document.getElementById('edit_id').value = id;
-            document.getElementById('edit_invoice_no').value = invoice_no;
-            document.getElementById('edit_date').value = date;
-            document.getElementById('edit_name').value = name;
-            document.getElementById('edit_quantity').value = quantity;
-            document.getElementById('edit_size').value = size;
-            document.getElementById('edit_location_id').value = location_id;
-            document.getElementById('edit_remark').value = remark || '';
-            
-            // Clear previous images
-            const container = document.getElementById('current_images');
-            container.innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>';
-            
-            // Initialize the modal
-            const editModal = new bootstrap.Modal(document.getElementById('editItemModal'));
-            editModal.show();
-            
-            // Fetch and display images
-            fetch(`get_item_images.php?id=${id}`)
-                .then(response => response.json())
-                .then(images => {
-                    const container = document.getElementById('current_images');
-                    container.innerHTML = '';
-                    
-                    if (images.length === 0) {
-                        container.innerHTML = '<div class="col-12 text-muted">No images available</div>';
-                        return;
-                    }
-                    
-                    images.forEach(image => {
-                        const col = document.createElement('div');
-                        col.className = 'col-md-3 mb-3 position-relative';
-                        col.style.width = '150px';
-                        col.style.height = '150px';
-                        
-                        const img = document.createElement('img');
-                        img.src = `display_image.php?id=${image.id}`;
-                        img.className = 'img-thumbnail w-100 h-100';
-                        img.style.objectFit = 'cover';
-                        
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
-                        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
-                        deleteBtn.title = 'Delete this image';
-                        deleteBtn.dataset.imageId = image.id;
-                        
-                        deleteBtn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            const imageId = this.getAttribute('data-image-id');
-                            pendingImageDelete = imageId;
-                            pendingImageElement = this.closest('.col-md-3');
-                            
-                            // Show the confirmation modal
-                            const deleteModal = new bootstrap.Modal(document.getElementById('deleteImageConfirmModal'));
-                            deleteModal.show();
-                        });
-                        
-                        col.appendChild(img);
-                        col.appendChild(deleteBtn);
-                        container.appendChild(col);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching images:', error);
-                    const container = document.getElementById('current_images');
-                    container.innerHTML = '<div class="col-12 text-danger">Error loading images</div>';
-                });
-        });
-    });
-});
 // Add event listener for item selection in add quantity modal
 document.addEventListener('change', function(e) {
     if (e.target.classList.contains('add-item-select')) {
@@ -3025,32 +1665,7 @@ document.addEventListener('change', function(e) {
 let pendingFileInput = null;
 let pendingPreviewContainer = null;
 
-document.getElementById('edit_images').addEventListener('change', function(e) {
-    const previewContainer = document.getElementById('current_images');
-    
-    // Clear only previews (not existing images)
-    const previews = previewContainer.querySelectorAll('img[src^="blob:"]');
-    previews.forEach(preview => preview.parentNode.remove());
-    
-    // Check if there are existing images
-    const existingImages = previewContainer.querySelectorAll('img:not([src^="blob:"])');
-    
-    if (existingImages.length > 0 && this.files.length > 0) {
-        // Store references for later use
-        pendingFileInput = this;
-        pendingPreviewContainer = previewContainer;
-        
-        // Show confirmation modal
-        const replaceModal = new bootstrap.Modal(document.getElementById('replaceImageConfirmModal'));
-        replaceModal.show();
-        
-        // Don't proceed further yet - wait for user confirmation
-        return;
-    }
-    
-    // If no existing images, process immediately
-    processNewImages(this, previewContainer);
-});
+
 
 // Handle confirm button click
 document.getElementById('confirmReplaceBtn').addEventListener('click', function() {
@@ -3157,7 +1772,7 @@ document.getElementById('deduct_location_id').addEventListener('change', functio
 document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
     img.addEventListener('click', function() {
         const itemId = this.getAttribute('data-item-id');
-        fetch(`get_item_images.php?id=${itemId}`)
+        fetch(`get_item_history_images.php?id=${itemId}`)
             .then(response => response.json())
             .then(images => {
                 const carouselInner = document.getElementById('carousel-inner');
@@ -3200,7 +1815,7 @@ document.querySelectorAll('.view-item').forEach(button => {
         document.getElementById('view_images').innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>';
         
         // Fetch item details
-        fetch(`get_item_details.php?id=${itemId}`)
+        fetch(`get_item_history_details.php?id=${itemId}`)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
@@ -3208,6 +1823,8 @@ document.querySelectorAll('.view-item').forEach(button => {
             .then(data => {
                 // Update basic info - access the 'item' property
                 const item = data.item;
+                document.getElementById('view_item_code').textContent = item.item_code || 'N/A';
+                document.getElementById('view_category').textContent = item.category_name || 'N/A';
                 document.getElementById('view_invoice_no').textContent = item.invoice_no || 'N/A';
                 document.getElementById('view_date').textContent = item.date || 'N/A';
                 document.getElementById('view_name').textContent = item.name || 'N/A';
@@ -3335,5 +1952,5 @@ setupSearchableDropdown('deduct_item_id');
 </script>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

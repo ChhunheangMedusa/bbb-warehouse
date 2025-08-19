@@ -2,7 +2,7 @@
 $host = 'localhost';
 $db   = 'warehouse_management';
 $user = 'root';
-$pass = 'Ningrong792668@';
+$pass = 'bbb@warehouse';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";

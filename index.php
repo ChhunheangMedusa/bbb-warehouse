@@ -20,114 +20,125 @@ $error = '';
 // Regular login processing
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitizeInput($_POST['username']);
-    $password = $_POST['password'];
+    $password = $_POST['password'] ?? ''; // Make password optional
     
-    // Validate password length
-    if (strlen($password) < 8) {
-        $error = "ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងហោចណាស់ ៨ តួអក្សរ។";
-    } else {
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-        $stmt->execute([$username]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($user) {
-            // Check if user is blocked in database
-            if ($user['is_blocked']) {
-                $error = "គណនីអ្នកត្រូវបានរារាំង។ សូមទាក់ទងអ្នកគ្រប់គ្រង។";
-            } 
-            // Check if user is temporarily blocked in session
-            else if (isset($_SESSION['login_blocked_users'][$user['id']])) {
-                $block_time = $_SESSION['login_blocked_users'][$user['id']];
-                if ($block_time > time()) {
-                    $remaining_time = $block_time - time();
-                    $minutes = ceil($remaining_time / 60);
-                    $error = "សូមរង់ចាំ $minutes នាទី មុនពេលព្យាយាមម្តងទៀត។";
-                } else {
-                    // Block time has expired, remove from blocked users
-                    unset($_SESSION['login_blocked_users'][$user['id']]);
-                }
+    // First check if user exists
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->execute([$username]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($user) {
+        // Check if user is blocked
+        if ($user['is_blocked']) {
+            $error = "គណនីអ្នកត្រូវបានរារាំង។ សូមទាក់ទងអ្នកគ្រប់គ្រង។";
+        } 
+        // Check if user is temporarily blocked
+        else if (isset($_SESSION['login_blocked_users'][$user['id']])) {
+            $block_time = $_SESSION['login_blocked_users'][$user['id']];
+            if ($block_time > time()) {
+                $remaining_time = $block_time - time();
+                $minutes = ceil($remaining_time / 60);
+                $error = "សូមរង់ចាំ $minutes នាទី មុនពេលព្យាយាមម្តងទៀត។";
             } else {
-                if (password_verify($password, $user['password'])) {
-                    // Reset login attempts for this user in database
-                    $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
-                    $resetStmt->execute([$user['id']]);
-                    
-                    // Set session variables
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['user_type'] = $user['user_type'];
-                    $_SESSION['email'] = $user['email'];
-                    $_SESSION['picture'] = $user['picture'];
-                    $_SESSION['show_welcome'] = true;
-                    logActivity($user['id'], 'Login', "User logged in: {$username} ");
-                    
-                    // Redirect based on user type
-                    $dashboard = ($user['user_type'] == 'admin') ? 'dashboard.php' : 'dashboard-staff.php';
-                    
-                    if (isset($_SESSION['redirect_url'])) {
-                        $redirect_url = $_SESSION['redirect_url'];
-                        unset($_SESSION['redirect_url']);
-                        header("Location: $redirect_url");
-                    } else {
-                        header("Location: $dashboard");
-                    }
-                    exit();
-                } else {
-                    // Increment login attempts in database
-                    $attemptStmt = $pdo->prepare("UPDATE users SET login_attempts = login_attempts + 1, last_attempt_time = NOW() WHERE id = ?");
-                    $attemptStmt->execute([$user['id']]);
-                    
-                    // Get updated attempt count
-                    $stmt = $pdo->prepare("SELECT login_attempts FROM users WHERE id = ?");
-                    $stmt->execute([$user['id']]);
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $current_attempts = $result['login_attempts'];
-                    
-                    // Progressive blocking system for this user
-                    if ($current_attempts > 7) {
-                        // Permanently block the user (admin must unblock)
-                        try {
-                            $blockStmt = $pdo->prepare("UPDATE users SET is_blocked = TRUE, block_reason = 'Too many failed login attempts' WHERE id = ?");
-                            $blockStmt->execute([$user['id']]);
-                            
-                            $error = "គណនីអ្នកត្រូវបានរារាំងដោយសារព្យាយាមចូលច្រើនដងពេក។ សូមទាក់ទងអ្នកគ្រប់គ្រង។";
-                        } catch (PDOException $e) {
-                            $error = "កំហុសក្នុងការរារាំងគណនី។";
+                unset($_SESSION['login_blocked_users'][$user['id']]);
+            }
+        } else {
+            // Handle guest login (no password required)
+            if ($user['user_type'] === 'guest') {
+                // Set session variables
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['user_type'] = $user['user_type'];
+                $_SESSION['email'] = $user['email'];
+                $_SESSION['picture'] = $user['picture'];
+                $_SESSION['show_welcome'] = true;
+                logActivity($user['id'], 'Login', "Guest user logged in: {$username} ");
+                
+                // Redirect guest to stock-in.php
+                header("Location: Guest/stock-in.php");
+                exit();
+            }
+            // Handle regular users (with password)
+            else {
+                // Password is required for non-guest users
+                if (empty($password)) {
+                    $error = "សូមបញ្ចូលពាក្យសម្ងាត់។";
+                } 
+                // Validate password length
+                else if (strlen($password) < 8) {
+                    $error = "ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងហោចណាស់ ៨ តួអក្សរ។";
+                }  else if (password_verify($password, $user['password'])) {
+                        // Reset login attempts for this user in database
+                        $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
+                        $resetStmt->execute([$user['id']]);
+                        
+                        // Set session variables
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['user_type'] = $user['user_type'];
+                        $_SESSION['email'] = $user['email'];
+                        $_SESSION['picture'] = $user['picture'];
+                        $_SESSION['show_welcome'] = true;
+                        logActivity($user['id'], 'Login', "User logged in: {$username} ");
+                        
+                        // Redirect based on user type
+                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
+                        
+                        if (isset($_SESSION['redirect_url'])) {
+                            $redirect_url = $_SESSION['redirect_url'];
+                            unset($_SESSION['redirect_url']);
+                            header("Location: $redirect_url");
+                        } else {
+                            header("Location: $dashboard");
                         }
-                    } elseif ($current_attempts == 7) {
-                        $_SESSION['login_blocked_users'][$user['id']] = time() + 300; // 5 minutes
-                        $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
-                    } elseif ($current_attempts >= 5 && $current_attempts <=6) {
-                        $_SESSION['login_blocked_users'][$user['id']] = time() + 180; // 3 minutes
-                        $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 3 នាទី។";
-                    } elseif ($current_attempts >= 3 && $current_attempts <=4) {
-                        $_SESSION['login_blocked_users'][$user['id']] = time() + 60; // 1 minute
-                        $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 1 នាទី។";
+                        exit();
                     } else {
-                        $error = "ពាក្យសម្ងាត់មិនត្រឹមត្រូវ។ អ្នកមាន ".(3 - $current_attempts)." ដងទៀតដើម្បីព្យាយាម។";
+                        // Reset login attempts
+                        $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
+                        $resetStmt->execute([$user['id']]);
+                        
+                        // Set session variables
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['user_type'] = $user['user_type'];
+                        $_SESSION['email'] = $user['email'];
+                        $_SESSION['picture'] = $user['picture'];
+                        $_SESSION['show_welcome'] = true;
+                        logActivity($user['id'], 'Login', "User logged in: {$username} ");
+                        
+                        // Redirect based on user type
+                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
+                        
+                        if (isset($_SESSION['redirect_url'])) {
+                            $redirect_url = $_SESSION['redirect_url'];
+                            unset($_SESSION['redirect_url']);
+                            header("Location: $redirect_url");
+                        } else {
+                            header("Location: $dashboard");
+                        }
+                        exit();
                     }
                 }
             }
         } else {
-            // User doesn't exist - we can't track attempts in DB for non-existent users
-            // So we'll use session for unknown usernames
-            if (!isset($_SESSION['unknown_user_attempts'][$username])) {
-                $_SESSION['unknown_user_attempts'][$username] = 0;
-            }
-            $_SESSION['unknown_user_attempts'][$username]++;
-            $current_attempts = $_SESSION['unknown_user_attempts'][$username];
-            
-            if ($current_attempts > 7) {
-                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 24 ម៉ោង។";
-            } elseif ($current_attempts == 7) {
-                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
-            } elseif ($current_attempts >= 5) {
-                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 3 នាទី។";
-            } elseif ($current_attempts >= 3) {
-                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 1 នាទី។";
-            } else {
-                $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។ អ្នកមាន ".(3 - $current_attempts)." ដងទៀតដើម្បីព្យាយាម។";
-            }
+        // User doesn't exist - we can't track attempts in DB for non-existent users
+        // So we'll use session for unknown usernames
+        if (!isset($_SESSION['unknown_user_attempts'][$username])) {
+            $_SESSION['unknown_user_attempts'][$username] = 0;
+        }
+        $_SESSION['unknown_user_attempts'][$username]++;
+        $current_attempts = $_SESSION['unknown_user_attempts'][$username];
+        
+        if ($current_attempts > 7) {
+            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 24 ម៉ោង។";
+        } elseif ($current_attempts == 7) {
+            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
+        } elseif ($current_attempts >= 5) {
+            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 3 នាទី។";
+        } elseif ($current_attempts >= 3) {
+            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 1 នាទី។";
+        } else {
+            $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។ អ្នកមាន ".(3 - $current_attempts)." ដងទៀតដើម្បីព្យាយាម។";
         }
     }
 }
@@ -394,7 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-    <div class="login-box">
+<div class="login-box">
         <div class="login-header">
             <img src="assets/images/white_logo.png" alt="Logo">
             <h3>ប្រព័ន្ធគ្រប់គ្រងឃ្លាំង</h3>
@@ -411,20 +422,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label for="username" class="form-label">ឈ្មោះអ្នកប្រើប្រាស់</label>
                     <input type="text" class="form-control" id="username" name="username" required>
-                    <i class="bi bi-person input-icon"style="margin-top:17px;"></i>
+                    <i class="bi bi-person input-icon" style="margin-top:17px;"></i>
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group" id="passwordGroup">
                     <label for="password" class="form-label">ពាក្យសម្ងាត់</label>
-                    <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                    <input type="password" class="form-control" id="password" name="password" minlength="8">
                     <i class="bi bi-eye-slash input-icon" id="togglePassword" style="margin-top:6px;"></i>
                     <a href="forgot-password.php" class="text-primary">ភ្លេចពាក្យសម្ងាត់?</a>
                 </div>
                 
-               
-                    
-                
-
                 <button type="submit" class="btn-login" id="loginButton">
                     <i class="bi bi-box-arrow-in-right"></i> ចូល
                 </button>
@@ -465,6 +472,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             icon.classList.add('bi-eye-slash');
         }
     });
+
+ // Update the username blur event to make an AJAX call to check user type
+document.getElementById('username').addEventListener('blur', function() {
+    const username = this.value.trim();
+    if (username) {
+        fetch('check_user_type.php?username=' + encodeURIComponent(username))
+            .then(response => response.json())
+            .then(data => {
+                const passwordGroup = document.getElementById('passwordGroup');
+                if (data.user_type === 'guest') {
+                    passwordGroup.style.display = 'none';
+                    document.getElementById('password').removeAttribute('required');
+                } else {
+                    passwordGroup.style.display = 'block';
+                    document.getElementById('password').setAttribute('required', 'required');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking user type:', error);
+            });
+    }
+});
 
     // Show modal if there's an error
     <?php if ($error): ?>
@@ -531,6 +560,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         });
     <?php endif; ?>
-</script>
+    </script>
 </body>
 </html>

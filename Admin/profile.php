@@ -1,6 +1,6 @@
 <?php
 ob_start();
-require_once 'includes/header.php';
+require_once '../includes/header.php';
 require_once  'translate.php'; 
 checkAuth();
 
@@ -736,7 +736,7 @@ body {
                         </div>
                         
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="dashboard.php" class="btn btn-secondary">
+                            <a href="../Admin/dashboard.php" class="btn btn-secondary">
                                 <i class="bi bi-arrow-left"></i> <?php echo t('return');?>
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -771,5 +771,5 @@ function previewImage(input) {
 </script>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

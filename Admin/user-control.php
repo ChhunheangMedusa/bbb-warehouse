@@ -2,10 +2,10 @@
 ob_start();
 
 // Includes in correct order
-require_once 'config/database.php';
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
-require_once 'includes/header.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once '../includes/auth.php';
+require_once '../includes/header.php';
 require_once  'translate.php'; 
 if (!isAdmin()) {
   $_SESSION['error'] = "You don't have permission to access this page";
@@ -23,7 +23,7 @@ checkAdminAccess();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
   // Validate required fields
-  $required = ['username', 'password', 'user_type', 'email'];
+  $required = ['username', 'user_type'];
   foreach ($required as $field) {
       if (empty($_POST[$field])) {
           $_SESSION['error'] = "Please fill in all required fields";
@@ -32,18 +32,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
       }
   }
 
-  // Check password match
-  if ($_POST['password'] !== $_POST['confirm_password']) {
-      $_SESSION['error'] = "Passwords do not match";
-      redirect('user-control.php');
-      exit();
+  $user_type = sanitizeInput($_POST['user_type']);
+  
+  // Only validate password if not guest
+  if ($user_type !== 'guest') {
+      if (empty($_POST['password'])) {
+          $_SESSION['error'] = "Please fill in all required fields";
+          redirect('user-control.php');
+          exit();
+      }
+
+      // Check password match
+      if ($_POST['password'] !== $_POST['confirm_password']) {
+          $_SESSION['error'] = "Passwords do not match";
+          redirect('user-control.php');
+          exit();
+      }
+      
+      $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+  } else {
+      // For guest users, set a default password or leave it empty if your system allows
+      $password = password_hash('guest123', PASSWORD_DEFAULT); // Example default password
   }
 
   $username = sanitizeInput($_POST['username']);
-  $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-  $user_type = sanitizeInput($_POST['user_type']);
-  $phone_number = sanitizeInput($_POST['phone_number'] ?? '');
-  $email = sanitizeInput($_POST['email']);
+  $phone_number = $user_type !== 'guest' ? sanitizeInput($_POST['phone_number'] ?? '') : '';
+  $email = $user_type !== 'guest' ? sanitizeInput($_POST['email']) : '';
   
   // Check for duplicate username
   $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
@@ -54,18 +68,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
       exit();
   }
 
-  // Check for duplicate email
-  $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-  $stmt->execute([$email]);
-  if ($stmt->fetch()) {
-      $_SESSION['error'] = "Email already exists";
-      redirect('user-control.php');
-      exit();
+  // Only check email if not guest
+  if ($user_type !== 'guest') {
+      // Check for duplicate email
+      $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+      $stmt->execute([$email]);
+      if ($stmt->fetch()) {
+          $_SESSION['error'] = "Email already exists";
+          redirect('user-control.php');
+          exit();
+      }
   }
 
-  // Handle file upload
+  // Handle file upload only if not guest
   $picture = null;
-  if (isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
+  if ($user_type !== 'guest' && isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
       $file = $_FILES['picture'];
       
       // Validate file type
@@ -104,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
   // Validate required fields
-  $required = ['id', 'username', 'user_type', 'email'];
+  $required = ['id', 'username', 'user_type'];
   foreach ($required as $field) {
       if (empty($_POST[$field])) {
           $_SESSION['error'] = "Please fill in all required fields";
@@ -114,9 +131,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
   }
 
   $id = $_POST['id'];
+  $user_type = sanitizeInput($_POST['user_type']);
   
-  // First get the current user data
-  $stmt = $pdo->prepare("SELECT username, user_type, email FROM users WHERE id = ?");
+  // Get current user data
+  $stmt = $pdo->prepare("SELECT username, password, user_type, email, phone_number, picture FROM users WHERE id = ?");
   $stmt->execute([$id]);
   $current_user = $stmt->fetch(PDO::FETCH_ASSOC);
   
@@ -127,48 +145,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
   }
 
   $username = sanitizeInput($_POST['username']);
-  $user_type = sanitizeInput($_POST['user_type']);
-  $phone_number = sanitizeInput($_POST['phone_number'] ?? '');
-  $email = sanitizeInput($_POST['email']);
+  $password = $current_user['password']; // Keep current password
   
-  // Initialize change log
-  $changes = [];
+  // Handle other fields
+  $phone_number = $user_type !== 'guest' ? sanitizeInput($_POST['phone_number'] ?? '') : '';
+  $email = $user_type !== 'guest' ? sanitizeInput($_POST['email'] ?? '') : '';
   
-  // Check for changes and log them
-  if ($current_user['username'] !== $username) {
-      $changes[] = "Updated username ({$current_user['username']}) : {$current_user['username']} → {$username}";
-  }
-  
-  if ($current_user['user_type'] !== $user_type) {
-      $changes[] = "Updated role ({$current_user['username']}) : {$current_user['username']} ({$current_user['user_type']} → {$user_type})";
-  }
-  
-  if ($current_user['email'] !== $email) {
-      $changes[] = "Updated email ({$current_user['username']}) : {$current_user['username']} ({$current_user['email']} → {$email})";
-  }
-
-  // Check for duplicate username (excluding current user)
-  $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-  $stmt->execute([$username, $id]);
-  if ($stmt->fetch()) {
-      $_SESSION['error'] = "Username already exists";
-      redirect('user-control.php');
-      exit();
-  }
-
-  // Check for duplicate email (excluding current user)
-  $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-  $stmt->execute([$email, $id]);
-  if ($stmt->fetch()) {
-      $_SESSION['error'] = "Email already exists";
-      redirect('user-control.php');
-      exit();
-  }
-
-  // Handle picture update
+  // Handle picture upload only for non-guest users
   $picture = null;
   $update_picture = false;
-  if (isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
+  if ($user_type !== 'guest' && isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
       $file = $_FILES['picture'];
       
       // Validate file type
@@ -181,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
           exit();
       }
       
-      // Validate file size (e.g., 2MB max)
+      // Validate file size
       if ($file['size'] > 2097152) {
           $_SESSION['error'] = "File size must be less than 2MB";
           redirect('user-control.php');
@@ -190,9 +176,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
       
       $picture = file_get_contents($file['tmp_name']);
       $update_picture = true;
-      $changes[] = "Updated image ({$current_user['username']})";
   }
   
+  // Prepare log messages for changes
+  $log_messages = [];
+  $has_changes = false;
+  
+  // Check for username change
+  if ($current_user['username'] !== $username) {
+      $log_messages[] = " Username ( {$current_user['username']} → {$username} )";
+      $has_changes = true;
+  }
+  
+  // Check for user type change
+  if ($current_user['user_type'] !== $user_type) {
+      $log_messages[] = " Role ( {$current_user['user_type']} → {$user_type} )";
+      $has_changes = true;
+  }
+  
+  // Check for email change (only if not guest)
+  if ($user_type !== 'guest' && isset($current_user['email']) && $current_user['email'] !== $email) {
+      $log_messages[] = " Email ( {$current_user['email']} → {$email} )";
+      $has_changes = true;
+  }
+  
+  // Check for phone number change (only if not guest)
+  if ($user_type !== 'guest' && isset($current_user['phone_number']) && $current_user['phone_number'] !== $phone_number) {
+      $log_messages[] = " Phone Number ( {$current_user['phone_number']} → {$phone_number} )";
+      $has_changes = true;
+  }
+  
+  // Check for picture change
+  if ($update_picture) {
+      $log_messages[] = "Update Profile picture ";
+      $has_changes = true;
+  }
+  
+  // Update database
   try {
       if ($update_picture) {
           $stmt = $pdo->prepare("UPDATE users SET 
@@ -213,19 +233,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
           $stmt->execute([$username, $user_type, $phone_number, $email, $id]);
       }
       
-      // Log the changes if any
-      if (!empty($changes)) {
-          $activity_details = " " . implode(", ", $changes);
-          logActivity($_SESSION['user_id'], 'Edit user', $activity_details);
+      $_SESSION['success'] = "User updated successfully";
+      
+      // Log activity based on changes
+      if ($has_changes) {
+          if (count($log_messages) > 1) {
+              // Multiple changes - log as a single activity with all changes
+              $log_message = "Updated user ( {$current_user['username']} ) : " . implode(", ", $log_messages);
+              logActivity($_SESSION['user_id'], 'Edit User', $log_message);
+          } else {
+              // Single change - log each change separately
+              foreach ($log_messages as $message) {
+               
+                  logActivity($_SESSION['user_id'], 'Edit User', "Updated user ( {$current_user['username']} ) : " . implode(", ", $log_messages));
+              }
+          }
+      } else {
+          // No changes detected except possibly picture
+          logActivity($_SESSION['user_id'], 'Edit User', "Viewed user details for '{$username}' (ID: {$id})");
       }
       
-      $_SESSION['success'] = "User updated successfully";
       redirect('user-control.php');
   } catch (PDOException $e) {
       $_SESSION['error'] = "Error updating user: " . $e->getMessage();
       redirect('user-control.php');
   }
 }
+
 if (isset($_GET['unblock'])) {
   $id = $_GET['unblock'];
   $succ= t('unblock_success');
@@ -971,7 +1005,7 @@ body {
 }
 
 #deleteConfirmModal .btn-danger {
-    min-width: 120px;
+
     padding: 8px 20px;
     font-weight: 600;
 }
@@ -1090,6 +1124,7 @@ body {
     border: 2px solid #ffc107;
     box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
 }
+
 </style>
 
 
@@ -1307,7 +1342,6 @@ body {
 </div>
 
 
-<!-- Add User Modal -->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1321,36 +1355,37 @@ body {
                         <label for="username" class="form-label"><?php echo t('form_user');?></label>
                         <input type="text" class="form-control" id="username" name="username" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" id="password_field">
                         <label for="password" class="form-label"><?php echo t('form_psw');?></label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <input type="password" class="form-control" id="password" name="password">
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" id="confirm_password_field">
                         <label for="confirm_password" class="form-label"><?php echo t('form_cpsw');?></label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password">
                     </div>
                     <div class="mb-3">
                         <label for="user_type" class="form-label"><?php echo t('form_type');?></label>
                         <select class="form-select" id="user_type" name="user_type" required>
                             <option value="admin"><?php echo t('form_admin');?></option>
                             <option value="staff"><?php echo t('form_staff');?></option>
+                            <option value="guest"><?php echo t('form_guest');?></option>
                         </select>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" id="phone_number_field">
                         <label for="phone_number" class="form-label"><?php echo t('form_phone');?></label>
                         <input type="text" class="form-control" id="phone_number" name="phone_number">
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" id="email_field">
                         <label for="email" class="form-label"><?php echo t('form_email');?></label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+                        <input type="email" class="form-control" id="email" name="email">
                     </div>
-               <div class="mb-3">
-    <label for="picture" class="form-label"><?php echo t('form_picture');?></label>
-    <input type="file" class="form-control" id="picture" name="picture" accept="image/*"  onchange="previewAddImage(this)">
-    <div class="mt-2">
-        <img id="addPreviewImage" src="../assets/images/users/default.png" alt="Preview" class="img-thumbnail" width="100" style="display: none;">
-    </div>
-</div>
+                    <div class="mb-3" id="picture_field">
+                        <label for="picture" class="form-label"><?php echo t('form_picture');?></label>
+                        <input type="file" class="form-control" id="picture" name="picture" accept="image/*" onchange="previewAddImage(this)">
+                        <div class="mt-2">
+                            <img id="addPreviewImage" src="../assets/images/users/default.png" alt="Preview" class="img-thumbnail" width="100" style="display: none;">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
@@ -1426,7 +1461,7 @@ body {
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" enctype="multipart/form-data" >
+            <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="id" id="edit_id">
                 <div class="modal-header bg-warning text-dark">
                     <h5 class="modal-title" id="editUserModalLabel"><?php echo t('form_updateusr');?></h5>
@@ -1437,28 +1472,33 @@ body {
                         <label for="edit_username" class="form-label"><?php echo t('form_user')?></label>
                         <input type="text" class="form-control" id="edit_username" name="username" required>
                     </div>
+                    
                     <div class="mb-3">
                         <label for="edit_user_type" class="form-label"><?php echo t('form_type')?></label>
                         <select class="form-select" id="edit_user_type" name="user_type" required>
                             <option value="admin"><?php echo t('form_admin')?></option>
                             <option value="staff"><?php echo t('form_staff')?></option>
+                            <option value="guest"><?php echo t('form_guest')?></option>
                         </select>
                     </div>
-                    <div class="mb-3">
+                    
+                    <div class="mb-3" id="edit_phone_number_field">
                         <label for="edit_phone_number" class="form-label"><?php echo t('form_phone')?></label>
                         <input type="text" class="form-control" id="edit_phone_number" name="phone_number">
                     </div>
-                    <div class="mb-3">
+                    
+                    <div class="mb-3" id="edit_email_field">
                         <label for="edit_email" class="form-label"><?php echo t('form_email')?></label>
-                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                        <input type="email" class="form-control" id="edit_email" name="email">
                     </div>
-                    <div class="mb-3">
-    <label for="edit_picture" class="form-label"><?php echo t('form_picture')?></label>
-    <input type="file" class="form-control" id="edit_picture" name="picture" accept="image/*" onchange="previewEditImage(this)">
-    <div class="mt-2">
-        <img id="editPreviewImage" src="" alt="Current Picture" class="img-thumbnail" width="100">
-    </div>
-</div>
+                    
+                    <div class="mb-3" id="edit_picture_field">
+                        <label for="edit_picture" class="form-label"><?php echo t('form_picture')?></label>
+                        <input type="file" class="form-control" id="edit_picture" name="picture" accept="image/*" onchange="previewEditImage(this)">
+                        <div class="mt-2">
+                            <img id="editPreviewImage" src="" alt="Current Picture" class="img-thumbnail" width="100">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
@@ -1468,9 +1508,45 @@ body {
         </div>
     </div>
 </div>
-
 <script>
 
+  
+
+
+
+
+function toggleFieldsByUserType(modalType = 'add') {
+    const prefix = modalType === 'edit' ? 'edit_' : '';
+    const userType = document.getElementById(`${prefix}user_type`).value;
+    const isGuest = userType === 'guest';
+    
+    // Fields to show/hide
+    const fieldsToToggle = ['phone_number', 'email', 'picture'];
+    
+    fieldsToToggle.forEach(fieldId => {
+        const fieldGroup = document.getElementById(`${prefix}${fieldId}`)?.closest('.mb-3');
+        if (fieldGroup) {
+            fieldGroup.style.display = isGuest ? 'none' : 'block';
+        }
+    });
+    
+    // Handle preview image
+    const previewImage = document.getElementById(`${prefix}PreviewImage`);
+    if (previewImage) {
+        previewImage.style.display = isGuest ? 'none' : 'block';
+    }
+}
+
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Add User Modal
+    document.getElementById('user_type').addEventListener('change', () => toggleFieldsByUserType('add'));
+    document.getElementById('addUserModal').addEventListener('shown.bs.modal', () => toggleFieldsByUserType('add'));
+    
+    // Edit User Modal
+    document.getElementById('edit_user_type').addEventListener('change', () => toggleFieldsByUserType('edit'));
+    document.getElementById('editUserModal').addEventListener('shown.bs.modal', () => toggleFieldsByUserType('edit'));
+});
   // Add this to your existing JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Unblock user confirmation
@@ -1640,6 +1716,30 @@ document.querySelector('#addUserModal form').addEventListener('submit', async fu
         e.preventDefault();
     }
 });
+// Update the toggleFieldsByUserType function to remove password field references
+function toggleFieldsByUserType(modalType = 'add') {
+    const prefix = modalType === 'edit' ? 'edit_' : '';
+    const userType = document.getElementById(`${prefix}user_type`).value;
+    const isGuest = userType === 'guest';
+    
+    // Fields to show/hide
+    const fieldsToToggle = ['phone_number', 'email', 'picture'];
+    
+    fieldsToToggle.forEach(fieldId => {
+        const fieldGroup = document.getElementById(`${prefix}${fieldId}`)?.closest('.mb-3');
+        if (fieldGroup) {
+            fieldGroup.style.display = isGuest ? 'none' : 'block';
+        }
+    });
+    
+    // Handle preview image
+    const previewImage = document.getElementById(`${prefix}PreviewImage`);
+    if (previewImage) {
+        previewImage.style.display = isGuest ? 'none' : 'block';
+    }
+}
+
+// Remove password validation from form submission
 document.querySelector('#editUserModal form').addEventListener('submit', async function(e) {
     const username = document.getElementById('edit_username').value.trim();
     const currentId = document.getElementById('edit_id').value;
@@ -1655,8 +1755,6 @@ document.querySelector('#editUserModal form').addEventListener('submit', async f
             e.preventDefault();
             return;
         }
-        
-        // If all validations pass, allow the form to submit normally
     } catch (error) {
         console.error('Validation error:', error);
         e.preventDefault();
@@ -1789,5 +1887,5 @@ function previewEditImage(input) {
 </script>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

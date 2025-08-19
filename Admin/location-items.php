@@ -1,9 +1,9 @@
 <?php
 ob_start();
-require_once 'config/database.php';
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
-require_once 'includes/header.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once '../includes/auth.php';
+require_once '../includes/header.php';
 require_once  'translate.php'; 
 if (!isAdmin()) {
   $_SESSION['error'] = "You don't have permission to access this page";
@@ -877,7 +877,7 @@ body {
              data-bs-target="#imageGalleryModal"
              data-item-id="<?php echo $item['id']; ?>">
     <?php else: ?>
-        <span class="badge bg-secondary">No image</span>
+        <span class="badge bg-secondary"><?php echo t('no_image');?></span>
     <?php endif; ?>
 </td>
                                     
@@ -966,5 +966,5 @@ body {
 </div>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

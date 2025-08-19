@@ -17,9 +17,18 @@ $translations = [
         'low_stock' => 'ស្តុកទាប',
         'logout' => 'ចាកចេញ',
         'profile' => 'Profile',
-        'system_title' => 'ប្រព័ន្ធគ្រប់គ្រងឃ្លាំង'
+        'system_title' => 'ប្រព័ន្ធគ្រប់គ្រងឃ្លាំង',
+        'stock_in'=>'ទំនិញចូលស្តុក',
+        'stock_out'=>'ទំនិញចេញពីស្តុក',
+        'repair'=>'ទំនិញជួសជុល',
+        'transfer'=>'ទំនិញផ្ទេរចេញ',
+        'item'=>'ទំនិញ',
+        'category_management'=>'គ្រប់គ្រងប្រភេទសម្ភារៈ',
+        'remaining'=>'សម្ភារៈនៅសល់'
     ],
     'en' => [
+        'remaining'=>'Remaining',
+        'category_management'=>'Category Management',
         'dashboard' => 'Dashboard',
         'user_management' => 'User Management',
         'item_management' => 'Item Management',
@@ -30,7 +39,12 @@ $translations = [
         'low_stock' => 'Low Stock',
         'logout' => 'Logout',
         'profile' => 'Profile',
-        'system_title' => 'Stock Management System'
+        'system_title' => 'Stock Management System',
+        'stock_in'=>'Stock In',
+        'stock_out'=>'Stock Out',
+        'repair'=>'Repair',
+        'transfer'=>'Transfer',
+        'item'=>'Item'
     ]
 ];
 

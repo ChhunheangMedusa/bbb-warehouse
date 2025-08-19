@@ -187,81 +187,14 @@ $hasAvatar = ($userPicture !== null);
     </div>
     <div class="sidebar-nav">
         <ul class="nav flex-column">
+    
         <li class="nav-item">
-    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Admin/dashboard.php' ? 'active' : ''; ?>" href="../Admin/dashboard.php">
-        <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard'); ?>
-    </a>
-</li>
-       
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/user-control.php' ? 'active' : ''; ?>" href="../Admin/user-control.php">
-                    <i class="bi bi-people me-2"></i><?php echo t('user_management'); ?>
+                <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == '../Guest/stock-in.php' ? 'active' : ''; ?>" href="../Guest/stock-in.php">
+                    <i class="bi bi-box-arrow-in-down me-2"></i><?php echo t('stock_in'); ?>
                 </a>
             </li>
            
-            
-            <li class="nav-item">
-    <a class="nav-link collapsed" data-bs-toggle="collapse" href="#itemManagementCollapse" role="button" aria-expanded="false">
-        <i class="bi bi-box-seam me-2"></i><?php echo t('item_management'); ?>
-        <i class="bi bi-chevron-down ms-auto" style="font-size: 0.8rem;"></i>
-    </a>
-    <div class="collapse" id="itemManagementCollapse">
-        <ul class="nav flex-column ps-4">
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/items.php' ? 'active' : ''; ?>" href="../Admin/items.php">
-                    <i class="bi bi-box-arrow-in-down me-2"></i><?php echo t('item'); ?>
-                </a>
-            </li>
-       
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/repair.php' ? 'active' : ''; ?>" href="../Admin/repair.php">
-                    <i class="bi bi-tools me-2"></i><?php echo t('repair'); ?>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/stock-transfer.php' ? 'active' : ''; ?>" href="../Admin/stock-transfer.php">
-                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('transfer'); ?>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/remaining.php' ? 'active' : ''; ?>" href="../Admin/remaining.php">
-                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('remaining'); ?>
-                </a>
-            </li>
-        </ul>
-    </div>
-</li>
-          
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/location-control.php' ? 'active' : ''; ?>" href="../Admin/location-control.php">
-                    <i class="bi bi-pin-map me-2"></i><?php echo t('location_management'); ?>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/category.php' ? 'active' : ''; ?>" href="../Admin/category.php">
-                    <i class="bi bi-pin-map me-2"></i><?php echo t('category_management'); ?>
-                </a>
-            </li>
-   
-          
-          
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/access-log.php' ? 'active' : ''; ?>" href="../Admin/access-log.php">
-                    <i class="bi bi-clock-history me-2"></i><?php echo t('logs'); ?>
-                </a>
-            </li>
-        
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/report.php' ? 'active' : ''; ?>" href="../Admin/report.php">
-                    <i class="bi bi-file-earmark-text me-2"></i><?php echo t('reports'); ?>
-                </a>
-            </li>
-          
-            <li class="nav-item">
-                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/low-stock-alert.php' ? 'active' : ''; ?>" href="../Admin/low-stock-alert.php">
-                    <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('low_stock'); ?>
-                </a>
-            </li>
+           
         </ul>
     </div>
     <div class="sidebar-footer mt-auto p-3 text-center">
@@ -287,7 +220,7 @@ $hasAvatar = ($userPicture !== null);
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="nav-link " href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <?php if ($hasAvatar): ?>
                             <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
                         <?php else: ?>
@@ -297,11 +230,7 @@ $hasAvatar = ($userPicture !== null);
                         <?php endif; ?>
                         <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="../Admin/profile.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?></a></li>
-                    </ul>
+                   
                 </li>
             </ul>
         </div>

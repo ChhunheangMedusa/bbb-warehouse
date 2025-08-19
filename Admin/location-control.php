@@ -2,10 +2,10 @@
 ob_start();
 
 // Includes in correct order
-require_once 'config/database.php';
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
-require_once 'includes/header.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once '../includes/auth.php';
+require_once '../includes/header.php';
 require_once  'translate.php'; 
 if (!isAdmin()) {
   $_SESSION['error'] = "You don't have permission to access this page";
@@ -864,7 +864,7 @@ body {
 }
 
 #deleteConfirmModal .btn-danger {
-    min-width: 120px;
+   
     padding: 8px 20px;
     font-weight: 600;
 }
@@ -1363,5 +1363,5 @@ document.querySelectorAll('.edit-location').forEach(button => {
 </script>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>
