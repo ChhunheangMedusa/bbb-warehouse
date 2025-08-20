@@ -189,18 +189,18 @@ $stock_in_history = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th><?php echo t('no'); ?></th>
+                                <th><?php echo t('item_no'); ?></th>
                                 <th><?php echo t('item_code'); ?></th>
                                 <th><?php echo t('category'); ?></th>
-                                <th><?php echo t('invoice_no'); ?></th>
-                                <th><?php echo t('date'); ?></th>
+                                <th><?php echo t('item_invoice'); ?></th>
+                                <th><?php echo t('item_date'); ?></th>
                                 <th><?php echo t('item_name'); ?></th>
-                                <th><?php echo t('quantity'); ?></th>
+                                <th><?php echo t('item_qty'); ?></th>
                                 <th><?php echo t('action'); ?></th>
                                 <th><?php echo t('unit'); ?></th>
                                 <th><?php echo t('location'); ?></th>
-                                <th><?php echo t('remark'); ?></th>
-                                <th><?php echo t('photo'); ?></th>
+                                <th><?php echo t('item_remark'); ?></th>
+                                <th><?php echo t('item_photo'); ?></th>
                                 <th><?php echo t('action_by'); ?></th>
                                 <th><?php echo t('action_at'); ?></th>
                             </tr>

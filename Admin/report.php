@@ -555,6 +555,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_report'])) {
 ?>
 
 <style>
+    /* Your existing CSS remains unchanged */
     :root {
   --primary: #4e73df;
   --primary-dark: #2e59d9;
@@ -582,7 +583,8 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-  width: 14rem;
+  width: 220px;
+  min-width:220px;
   min-height: 100vh;
   background: #005064;
   color: var(--white);
@@ -606,12 +608,15 @@ body {
 }
 
 .sidebar .nav-link {
-  color: rgba(255, 255, 255, 0.8);
-  padding: 0.75rem 1.5rem;
-  margin: 0.25rem 1rem;
-  border-radius: 0.35rem;
-  font-weight: 500;
-  transition: all 0.3s;
+    white-space: nowrap;       /* Prevent text wrapping */
+    overflow: hidden;          /* Hide overflow */
+    text-overflow: ellipsis;   /* Show ... if text is too long */
+    padding: 0.75rem 1rem;     /* Adjust padding as needed */
+    margin: 0.25rem 0;         /* Reduce margin */
+    font-size: 0.875rem;       /* Slightly smaller font */
+    display: flex;             /* Use flexbox for alignment */
+    align-items: center;  
+    color: var(--white);     /* Center items vertically */
 }
 
 .sidebar .nav-link:hover {
@@ -628,6 +633,8 @@ body {
 .sidebar .nav-link i {
   margin-right: 0.5rem;
   font-size: 0.85rem;
+  min-width: 1.25rem;       /* Fixed width for icons */
+  text-align: center;
 }
 
 .sidebar-footer {
@@ -721,6 +728,10 @@ body {
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   border-bottom-width: 1px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  overflow: hidden;
 }
 
 .table > :not(:first-child) {
@@ -864,6 +875,10 @@ body {
   color: var(--white);
 }
 
+.pagination .page-item.disabled .page-link {
+  color: var(--secondary);
+}
+
 /* Custom Toggle Switch */
 .form-switch .form-check-input {
   width: 2.5em;
@@ -893,6 +908,208 @@ body {
 
 .form-control-file:hover::before {
   background: #e9ecef;
+}
+/* Mobile-specific styles */
+@media (max-width: 576px) {
+    /* Adjust container padding */
+    .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    
+    /* Card adjustments */
+    .card-header h5 {
+        font-size: 1rem;
+    }
+    
+    /* Table adjustments */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Pagination adjustments */
+    .pagination {
+        flex-wrap: wrap;
+    }
+    
+    .page-item {
+        margin-bottom: 0.25rem;
+    }
+    
+    .page-link {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Text adjustments */
+    h2 {
+        font-size: 1.25rem;
+    }
+    
+    /* Main content width */
+    .main-content {
+        width: 100%;
+        margin-left: 0;
+    }
+    
+    /* Sidebar adjustments */
+    .sidebar {
+        margin-left: -220px;
+        position: fixed;
+        z-index: 1040;
+    }
+    
+    .sidebar.show {
+        margin-left: 0;
+    }
+    
+    /* Navbar adjustments */
+    .navbar {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+/* Additional touch targets for mobile */
+@media (pointer: coarse) {
+    .btn, .page-link, .nav-link {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.5rem 1rem;
+    }
+    
+    .form-control, .form-select {
+        min-height: 44px;
+    }
+}
+
+/* Very small devices (portrait phones) */
+@media (max-width: 360px) {
+    .table th, .table td {
+        padding: 0.3rem;
+        font-size: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+@media (max-width: 768px) {
+    /* Make table display as cards on mobile */
+    .table-responsive table, 
+    .table-responsive thead, 
+    .table-responsive tbody, 
+    .table-responsive th, 
+    .table-responsive td, 
+    .table-responsive tr { 
+        display: block; 
+        width: 100%;
+    }
+    
+    /* Hide table headers */
+    .table-responsive thead tr { 
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    
+    .table-responsive tr {
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.35rem;
+        box-shadow: 0 0.15rem 0.75rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .table-responsive td {
+        /* Behave like a row */
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        white-space: normal;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .table-responsive td:before {
+        /* Now like a table header */
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        width: 45%; 
+        padding-right: 1rem; 
+        white-space: nowrap;
+        font-weight: bold;
+        content: attr(data-label);
+    }
+    
+    /* Remove bottom border from last td */
+    .table-responsive td:last-child {
+        border-bottom: none;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Make table cells more compact */
+    .table-responsive td {
+        padding-left: 45%;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .table-responsive td:before {
+        font-size: 0.85rem;
+        top: 0.5rem;
+    }
+}
+
+/* Filter section styles */
+.filter-section {
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .filter-group {
+        min-width: 100%;
+    }
 }
 </style>
 

@@ -19,7 +19,30 @@ checkAdminAccess();
 
 
 
+// Get filter parameters
+$username_filter = isset($_GET['username']) ? sanitizeInput($_GET['username']) : '';
+$type_filter = isset($_GET['type']) ? sanitizeInput($_GET['type']) : '';
+$month_filter = isset($_GET['month']) ? sanitizeInput($_GET['month']) : '';
+$year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'username_asc';
 
+// Validate and parse sort option
+$sort_mapping = [
+    'username_asc' => ['field' => 'username', 'direction' => 'ASC'],
+    'username_desc' => ['field' => 'username', 'direction' => 'DESC'],
+    'type_asc' => ['field' => 'user_type', 'direction' => 'ASC'],
+    'type_desc' => ['field' => 'user_type', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'created_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'created_at', 'direction' => 'DESC']
+];
+
+// Default to username_asc if invalid option
+if (!array_key_exists($sort_option, $sort_mapping)) {
+    $sort_option = 'username_asc';
+}
+
+$sort_by = $sort_mapping[$sort_option]['field'];
+$sort_order = $sort_mapping[$sort_option]['direction'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
   // Validate required fields
@@ -109,8 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
   try {
       $stmt = $pdo->prepare("INSERT INTO users (username, password, user_type, phone_number, email, picture) VALUES (?, ?, ?, ?, ?, ?)");
       $stmt->execute([$username, $password, $user_type, $phone_number, $email, $picture]);
-      
-      $_SESSION['success'] = "User added successfully";
+      $succs= t('usr_scc');
+      $_SESSION['success'] = "$succs";
       logActivity($_SESSION['user_id'], 'Create new user', "Created new user: $username");
       
       redirect('user-control.php');
@@ -232,8 +255,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
                                WHERE id = ?");
           $stmt->execute([$username, $user_type, $phone_number, $email, $id]);
       }
-      
-      $_SESSION['success'] = "User updated successfully";
+      $upt_scc=t('upt_scc');
+      $_SESSION['success'] = "$upt_scc";
       
       // Log activity based on changes
       if ($has_changes) {
@@ -307,19 +330,90 @@ $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($current_page < 1) $current_page = 1;
 $offset = ($current_page - 1) * $records_per_page;
 
-// Get all users with pagination
-$count_query = "SELECT COUNT(*) as total FROM users";
-$stmt = $pdo->query($count_query);
+// Build query for users with filters
+$query = "SELECT id, username, user_type, phone_number, email, picture, is_blocked, created_at FROM users WHERE 1=1";
+$count_query = "SELECT COUNT(*) as total FROM users WHERE 1=1";
+$params = [];
+
+if ($username_filter) {
+    $query .= " AND username LIKE :username";
+    $count_query .= " AND username LIKE :username";
+    $params[':username'] = "%$username_filter%";
+}
+
+if ($type_filter && $type_filter !== 'all') {
+    $query .= " AND user_type = :type";
+    $count_query .= " AND user_type = :type";
+    $params[':type'] = $type_filter;
+}
+
+// Add month filter condition
+if ($month_filter && $month_filter !== 'all') {
+    $query .= " AND MONTH(created_at) = :month";
+    $count_query .= " AND MONTH(created_at) = :month";
+    $params[':month'] = $month_filter;
+}
+
+// Add year filter condition
+if ($year_filter && $year_filter !== 'all') {
+    $query .= " AND YEAR(created_at) = :year";
+    $count_query .= " AND YEAR(created_at) = :year";
+    $params[':year'] = $year_filter;
+}
+
+// Add sorting
+$query .= " ORDER BY $sort_by $sort_order";
+
+// Get total count
+$stmt = $pdo->prepare($count_query);
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
+if (!$stmt->execute()) {
+    throw new Exception("Count query failed: " . implode(" ", $stmt->errorInfo()));
+}
 $total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 $total_pages = ceil($total_records / $records_per_page);
 
-$query = "SELECT id, username, user_type, phone_number, email, picture, is_blocked 
-          FROM users ORDER BY username LIMIT :limit OFFSET :offset";
+// Add pagination to main query
+$query .= " LIMIT :limit OFFSET :offset";
+
+// Get users
 $stmt = $pdo->prepare($query);
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
 $stmt->bindValue(':limit', $records_per_page, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->execute();
+
+if (!$stmt->execute()) {
+    throw new Exception("Main query failed: " . implode(" ", $stmt->errorInfo()));
+}
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get distinct user types for filter
+$stmt = $pdo->query("SELECT DISTINCT user_type FROM users ORDER BY user_type");
+$user_types = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+// Get available years from the users
+$stmt = $pdo->query("SELECT DISTINCT YEAR(created_at) as year FROM users ORDER BY year DESC");
+$available_years = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+// Month names for the dropdown
+$months = [
+    '1' => t('jan'),
+    '2' => t('feb'),
+    '3' => t('mar'),
+    '4' => t('apr'),
+    '5' => t('may'),
+    '6' => t('jun'),
+    '7' => t('jul'),
+    '8' => t('aug'),
+    '9' => t('sep'),
+    '10' => t('oct'),
+    '11' => t('nov'),
+    '12' => t('dec'),
+];
 ?>
 <style>
     :root {
@@ -1125,11 +1219,156 @@ body {
     box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
 }
 
-</style>
+/* Filter section styles */
+.filter-section {
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
 
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.sort-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+.sort-select {
+    min-width: 120px;
+}
+
+.sort-order-select {
+    min-width: 100px;
+}
+
+@media (max-width: 768px) {
+    .filter-group {
+        min-width: 100%;
+    }
+    .sort-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .sort-select, .sort-order-select {
+        min-width: 100%;
+    }
+}
+</style>
 
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('dashboard_titles');?></h2>
+    
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><?php echo t('filter_options');?></h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="filter-form">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('form_user');?></label>
+                        <input type="text" name="username" class="form-control" value="<?php echo htmlspecialchars($username_filter); ?>" placeholder="<?php echo t('search');?>">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('form_type');?></label>
+                        <select name="type" class="form-select">
+                            <option value="all"><?php echo t('type_all');?></option>
+                            <?php foreach ($user_types as $type): ?>
+                                <option value="<?php echo $type; ?>" <?php echo $type_filter == $type ? 'selected' : ''; ?>>
+                                    <?php echo $type; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('month');?></label>
+                        <select name="month" class="form-select">
+                            <option value="all"><?php echo t('all_months');?></option>
+                            <?php foreach ($months as $num => $name): ?>
+                                <option value="<?php echo $num; ?>" <?php echo $month_filter == $num ? 'selected' : ''; ?>>
+                                    <?php echo $name; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('year');?></label>
+                        <select name="year" class="form-select">
+                            <option value="all"><?php echo t('all_years');?></option>
+                            <?php foreach ($available_years as $year): ?>
+                                <option value="<?php echo $year; ?>" <?php echo $year_filter == $year ? 'selected' : ''; ?>>
+                                    <?php echo $year; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('sort');?></label>
+                        <select name="sort_option" class="form-select">
+                            <option value="username_asc" <?php echo $sort_option == 'username_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('name_a_to_z'); ?>
+                            </option>
+                            <option value="username_desc" <?php echo $sort_option == 'username_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('name_z_to_a'); ?>
+                            </option>
+                            <option value="type_asc" <?php echo $sort_option == 'type_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('type_az'); ?>
+                            </option>
+                            <option value="type_desc" <?php echo $sort_option == 'type_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('type_za'); ?>
+                            </option>
+                            <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('date_oldest_first'); ?>
+                            </option>
+                            <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('date_newest_first'); ?>
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> <?php echo t('search');?>
+                    </button>
+                    <a href="user-control.php" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> <?php echo t('reset');?>
+                    </a>
+                </div>
+                
+                <input type="hidden" name="page" value="1">
+            </form>
+        </div>
+    </div>
     
     <div class="card mb-4">
         <div class="card-header  text-white" style="background-color:#ce7e00;">
@@ -1139,10 +1378,30 @@ body {
             <h5 class="mb-0"><?php echo t('list_user');?></h5>
         </div>
         <div class="card-body">
+            <?php if (!empty($username_filter) || ($type_filter && $type_filter !== 'all') || ($month_filter && $month_filter !== 'all') || ($year_filter && $year_filter !== 'all')): ?>
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i> 
+                    <?php echo t('showing_filtered_results');?>
+                    <?php if (!empty($username_filter)): ?>
+                        <span class="badge bg-secondary"><?php echo t('form_user');?>: <?php echo htmlspecialchars($username_filter); ?></span>
+                    <?php endif; ?>
+                    <?php if ($type_filter && $type_filter !== 'all'): ?>
+                        <span class="badge bg-secondary"><?php echo t('form_type');?>: <?php echo $type_filter; ?></span>
+                    <?php endif; ?>
+                    <?php if ($month_filter && $month_filter !== 'all'): ?>
+                        <span class="badge bg-secondary"><?php echo t('month');?>: <?php echo $months[$month_filter]; ?></span>
+                    <?php endif; ?>
+                    <?php if ($year_filter && $year_filter !== 'all'): ?>
+                        <span class="badge bg-secondary"><?php echo t('year');?>: <?php echo $year_filter; ?></span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
                         <tr>
+                            <th><?php echo t('item_no');?></th>
                             <th><?php echo t('column_picture');?></th>
                             <th><?php echo t('column_user');?></th>
                             <th><?php echo t('column_type');?></th>
@@ -1153,112 +1412,138 @@ body {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($users as $user): ?>
+                        <?php if (empty($users)): ?>
                             <tr>
-                            <td>
-    <?php
-    $image_src = 'get_user_image.php?id=' . $user['id'];
-    ?>
-    <img src="<?php echo $image_src; ?>" 
-         alt="<?php echo htmlspecialchars($user['username']); ?>" 
-         class="rounded-circle" 
-         width="50" 
-         height="50"
-         style="object-fit: cover;"
-         onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2250%22%20height%3D%2250%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2050%2050%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_18a5f8a8b0a%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_18a5f8a8b0a%22%3E%3Crect%20width%3D%2250%22%20height%3D%2250%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2210%22%20y%3D%2227%22%3E50x50%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'">
-</td>
-                                <td><?php echo $user['username']; ?></td>
-                                <td><?php echo $user['user_type']; ?></td>
-                                <td><?php echo $user['phone_number'] ?? 'N/A'; ?></td>
-                                <td><?php echo $user['email']; ?></td>
-                                <td>
-                                <button class="btn btn-sm btn-warning edit-user" 
-        data-id="<?php echo $user['id']; ?>"
-        data-username="<?php echo $user['username']; ?>"
-        data-user_type="<?php echo $user['user_type']; ?>"
-        data-phone_number="<?php echo $user['phone_number']; ?>"
-        data-email="<?php echo $user['email']; ?>"
-        data-picture="<?php echo isset($user['picture']) ? '1' : '0'; ?>">
-    <i class="bi bi-pencil"></i> <?php echo t('update_button')?>
-</button>
-    <button class="btn btn-sm btn-danger delete-user" 
-        data-id="<?php echo $user['id']; ?>"
-        data-username="<?php echo htmlspecialchars($user['username']); ?>">
-    <i class="bi bi-trash"></i> <?php echo t('delete_button')?>
-</button>
-</td>
-<td>
-    <?php 
-    $is_blocked = $user['is_blocked'] ?? false; // Use null coalescing operator
-    if ($is_blocked): ?>
-        <span class="badge bg-danger"><?php echo t('block_status')?></span>
-        <button class="btn btn-sm btn-success unblock-user" 
-                data-id="<?php echo $user['id']; ?>"
-                data-username="<?php echo htmlspecialchars($user['username']); ?>">
-            <i class="bi bi-unlock"></i> <?php echo t('unblock_button')?>
-        </button>
-    <?php else: ?>
-        <span class="badge bg-success"><?php echo t('active_status')?></span>
-    <?php endif; ?>
-</td>
+                                <td colspan="8" class="text-center"><?php echo t('no_users_found');?></td>
                             </tr>
-                        <?php endforeach; ?>
-          
+                        <?php else: ?>
+                            <?php foreach ($users as $index => $user): ?>
+                                <tr>
+                                    <td><?php echo $index + 1 + $offset; ?></td>
+                                    <td>
+                                        <?php
+                                        $image_src = 'get_user_image.php?id=' . $user['id'];
+                                        ?>
+                                        <img src="<?php echo $image_src; ?>" 
+                                             alt="<?php echo htmlspecialchars($user['username']); ?>" 
+                                             class="rounded-circle" 
+                                             width="50" 
+                                             height="50"
+                                             style="object-fit: cover;"
+                                             onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2250%22%20height%3D%2250%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2050%2050%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_18a5f8a8b0a%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_18a5f8a8b0a%22%3E%3Crect%20width%3D%2250%22%20height%3D%2250%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2210%22%20y%3D%2227%22%3E50x50%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'">
+                                    </td>
+                                    <td><?php echo $user['username']; ?></td>
+                                    <td><?php echo $user['user_type']; ?></td>
+                                    <td><?php echo $user['phone_number'] ?? 'N/A'; ?></td>
+                                    <td><?php echo $user['email']; ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning edit-user" 
+                                            data-id="<?php echo $user['id']; ?>"
+                                            data-username="<?php echo $user['username']; ?>"
+                                            data-user_type="<?php echo $user['user_type']; ?>"
+                                            data-phone_number="<?php echo $user['phone_number']; ?>"
+                                            data-email="<?php echo $user['email']; ?>"
+                                            data-picture="<?php echo isset($user['picture']) ? '1' : '0'; ?>">
+                                            <i class="bi bi-pencil"></i> <?php echo t('update_button')?>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger delete-user" 
+                                            data-id="<?php echo $user['id']; ?>"
+                                            data-username="<?php echo htmlspecialchars($user['username']); ?>">
+                                            <i class="bi bi-trash"></i> <?php echo t('delete_button')?>
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                        $is_blocked = $user['is_blocked'] ?? false;
+                                        if ($is_blocked): ?>
+                                            <span class="badge bg-danger"><?php echo t('block_status')?></span>
+                                            <button class="btn btn-sm btn-success unblock-user" 
+                                                    data-id="<?php echo $user['id']; ?>"
+                                                    data-username="<?php echo htmlspecialchars($user['username']); ?>">
+                                                <i class="bi bi-unlock"></i> <?php echo t('unblock_button')?>
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="badge bg-success"><?php echo t('active_status')?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
-         <!-- Pagination -->
-<nav aria-label="Page navigation" class="mt-3">
-    <ul class="pagination justify-content-center">
-        <li class="page-item <?php echo $current_page <= 1 ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
-                <span aria-hidden="true">&laquo;&laquo;</span>
-            </a>
-        </li>
-        <li class="page-item <?php echo $current_page <= 1 ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-            </a>
-        </li>
+            
+            <!-- Pagination -->
+            <nav aria-label="Page navigation" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    <?php if ($current_page > 1): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;&laquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;</span>
+                        </li>
+                    <?php endif; ?>
 
-        <?php 
-        // Show page numbers
-        $start_page = max(1, $current_page - 2);
-        $end_page = min($total_pages, $current_page + 2);
-        
-        if ($start_page > 1) {
-            echo '<li class="page-item"><span class="page-link">...</span></li>';
-        }
-        
-        for ($i = $start_page; $i <= $end_page; $i++): ?>
-            <li class="page-item <?php echo $i == $current_page ? 'active' : ''; ?>">
-                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-            </li>
-        <?php endfor;
-        
-        if ($end_page < $total_pages) {
-            echo '<li class="page-item"><span class="page-link">...</span></li>';
-        }
-        ?>
+                    <?php 
+                    // Show page numbers
+                    $start_page = max(1, $current_page - 2);
+                    $end_page = min($total_pages, $current_page + 2);
+                    
+                    if ($start_page > 1) {
+                        echo '<li class="page-item"><span class="page-link">...</span></li>';
+                    }
+                    
+                    for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <li class="page-item <?php echo $i == $current_page ? 'active' : ''; ?>">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor;
+                    
+                    if ($end_page < $total_pages) {
+                        echo '<li class="page-item"><span class="page-link">...</span></li>';
+                    }
+                    ?>
 
-        <li class="page-item <?php echo $current_page >= $total_pages ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-            </a>
-        </li>
-        <li class="page-item <?php echo $current_page >= $total_pages ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
-                <span aria-hidden="true">&raquo;&raquo;</span>
-            </a>
-        </li>
-    </ul>
-      </nav>
-<div class="text-center text-muted">
-    <?php echo t('page')?> <?php echo $current_page; ?> <?php echo t('page_of')?> <?php echo $total_pages; ?> 
-</div>
+                    <?php if ($current_page < $total_pages): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;&raquo;</span>
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            </nav>
+            <div class="text-center text-muted">
+                <?php echo t('page');?> <?php echo $current_page; ?> <?php echo t('page_of');?> <?php echo $total_pages; ?> 
+            </div>
         </div>
     </div>
 </div>
+
 <!-- Duplicate Email Modal -->
 <div class="modal fade" id="duplicateEmailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

@@ -124,10 +124,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
         $_SESSION['error'] = $e->getMessage();
     }
 }
+// Get filter parameters
+$search_filter = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+$category_filter = isset($_GET['category']) ? (int)$_GET['category'] : 0;
+$location_filter = isset($_GET['location']) ? (int)$_GET['location'] : 0;
+$month_filter = isset($_GET['month']) ? sanitizeInput($_GET['month']) : '';
+$year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+
+// Validate and parse sort option
+$sort_mapping = [
+    'name_asc' => ['field' => 't.name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 't.name', 'direction' => 'DESC'],
+    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 't.date', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 't.date', 'direction' => 'DESC'],
+    'quantity_asc' => ['field' => 't.quantity', 'direction' => 'ASC'],
+    'quantity_desc' => ['field' => 't.quantity', 'direction' => 'DESC'],
+    'location_asc' => ['field' => 'fl.name', 'direction' => 'ASC'],
+    'location_desc' => ['field' => 'fl.name', 'direction' => 'DESC'],
+    'action_by_asc' => ['field' => 'u.username', 'direction' => 'ASC'],
+    'action_by_desc' => ['field' => 'u.username', 'direction' => 'DESC']
+];
+
+// Default to date_desc if invalid option
+if (!array_key_exists($sort_option, $sort_mapping)) {
+    $sort_option = 'date_desc';
+}
+
+$sort_by = $sort_mapping[$sort_option]['field'];
+$sort_order = $sort_mapping[$sort_option]['direction'];
 
 // Get all locations
 $stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
 $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get all categories
+$stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
+$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get items by location for dropdowns
 $items_by_location = [];
@@ -139,12 +174,12 @@ if ($locations) {
     }
 }
 
-// Get transfer history with pagination
+// Get transfer history with pagination and filtering
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
-// Build query
+// Build query with filters
 $query = "SELECT 
     t.id,
     t.item_id,
@@ -175,20 +210,99 @@ JOIN
     locations tl ON t.to_location_id = tl.id
 JOIN
     users u ON t.action_by = u.id
-ORDER BY t.action_at DESC
-LIMIT :limit OFFSET :offset";
+WHERE 1=1";
 
+$count_query = "SELECT COUNT(*) as total 
+FROM transfer_history t
+LEFT JOIN categories c ON t.category_id = c.id
+JOIN locations fl ON t.from_location_id = fl.id
+JOIN locations tl ON t.to_location_id = tl.id
+JOIN users u ON t.action_by = u.id
+WHERE 1=1";
+
+$params = [];
+$count_params = [];
+
+// Apply filters
+if ($search_filter) {
+    $query .= " AND (t.name LIKE :search OR t.item_code LIKE :search OR t.invoice_no LIKE :search)";
+    $count_query .= " AND (t.name LIKE :search OR t.item_code LIKE :search OR t.invoice_no LIKE :search)";
+    $params[':search'] = "%$search_filter%";
+    $count_params[':search'] = "%$search_filter%";
+}
+
+if ($category_filter > 0) {
+    $query .= " AND t.category_id = :category_id";
+    $count_query .= " AND t.category_id = :category_id";
+    $params[':category_id'] = $category_filter;
+    $count_params[':category_id'] = $category_filter;
+}
+
+if ($location_filter > 0) {
+    $query .= " AND (t.from_location_id = :location_id OR t.to_location_id = :location_id)";
+    $count_query .= " AND (t.from_location_id = :location_id OR t.to_location_id = :location_id)";
+    $params[':location_id'] = $location_filter;
+    $count_params[':location_id'] = $location_filter;
+}
+
+if ($month_filter && $month_filter !== 'all') {
+    $query .= " AND MONTH(t.date) = :month";
+    $count_query .= " AND MONTH(t.date) = :month";
+    $params[':month'] = $month_filter;
+    $count_params[':month'] = $month_filter;
+}
+
+if ($year_filter && $year_filter !== 'all') {
+    $query .= " AND YEAR(t.date) = :year";
+    $count_query .= " AND YEAR(t.date) = :year";
+    $params[':year'] = $year_filter;
+    $count_params[':year'] = $year_filter;
+}
+
+// Add sorting
+$query .= " ORDER BY $sort_by $sort_order";
+
+// Add pagination
+$query .= " LIMIT :limit OFFSET :offset";
+
+// Get total count
+$stmt = $pdo->prepare($count_query);
+foreach ($count_params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
+$stmt->execute();
+$total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_items / $limit);
+
+// Get filtered data
 $stmt = $pdo->prepare($query);
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $transfer_history = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get total count for pagination
-$count_query = "SELECT COUNT(*) as total FROM transfer_history";
-$stmt = $pdo->query($count_query);
-$total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_items / $limit);
+// Get available years from the transfer history
+$stmt = $pdo->query("SELECT DISTINCT YEAR(date) as year FROM transfer_history ORDER BY year DESC");
+$available_years = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+// Month names for the dropdown
+$months = [
+    '1' => t('jan'),
+    '2' => t('feb'),
+    '3' => t('mar'),
+    '4' => t('apr'),
+    '5' => t('may'),
+    '6' => t('jun'),
+    '7' => t('jul'),
+    '8' => t('aug'),
+    '9' => t('sep'),
+    '10' => t('oct'),
+    '11' => t('nov'),
+    '12' => t('dec'),
+];
 ?>
 
 <!DOCTYPE html>
@@ -269,21 +383,260 @@ $total_pages = ceil($total_items / $limit);
                 font-size: 0.85rem;
             }
         }
+        @media (max-width: 768px) {
+    .sidebar {
+        margin-left: -14rem;
+        position: fixed;
+    }
+
+    .sidebar.show {
+        margin-left: 0;
+    }
+
+    .main-content {
+        width: 100%;
+    }
+
+    .main-content.show {
+        margin-left: 14rem;
+    }
+
+    #sidebarToggle {
+        display: block;
+    }
+}
+/* Filter section styles */
+.filter-section {
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.sort-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+.sort-select {
+    min-width: 120px;
+}
+
+.sort-order-select {
+    min-width: 100px;
+}
+
+@media (max-width: 768px) {
+    .filter-group {
+        min-width: 100%;
+    }
+    .sort-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .sort-select, .sort-order-select {
+        min-width: 100%;
+    }
+}
     </style>
 </head>
 <body>
-    <div class="container-fluid">
+      <!-- Add this button to your navbar -->
+<button id="sidebarToggle" class="btn btn-primary d-md-none rounded-circle mr-3 no-print" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+    <i class="bi bi-list"></i>
+</button>
+<div class="container-fluid">
         <h2 class="mb-4"><?php echo t('stock_transfer'); ?></h2>
+        
+        <!-- Filter Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="filter-form">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label class="filter-label"><?php echo t('search'); ?></label>
+                            <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_filter); ?>" placeholder="<?php echo t('search_placeholder'); ?>">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label"><?php echo t('category'); ?></label>
+                            <select name="category" class="form-select">
+                                <option value="0"><?php echo t('all_categories'); ?></option>
+                                <?php foreach ($categories as $category): ?>
+                                    <option value="<?php echo $category['id']; ?>" <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                        <?php echo $category['name']; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label"><?php echo t('location'); ?></label>
+                            <select name="location" class="form-select">
+                                <option value="0"><?php echo t('all_locations'); ?></option>
+                                <?php foreach ($locations as $location): ?>
+                                    <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                        <?php echo $location['name']; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label"><?php echo t('month'); ?></label>
+                            <select name="month" class="form-select">
+                                <option value="all"><?php echo t('all_months'); ?></option>
+                                <?php foreach ($months as $num => $name): ?>
+                                    <option value="<?php echo $num; ?>" <?php echo $month_filter == $num ? 'selected' : ''; ?>>
+                                        <?php echo $name; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label"><?php echo t('year'); ?></label>
+                            <select name="year" class="form-select">
+                                <option value="all"><?php echo t('all_years'); ?></option>
+                                <?php foreach ($available_years as $year): ?>
+                                    <option value="<?php echo $year; ?>" <?php echo $year_filter == $year ? 'selected' : ''; ?>>
+                                        <?php echo $year; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label"><?php echo t('sort_by'); ?></label>
+                            <select name="sort_option" class="form-select sort-select">
+                                <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>>
+                                    <?php echo t('name_a_to_z'); ?>
+                                </option>
+                                <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>>
+                                    <?php echo t('name_z_to_a'); ?>
+                                </option>
+                                <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>>
+                                    <?php echo t('category_az'); ?>
+                                </option>
+                                <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>>
+                                    <?php echo t('category_z_to_a'); ?>
+                                </option>
+                                <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
+                                    <?php echo t('date_oldest_first'); ?>
+                                </option>
+                                <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
+                                    <?php echo t('date_newest_first'); ?>
+                                </option>
+                                <option value="quantity_asc" <?php echo $sort_option == 'quantity_asc' ? 'selected' : ''; ?>>
+                                    <?php echo t('quantity_low_to_high'); ?>
+                                </option>
+                                <option value="quantity_desc" <?php echo $sort_option == 'quantity_desc' ? 'selected' : ''; ?>>
+                                    <?php echo t('quantity_high_to_low'); ?>
+                                </option>
+                                <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
+                                    <?php echo t('location_a_to_z'); ?>
+                                </option>
+                                <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
+                                    <?php echo t('location_z_to_a'); ?>
+                                </option>
+                                <option value="action_by_asc" <?php echo $sort_option == 'action_by_asc' ? 'selected' : ''; ?>>
+                                    <?php echo t('action_by_a_to_z'); ?>
+                                </option>
+                                <option value="action_by_desc" <?php echo $sort_option == 'action_by_desc' ? 'selected' : ''; ?>>
+                                    <?php echo t('action_by_z_to_a'); ?>
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter"></i> <?php echo t('apply_filters'); ?>
+                        </button>
+                        <a href="stock-transfer.php" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> <?php echo t('reset_filters'); ?>
+                        </a>
+                    </div>
+                    
+                    <input type="hidden" name="page" value="1">
+                </form>
+            </div>
+        </div>
         
         <div class="card mb-4">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><?php echo t('transfer_items'); ?></h5>
                 <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#transferItemModal">
-    <i class="bi bi-arrow-left-right"></i> <?php echo t('new_transfer'); ?>
-</button>
-                
+                    <i class="bi bi-arrow-left-right"></i> <?php echo t('new_transfer'); ?>
+                </button>
             </div>
             <div class="card-body">
+                <?php if (!empty($search_filter) || $category_filter > 0 || $location_filter > 0 || ($month_filter && $month_filter !== 'all') || ($year_filter && $year_filter !== 'all')): ?>
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i> 
+                        <?php echo t('showing_filtered_results'); ?>
+                        <?php if (!empty($search_filter)): ?>
+                            <span class="badge bg-secondary"><?php echo t('search'); ?>: <?php echo htmlspecialchars($search_filter); ?></span>
+                        <?php endif; ?>
+                        <?php if ($category_filter > 0): 
+                            $category_name = '';
+                            foreach ($categories as $cat) {
+                                if ($cat['id'] == $category_filter) {
+                                    $category_name = $cat['name'];
+                                    break;
+                                }
+                            }
+                        ?>
+                            <span class="badge bg-secondary"><?php echo t('category'); ?>: <?php echo $category_name; ?></span>
+                        <?php endif; ?>
+                        <?php if ($location_filter > 0): 
+                            $location_name = '';
+                            foreach ($locations as $loc) {
+                                if ($loc['id'] == $location_filter) {
+                                    $location_name = $loc['name'];
+                                    break;
+                                }
+                            }
+                        ?>
+                            <span class="badge bg-secondary"><?php echo t('location'); ?>: <?php echo $location_name; ?></span>
+                        <?php endif; ?>
+                        <?php if ($month_filter && $month_filter !== 'all'): ?>
+                            <span class="badge bg-secondary"><?php echo t('month'); ?>: <?php echo $months[$month_filter]; ?></span>
+                        <?php endif; ?>
+                        <?php if ($year_filter && $year_filter !== 'all'): ?>
+                            <span class="badge bg-secondary"><?php echo t('year'); ?>: <?php echo $year_filter; ?></span>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+                
                 <?php if (isset($_SESSION['error'])): ?>
                     <div class="alert alert-danger"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
                 <?php endif; ?>
@@ -355,12 +708,12 @@ $total_pages = ceil($total_items / $limit);
                         <ul class="pagination justify-content-center">
                             <?php if ($page > 1): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=1" aria-label="First">
+                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
                                         <span aria-hidden="true">&laquo;&laquo;</span>
                                     </a>
                                 </li>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<?php echo $page - 1; ?>" aria-label="Previous">
+                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
                                         <span aria-hidden="true">&laquo;</span>
                                     </a>
                                 </li>
@@ -384,7 +737,7 @@ $total_pages = ceil($total_items / $limit);
                             
                             for ($i = $start_page; $i <= $end_page; $i++): ?>
                                 <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                                    <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
                                 </li>
                             <?php endfor;
                             
@@ -395,12 +748,12 @@ $total_pages = ceil($total_items / $limit);
 
                             <?php if ($page < $total_pages): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<?php echo $page + 1; ?>" aria-label="Next">
+                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
                                         <span aria-hidden="true">&raquo;</span>
                                     </a>
                                 </li>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<?php echo $total_pages; ?>" aria-label="Last">
+                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
                                         <span aria-hidden="true">&raquo;&raquo;</span>
                                     </a>
                                 </li>
@@ -832,7 +1185,32 @@ $total_pages = ceil($total_items / $limit);
                 });
         });
     });
-
+// Sidebar toggle functionality for mobile
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (sidebarToggle && sidebar && mainContent) {
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('show');
+            mainContent.classList.toggle('show');
+        });
+    }
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+        if (window.innerWidth < 768 && sidebar && mainContent) {
+            const isClickInsideSidebar = sidebar.contains(event.target);
+            const isClickOnToggle = sidebarToggle.contains(event.target);
+            
+            if (!isClickInsideSidebar && !isClickOnToggle && sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+                mainContent.classList.remove('show');
+            }
+        }
+    });
+});
     // Auto-hide success messages after 5 seconds
     document.addEventListener('DOMContentLoaded', function() {
         const successMessages = document.querySelectorAll('.alert-success');

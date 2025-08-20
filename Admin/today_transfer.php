@@ -1122,16 +1122,42 @@ table th{
                 background-color: #f2f2f2;
             }
         }
+        @media (max-width: 768px) {
+    .sidebar {
+        margin-left: -14rem;
+        position: fixed;
+    }
+
+    .sidebar.show {
+        margin-left: 0;
+    }
+
+    .main-content {
+        width: 100%;
+    }
+
+    .main-content.show {
+        margin-left: 14rem;
+    }
+
+    #sidebarToggle {
+        display: block;
+    }
+}
     </style>
 </head>
 <body>
+  <!-- Add this button to your navbar -->
+<button id="sidebarToggle" class="btn btn-primary d-md-none rounded-circle mr-3 no-print" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+    <i class="bi bi-list"></i>
+</button>
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4 no-print">
             <h2><?php echo t('todays_transfers'); ?></h2>
             <div>
                
                 <a href="dashboard.php" class="btn btn-info">
-                    <i class="bi bi-arrow-left"></i> <?php echo t('back_to_transfers'); ?>
+                    <i class="bi bi-arrow-left"></i> <?php echo t('back_to_items'); ?>
                 </a>
             </div>
         </div>
@@ -1143,7 +1169,7 @@ table th{
         
         <div class="card mb-4">
         <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><?php echo t('todays_transfers'); ?></h5>
+                <h5 class="mb-0"><?php echo t('todays_transfers_history'); ?></h5>
             </div>
             <div class="card-body">
                 <?php if (isset($_SESSION['error'])): ?>
@@ -1157,18 +1183,18 @@ table th{
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th><?php echo t('no'); ?></th>
+                                <th><?php echo t('item_no'); ?></th>
                                 <th><?php echo t('item_code'); ?></th>
                                 <th><?php echo t('category'); ?></th>
-                                <th><?php echo t('invoice_no'); ?></th>
-                                <th><?php echo t('date'); ?></th>
+                                <th><?php echo t('item_invoice'); ?></th>
+                                <th><?php echo t('item_date'); ?></th>
                                 <th><?php echo t('item_name'); ?></th>
-                                <th><?php echo t('quantity'); ?></th>
+                                <th><?php echo t('item_qty'); ?></th>
                                 <th><?php echo t('unit'); ?></th>
                                 <th><?php echo t('from_location'); ?></th>
                                 <th><?php echo t('to_location'); ?></th>
-                                <th><?php echo t('remark'); ?></th>
-                                <th class="no-print"><?php echo t('photo'); ?></th>
+                                <th><?php echo t('item_remark'); ?></th>
+                                <th class="no-print"><?php echo t('item_photo'); ?></th>
                                 <th><?php echo t('action_by'); ?></th>
                                 <th><?php echo t('action_at'); ?></th>
                             </tr>
@@ -1279,7 +1305,32 @@ table th{
                     });
             });
         });
-
+// Sidebar toggle functionality for mobile
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (sidebarToggle && sidebar && mainContent) {
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('show');
+            mainContent.classList.toggle('show');
+        });
+    }
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+        if (window.innerWidth < 768 && sidebar && mainContent) {
+            const isClickInsideSidebar = sidebar.contains(event.target);
+            const isClickOnToggle = sidebarToggle.contains(event.target);
+            
+            if (!isClickInsideSidebar && !isClickOnToggle && sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+                mainContent.classList.remove('show');
+            }
+        }
+    });
+});
         // Auto-hide success messages after 5 seconds
         document.addEventListener('DOMContentLoaded', function() {
             const successMessages = document.querySelectorAll('.alert-success');

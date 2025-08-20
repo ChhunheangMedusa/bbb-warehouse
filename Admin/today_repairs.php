@@ -1041,10 +1041,10 @@ table th{
     
     <div class="card mb-4">
         <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><?php echo t('todays_repairs'); ?> (<?php echo date('d/m/Y'); ?>)</h5>
+            <h5 class="mb-0"><?php echo t('todays_repairs'); ?> </h5>
             <div>
                 <a href="dashboard.php" class="btn btn-light btn-sm">
-                    <i class="bi bi-arrow-left"></i> <?php echo t('back_to_repair'); ?>
+                    <i class="bi bi-arrow-left"></i> <?php echo t('back_to_items'); ?>
                 </a>
             </div>
         </div>
@@ -1053,19 +1053,19 @@ table th{
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th><?php echo t('no'); ?></th>
+                            <th><?php echo t('item_no'); ?></th>
                             <th><?php echo t('item_code'); ?></th>
                             <th><?php echo t('category'); ?></th>
-                            <th><?php echo t('invoice_no'); ?></th>
-                            <th><?php echo t('date'); ?></th>
+                            <th><?php echo t('item_invoice'); ?></th>
+                            <th><?php echo t('item_date'); ?></th>
                             <th><?php echo t('item_name'); ?></th>
-                            <th><?php echo t('quantity'); ?></th>
+                            <th><?php echo t('item_qty'); ?></th>
                             <th><?php echo t('action'); ?></th>
                             <th><?php echo t('unit'); ?></th>
                             <th><?php echo t('from_location'); ?></th>
                             <th><?php echo t('to_location'); ?></th>
-                            <th><?php echo t('remark'); ?></th>
-                            <th><?php echo t('photo'); ?></th>
+                            <th><?php echo t('item_remark'); ?></th>
+                            <th><?php echo t('item_photo'); ?></th>
                             <th><?php echo t('action_by'); ?></th>
                             <th><?php echo t('action_at'); ?></th>
                         </tr>

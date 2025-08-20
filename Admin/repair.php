@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $to_location = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 $log_message = "Sent for repair: {$item['name']} ($quantity $size) from {$from_location['name']} to {$to_location['name']}";
-                logActivity($_SESSION['user_id'], 'Send for Repair', $log_message);
+                logActivity($_SESSION['user_id'], 'Repair Item', $log_message);
             }
             
             $pdo->commit();
@@ -190,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $to_location = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 $log_message = "Returned from repair: {$repair_item['item_name']} ($quantity {$repair_item['size']}) from {$from_location['name']} to {$to_location['name']}";
-                logActivity($_SESSION['user_id'], 'Return from Repair', $log_message);
+                logActivity($_SESSION['user_id'], 'Return Repair', $log_message);
             }
             
             $pdo->commit();
@@ -1506,7 +1506,7 @@ table th{
                                     <th><?php echo t('item_photo'); ?></th>
                                     <th><?php echo t('action_by'); ?></th>
                                     <th><?php echo t('action_at'); ?></th>
-                                    <th><?php echo t('actions'); ?></th>
+                                    <th><?php echo t('action'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1561,13 +1561,13 @@ table th{
                                                             data-quantity="<?php echo $item['quantity']; ?>"
                                                             data-size="<?php echo $item['size']; ?>"
                                                             data-from-location="<?php echo $item['from_location_id']; ?>">
-                                                        <i class="bi bi-arrow-return-left"></i> <?php echo t('return'); ?>
+                                                        <i class="bi bi-arrow-return-left"></i> <?php echo t('return_back'); ?>
                                                     </button>
                                                 <?php endif; ?>
                                                 <button class="btn btn-danger btn-sm delete-btn" 
                                                         data-id="<?php echo $item['id']; ?>"
                                                         data-name="<?php echo $item['item_name']; ?>">
-                                                    <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+                                                    <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
                                                 </button>
                                             </td>
                                         </tr>
@@ -1823,11 +1823,11 @@ table th{
                     </div>
                     
                     <button type="button" id="send-repair-more-row" class="btn btn-secondary btn-sm mb-3">
-                        <i class="bi bi-plus-circle"></i> <?php echo t('add_row'); ?>
+                        <i class="bi bi-plus-circle"></i> <?php echo t('add_transfer_row'); ?>
                     </button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
                     <button type="submit" name="send_for_repair" class="btn btn-warning"><?php echo t('send'); ?></button>
                 </div>
             </form>
@@ -1981,10 +1981,10 @@ table th{
                 <form method="POST" id="deleteForm">
                     <input type="hidden" name="delete_id" id="delete_id">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> <?php echo t('cancel'); ?>
+                        <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
                     </button>
                     <button type="submit" name="delete_repair_item" class="btn btn-danger">
-                        <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+                        <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
                     </button>
                 </form>
             </div>
@@ -2274,13 +2274,13 @@ document.getElementById('returnFromRepairModal').addEventListener('shown.bs.moda
 // Delete confirmation
 document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-        const id = this.getAttribute('data-id');
+      
         const name = this.getAttribute('data-name');
         
-        document.getElementById('delete_id').value = id;
+       
         document.getElementById('deleteItemInfo').innerHTML = `
             <p><strong><?php echo t('item_name'); ?>:</strong> ${name}</p>
-            <p><strong>ID:</strong> ${id}</p>
+        
         `;
         
         const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
