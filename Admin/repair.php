@@ -244,8 +244,36 @@ $offset = ($page - 1) * $limit;
 $year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
 $month_filter = isset($_GET['month']) && $_GET['month'] != 0 ? (int)$_GET['month'] : null;
 $location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
+$category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
 $action_type_filter = isset($_GET['action_type']) ? $_GET['action_type'] : null;
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+
+// Get sort option
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+
+// Validate and parse sort option
+$sort_mapping = [
+    'name_asc' => ['field' => 'r.item_name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'r.item_name', 'direction' => 'DESC'],
+    'location_asc' => ['field' => 'fl.name', 'direction' => 'ASC'],
+    'location_desc' => ['field' => 'fl.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'r.date', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'r.date', 'direction' => 'DESC'],
+    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
+    'action_by_asc' => ['field' => 'u.username', 'direction' => 'ASC'],
+    'action_by_desc' => ['field' => 'u.username', 'direction' => 'DESC'],
+    'action_asc' => ['field' => 'r.action_type', 'direction' => 'ASC'],
+    'action_desc' => ['field' => 'r.action_type', 'direction' => 'DESC']
+];
+
+// Default to date_desc if invalid option
+if (!array_key_exists($sort_option, $sort_mapping)) {
+    $sort_option = 'date_desc';
+}
+
+$sort_by = $sort_mapping[$sort_option]['field'];
+$sort_order = $sort_mapping[$sort_option]['direction'];
 
 // Build query for current repairs
 $query = "SELECT 
@@ -298,6 +326,11 @@ if ($location_filter) {
     $params[':location_id'] = $location_filter;
 }
 
+if ($category_filter) {
+    $query .= " AND r.category_id = :category_id";
+    $params[':category_id'] = $category_filter;
+}
+
 if ($action_type_filter) {
     $query .= " AND r.action_type = :action_type";
     $params[':action_type'] = $action_type_filter;
@@ -308,8 +341,8 @@ if ($search_query) {
     $params[':search'] = "%$search_query%";
 }
 
-// Order by action date (newest first)
-$query .= " ORDER BY r.action_at DESC";
+// Add sorting
+$query .= " ORDER BY $sort_by $sort_order";
 
 // Get total count for pagination
 $count_query = "SELECT COUNT(*) as total FROM repair_items r
@@ -321,6 +354,7 @@ $count_query = "SELECT COUNT(*) as total FROM repair_items r
 if ($year_filter !== null) $count_query .= " AND YEAR(r.date) = :year";
 if ($month_filter !== null) $count_query .= " AND MONTH(r.date) = :month";
 if ($location_filter) $count_query .= " AND (r.from_location_id = :location_id OR r.to_location_id = :location_id)";
+if ($category_filter) $count_query .= " AND r.category_id = :category_id";
 if ($action_type_filter) $count_query .= " AND r.action_type = :action_type";
 if ($search_query) $count_query .= " AND (r.item_name LIKE :search OR r.invoice_no LIKE :search OR r.remark LIKE :search)";
 
@@ -345,6 +379,9 @@ $repair_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get all locations for filter dropdown
 $all_locations = $pdo->query("SELECT * FROM locations ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// Get all categories for filter dropdown
+$all_categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 // Get items by location for dropdowns
 $items_by_location = [];
@@ -388,7 +425,6 @@ LIMIT 100";
 
 $history_items = $pdo->query($history_query)->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 <style>
       :root {
   --primary: #4e73df;
@@ -1378,10 +1414,15 @@ table th{
     background-color: #4e73df;
     color: #fff;
 }
-
+.action-buttons {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+}
 .action-buttons .btn {
-    margin-right: 5px;
-    margin-bottom: 5px;
+    margin: 0;
+    white-space: nowrap;
+
 }
 
 @media (max-width: 768px) {
@@ -1390,7 +1431,6 @@ table th{
     }
 }
 </style>
-
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('repair_management'); ?></h2>
     
@@ -1420,6 +1460,121 @@ table th{
     <div class="tab-content" id="repairTabsContent">
         <!-- Current Repairs Tab -->
         <div class="tab-pane fade show active" id="current-repairs" role="tabpanel" aria-labelledby="current-tab">
+            <!-- Filter Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="filter-form">
+                        <div class="row mb-3">
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('search'); ?></label>
+                                <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('location'); ?></label>
+                                <select name="location" class="form-select">
+                                    <option value=""><?php echo t('report_all_location'); ?></option>
+                                    <?php foreach ($all_locations as $location): ?>
+                                        <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                            <?php echo $location['name']; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('category'); ?></label>
+                                <select name="category" class="form-select">
+                                    <option value=""><?php echo t('all_categories'); ?></option>
+                                    <?php foreach ($all_categories as $category): ?>
+                                        <option value="<?php echo $category['id']; ?>" <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                            <?php echo $category['name']; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                    
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('month'); ?></label>
+                                <select name="month" class="form-select">
+                                    <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
+                                    <?php for ($m = 1; $m <= 12; $m++): ?>
+                                        <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
+                                            <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('year'); ?></label>
+                                <select name="year" class="form-select">
+                                    <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
+                                    <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                                        <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
+                                            <?php echo $y; ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('sort'); ?></label>
+                                <select name="sort_option" class="form-select">
+                                    <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('name_a_to_z'); ?>
+                                    </option>
+                                    <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('name_z_to_a'); ?>
+                                    </option>
+                                    <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('location_a_to_z'); ?>
+                                    </option>
+                                    <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('location_z_to_a'); ?>
+                                    </option>
+                                    <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('date_oldest_first'); ?>
+                                    </option>
+                                    <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('date_newest_first'); ?>
+                                    </option>
+                                    <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('category_az'); ?>
+                                    </option>
+                                    <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('category_za'); ?>
+                                    </option>
+                                    <option value="action_by_asc" <?php echo $sort_option == 'action_by_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_by_a_to_z'); ?>
+                                    </option>
+                                    <option value="action_by_desc" <?php echo $sort_option == 'action_by_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_by_z_to_a'); ?>
+                                    </option>
+                                    <option value="action_asc" <?php echo $sort_option == 'action_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_a_to_z'); ?>
+                                    </option>
+                                    <option value="action_desc" <?php echo $sort_option == 'action_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_z_to_a'); ?>
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> <?php echo t('search'); ?>
+                            </button>
+                            <a href="repair.php" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> <?php echo t('reset'); ?>
+                            </a>
+                        </div>
+                        
+                        <input type="hidden" name="page" value="1">
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Data Card -->
             <div class="card mb-4">
                 <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><?php echo t('current_repairs'); ?></h5>
@@ -1430,62 +1585,48 @@ table th{
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <form method="GET" class="row g-2">
-                                <div class="col-md-2">
-                                    <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="location" class="form-select">
-                                        <option value=""><?php echo t('all_locations'); ?></option>
-                                        <?php foreach ($all_locations as $location): ?>
-                                            <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
-                                                <?php echo $location['name']; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="action_type" class="form-select">
-                                        <option value=""><?php echo t('all_actions'); ?></option>
-                                        <option value="send_for_repair" <?php echo $action_type_filter == 'send_for_repair' ? 'selected' : ''; ?>>
-                                            <?php echo t('send_for_repair'); ?>
-                                        </option>
-                                        <option value="return_from_repair" <?php echo $action_type_filter == 'return_from_repair' ? 'selected' : ''; ?>>
-                                            <?php echo t('return_from_repair'); ?>
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="month" class="form-select">
-                                        <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
-                                        <?php for ($m = 1; $m <= 12; $m++): ?>
-                                            <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
-                                                <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="year" class="form-select">
-                                        <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
-                                        <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-                                            <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
-                                                <?php echo $y; ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-1">
-                                    <button type="submit" class="btn btn-primary w-100"><?php echo t('search'); ?></button>
-                                </div>
-                                <div class="col-md-1">
-                                    <a href="repair.php" class="btn btn-danger w-100"><?php echo t('reset'); ?></a>
-                                </div>
-                            </form>
+                    <?php if (!empty($search_query) || $location_filter || $category_filter || $action_type_filter || $month_filter || $year_filter): ?>
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle"></i> 
+                            <?php echo t('showing_filtered_results'); ?>
+                            <?php if (!empty($search_query)): ?>
+                                <span class="badge bg-secondary"><?php echo t('search'); ?>: <?php echo htmlspecialchars($search_query); ?></span>
+                            <?php endif; ?>
+                            <?php if ($location_filter): ?>
+                                <?php 
+                                $location_name = '';
+                                foreach ($all_locations as $location) {
+                                    if ($location['id'] == $location_filter) {
+                                        $location_name = $location['name'];
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <span class="badge bg-secondary"><?php echo t('location'); ?>: <?php echo $location_name; ?></span>
+                            <?php endif; ?>
+                            <?php if ($category_filter): ?>
+                                <?php 
+                                $category_name = '';
+                                foreach ($all_categories as $category) {
+                                    if ($category['id'] == $category_filter) {
+                                        $category_name = $category['name'];
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <span class="badge bg-secondary"><?php echo t('category'); ?>: <?php echo $category_name; ?></span>
+                            <?php endif; ?>
+                            <?php if ($action_type_filter): ?>
+                                <span class="badge bg-secondary"><?php echo t('action'); ?>: <?php echo $action_type_filter; ?></span>
+                            <?php endif; ?>
+                            <?php if ($month_filter && $month_filter != 0): ?>
+                                <span class="badge bg-secondary"><?php echo t('month'); ?>: <?php echo date('F', mktime(0, 0, 0, $month_filter, 1)); ?></span>
+                            <?php endif; ?>
+                            <?php if ($year_filter && $year_filter != 0): ?>
+                                <span class="badge bg-secondary"><?php echo t('year'); ?>: <?php echo $year_filter; ?></span>
+                            <?php endif; ?>
                         </div>
-                    </div>
+                    <?php endif; ?>
                     
                     <div class="table-responsive">
                         <table class="table table-striped">
@@ -1530,7 +1671,7 @@ table th{
                                                     if ($item['action_type'] == 'send_for_repair') {
                                                         echo t('send_for_repair');
                                                     } elseif ($item['action_type'] == 'return_from_repair') {
-                                                        echo t('return_from_repair');
+                                                        echo t('return_back');
                                                     } else {
                                                         echo t('repair_complete');
                                                     }
@@ -1696,7 +1837,15 @@ table th{
                                             <td><?php echo $item['quantity']; ?></td>
                                             <td>
                                                 <span class="repair-badge badge-<?php echo str_replace('_', '-', $item['action_type']); ?>">
-                                                    <?php echo t($item['action_type']); ?>
+                                                <?php 
+                                                    if ($item['action_type'] == 'send_for_repair') {
+                                                        echo t('send_for_repair');
+                                                    } elseif ($item['action_type'] == 'return_from_repair') {
+                                                        echo t('return_back');
+                                                    } else {
+                                                        echo t('repair_complete');
+                                                    }
+                                                    ?>
                                                 </span>
                                             </td>
                                             <td><?php echo $item['size']; ?></td>
@@ -1735,6 +1884,7 @@ table th{
         </div>
     </div>
 </div>
+
 <!-- Send for Repair Modal -->
 <div class="modal fade" id="sendForRepairModal" tabindex="-1" aria-labelledby="sendForRepairModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -1748,7 +1898,7 @@ table th{
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label"><?php echo t('invoice_no'); ?></label>
+                            <label class="form-label"><?php echo t('item_invoice'); ?></label>
                             <input type="text" class="form-control" name="invoice_no" id="send_invoice_no">
                         </div>
                         <div class="col-md-6">
@@ -1794,7 +1944,7 @@ table th{
                                         <ul class="dropdown-menu custom-dropdown-menu p-2">
                                             <li>
                                                 <div class="px-2 mb-2">
-                                                    <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
+                                                    <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                                                 </div>
                                             </li>
                                             <li><hr class="dropdown-divider"></li>
@@ -1805,7 +1955,7 @@ table th{
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label"><?php echo t('quantity'); ?></label>
+                                    <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
                                 </div>
                             </div>
@@ -1815,7 +1965,7 @@ table th{
                                     <input type="text" class="form-control" name="size[]" readonly>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label"><?php echo t('remark'); ?></label>
+                                    <label class="form-label"><?php echo t('item_remark'); ?></label>
                                     <input type="text" class="form-control" name="remark[]">
                                 </div>
                             </div>
@@ -1865,18 +2015,18 @@ table th{
         <div class="modal-content">
             <form method="POST">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="returnFromRepairModalLabel"><?php echo t('return_from_repair'); ?></h5>
+                    <h5 class="modal-title" id="returnFromRepairModalLabel"><?php echo t('return_back'); ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label"><?php echo t('invoice_no'); ?></label>
+                            <label class="form-label"><?php echo t('item_invoice'); ?></label>
                             <input type="text" class="form-control" name="invoice_no" id="return_invoice_no">
                         </div>
                         <div class="col-md-6">
-                            <label for="return_date" class="form-label"><?php echo t('date'); ?></label>
+                            <label for="return_date" class="form-label"><?php echo t('item_date'); ?></label>
                             <input type="date" class="form-control" id="return_date" name="date" required>
                         </div>
                     </div>
@@ -1918,7 +2068,7 @@ table th{
                                         <ul class="dropdown-menu custom-dropdown-menu p-2">
                                             <li>
                                                 <div class="px-2 mb-2">
-                                                    <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
+                                                    <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                                                 </div>
                                             </li>
                                             <li><hr class="dropdown-divider"></li>
@@ -1929,7 +2079,7 @@ table th{
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label"><?php echo t('quantity'); ?></label>
+                                    <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
                                 </div>
                             </div>
@@ -1939,7 +2089,7 @@ table th{
                                     <input type="text" class="form-control" name="size[]" readonly>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label"><?php echo t('remark'); ?></label>
+                                    <label class="form-label"><?php echo t('item_remark'); ?></label>
                                     <input type="text" class="form-control" name="remark[]">
                                 </div>
                             </div>
@@ -1947,11 +2097,11 @@ table th{
                     </div>
                     
                     <button type="button" id="return-repair-more-row" class="btn btn-secondary btn-sm mb-3">
-                        <i class="bi bi-plus-circle"></i> <?php echo t('add_row'); ?>
+                        <i class="bi bi-plus-circle"></i> <?php echo t('add_transfer_row'); ?>
                     </button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
                     <button type="submit" name="return_from_repair" class="btn btn-success"><?php echo t('return'); ?></button>
                 </div>
             </form>
@@ -2136,7 +2286,7 @@ document.getElementById('send-repair-more-row').addEventListener('click', functi
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
                         <li>
                             <div class="px-2 mb-2">
-                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
+                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                             </div>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -2147,7 +2297,7 @@ document.getElementById('send-repair-more-row').addEventListener('click', functi
                 </div>
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label"><?php echo t('quantity'); ?></label>
+                <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
             </div>
         </div>
@@ -2157,12 +2307,12 @@ document.getElementById('send-repair-more-row').addEventListener('click', functi
                 <input type="text" class="form-control" name="size[]" readonly>
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label"><?php echo t('remark'); ?></label>
+                <label class="form-label"><?php echo t('item_remark'); ?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
         </div>
         <button type="button" class="btn btn-danger btn-sm remove-row">
-            <i class="bi bi-trash"></i> <?php echo t('remove_row'); ?>
+            <i class="bi bi-trash"></i> <?php echo t('del_row'); ?>
         </button>
     `;
     
@@ -2217,7 +2367,7 @@ document.getElementById('return-repair-more-row').addEventListener('click', func
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
                         <li>
                             <div class="px-2 mb-2">
-                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
+                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                             </div>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -2228,7 +2378,7 @@ document.getElementById('return-repair-more-row').addEventListener('click', func
                 </div>
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label"><?php echo t('quantity'); ?></label>
+                <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
             </div>
         </div>
@@ -2238,12 +2388,12 @@ document.getElementById('return-repair-more-row').addEventListener('click', func
                 <input type="text" class="form-control" name="size[]" readonly>
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label"><?php echo t('remark'); ?></label>
+                <label class="form-label"><?php echo t('item_remark'); ?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
         </div>
         <button type="button" class="btn btn-danger btn-sm remove-row">
-            <i class="bi bi-trash"></i> <?php echo t('remove_row'); ?>
+            <i class="bi bi-trash"></i> <?php echo t('del_row'); ?>
         </button>
     `;
     
@@ -2317,7 +2467,7 @@ document.querySelectorAll('.return-btn').forEach(btn => {
                     <input type="hidden" name="repair_item_id[]" value="${id}">
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="form-label"><?php echo t('quantity'); ?></label>
+                    <label class="form-label"><?php echo t('item_qty'); ?></label>
                     <input type="number" class="form-control" name="quantity[]" value="${quantity}" step="0.5" min="0.5" max="${quantity}" required>
                 </div>
             </div>
@@ -2327,7 +2477,7 @@ document.querySelectorAll('.return-btn').forEach(btn => {
                     <input type="text" class="form-control" name="size[]" value="${size}" readonly>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label"><?php echo t('remark'); ?></label>
+                    <label class="form-label"><?php echo t('item_remark'); ?></label>
                     <input type="text" class="form-control" name="remark[]">
                 </div>
             </div>

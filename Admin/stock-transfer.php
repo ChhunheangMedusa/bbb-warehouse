@@ -471,7 +471,7 @@ $months = [
     <i class="bi bi-list"></i>
 </button>
 <div class="container-fluid">
-        <h2 class="mb-4"><?php echo t('stock_transfer'); ?></h2>
+        <h2 class="mb-4"><?php echo t('transfer_items'); ?></h2>
         
         <!-- Filter Card -->
         <div class="card mb-4">
@@ -483,7 +483,7 @@ $months = [
                     <div class="filter-row">
                         <div class="filter-group">
                             <label class="filter-label"><?php echo t('search'); ?></label>
-                            <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_filter); ?>" placeholder="<?php echo t('search_placeholder'); ?>">
+                            <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_filter); ?>" placeholder="<?php echo t('search'); ?>">
                         </div>
                         
                         <div class="filter-group">
@@ -501,7 +501,7 @@ $months = [
                         <div class="filter-group">
                             <label class="filter-label"><?php echo t('location'); ?></label>
                             <select name="location" class="form-select">
-                                <option value="0"><?php echo t('all_locations'); ?></option>
+                                <option value="0"><?php echo t('report_all_location'); ?></option>
                                 <?php foreach ($locations as $location): ?>
                                     <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
                                         <?php echo $location['name']; ?>
@@ -547,7 +547,7 @@ $months = [
                                     <?php echo t('category_az'); ?>
                                 </option>
                                 <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>>
-                                    <?php echo t('category_z_to_a'); ?>
+                                    <?php echo t('category_za'); ?>
                                 </option>
                                 <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
                                     <?php echo t('date_oldest_first'); ?>
@@ -579,10 +579,10 @@ $months = [
                     
                     <div class="action-buttons">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-filter"></i> <?php echo t('apply_filters'); ?>
+                            <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                         </button>
                         <a href="stock-transfer.php" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> <?php echo t('reset_filters'); ?>
+                            <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
                         </a>
                     </div>
                     
@@ -595,7 +595,7 @@ $months = [
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><?php echo t('transfer_items'); ?></h5>
                 <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#transferItemModal">
-                    <i class="bi bi-arrow-left-right"></i> <?php echo t('new_transfer'); ?>
+                    <i class="bi bi-arrow-left-right"></i> <?php echo t('transfer_history'); ?>
                 </button>
             </div>
             <div class="card-body">
@@ -866,8 +866,8 @@ $months = [
                     </button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="transfer_items" class="btn btn-info"><?php echo t('transfer'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
+                    <button type="submit" name="transfer_items" class="btn btn-info"><?php echo t('transferss'); ?></button>
                 </div>
             </form>
         </div>

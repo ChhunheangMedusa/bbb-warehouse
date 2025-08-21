@@ -14,6 +14,38 @@ if (!isAdmin()) {
     exit();
 }
 checkAuth();
+// Get filter parameters
+$name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
+$category_filter = isset($_GET['category']) ? sanitizeInput($_GET['category']) : '';
+$location_filter = isset($_GET['location']) ? sanitizeInput($_GET['location']) : '';
+$month_filter = isset($_GET['month']) ? sanitizeInput($_GET['month']) : '';
+$year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
+$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+
+// Validate and parse sort option
+$sort_mapping = [
+    'name_asc' => ['field' => 'si.name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'si.name', 'direction' => 'DESC'],
+    'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
+    'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'si.date', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'si.date', 'direction' => 'DESC'],
+    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
+    'action_asc' => ['field' => 'si.action_type', 'direction' => 'ASC'],
+    'action_desc' => ['field' => 'si.action_type', 'direction' => 'DESC'],
+    'action_by_asc' => ['field' => 'u.username', 'direction' => 'ASC'],
+    'action_by_desc' => ['field' => 'u.username', 'direction' => 'DESC']
+];
+
+// Default to date_desc if invalid option
+if (!array_key_exists($sort_option, $sort_mapping)) {
+    $sort_option = 'date_desc';
+}
+
+$sort_by = $sort_mapping[$sort_option]['field'];
+$sort_order = $sort_mapping[$sort_option]['direction'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_item'])) {
         $invoice_no = sanitizeInput($_POST['invoice_no']);
@@ -266,6 +298,7 @@ $stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
     }
    
     }
+    
 // Get pagination parameters for stock in history
 $in_page = isset($_GET['in_page']) ? (int)$_GET['in_page'] : 1;
 $in_limit = 10;

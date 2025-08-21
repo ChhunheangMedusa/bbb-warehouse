@@ -378,11 +378,27 @@ $translations = [
 'repair_return_success'=>'សម្ភារៈត្រូវបានបញ្ជូនទៅកាន់ទីតាំងដើមដោយជោគជ័យ',
 'confirm_delete'=>'លុបសម្ភារៈជួសជុល',
 'confirm_delete_question'=>'តើអ្នកពិតជាចង់លុបសម្ភារៈជួសជុលនេះមែនទេ?',
-'repair_item_deleted'=>'សម្ភារៈជួសជុលត្រូវបានលុបដោយជោគជ័យ'
+'repair_item_deleted'=>'សម្ភារៈជួសជុលត្រូវបានលុបដោយជោគជ័យ',
+'category_az'=>'ប្រភេទសម្ភារៈ (A-Z)',
+'category_za'=>'ប្រភេទសម្ភារៈ (Z-A)',
+'action_by_a_to_z'=>'អ្នកធ្វើសកម្មភាព (A-Z)',
+'action_by_z_to_a'=>'អ្នកធ្វើសកម្មភាព (Z-A)',
+'all_categories'=>'ប្រភេទសម្ភារៈទាំងអស់',
+'transferss'=>'ផ្ទេរ',
+'action_a_to_z'=>'សកម្មភាព (A-Z)',
+'action_z_to_a'=>'សកម្មភាព (Z-A)'
     ],
 
 
     'en' => [
+        'action_a_to_z'=>'Action (A-Z)',
+'action_z_to_a'=>'Action (Z-A)',
+        'transferss'=>'Transfer',
+        'all_categories'=>'All Categories',
+        'action_by_a_to_z'=>'Action By (A-Z)',
+'action_by_z_to_a'=>'Action By (Z-A)',
+        'category_az'=>'Category (A-Z)',
+'category_za'=>'Category (Z-A)',
         'repair_item_deleted'=>'The repair item has been deleted successfully',
         'confirm_delete'=>'Delete Repair Item',
 'confirm_delete_question'=>'Are you sure want to permanently delete this repair item?',

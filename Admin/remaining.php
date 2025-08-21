@@ -1647,10 +1647,10 @@ table th{
                                 <?php echo t('date_newest_first'); ?>
                             </option>
                             <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('type_az'); ?>
+                                <?php echo t('category_az'); ?>
                             </option>
                             <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>>
-                                <?php echo t('type_za'); ?>
+                                <?php echo t('category_za'); ?>
                             </option>
                             <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
                                 <?php echo t('location_a_to_z'); ?>
