@@ -14,16 +14,32 @@ if (!isAdmin()) {
     exit();
 }
 checkAuth();
-// Get filter parameters
-$name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
-$category_filter = isset($_GET['category']) ? sanitizeInput($_GET['category']) : '';
-$location_filter = isset($_GET['location']) ? sanitizeInput($_GET['location']) : '';
-$month_filter = isset($_GET['month']) ? sanitizeInput($_GET['month']) : '';
-$year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
-$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
-$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+// Get active tab from URL
+$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'in';
 
-// Validate and parse sort option
+// Get filter parameters - separate for each tab
+if ($active_tab === 'in') {
+    $name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
+    $category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
+    $action_filter = isset($_GET['action']) ? sanitizeInput($_GET['action']) : '';
+    $location_filter = isset($_GET['location']) ? sanitizeInput($_GET['location']) : '';
+    $month_filter = isset($_GET['month']) ? sanitizeInput($_GET['month']) : '';
+    $year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
+    $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+    $sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+} else {
+    // For out tab, use different parameter names or session to store separate values
+    $name_filter = isset($_GET['out_name']) ? sanitizeInput($_GET['out_name']) : '';
+    $category_filter = isset($_GET['out_category']) ? (int)$_GET['out_category'] : null;
+    $action_filter = isset($_GET['out_action']) ? sanitizeInput($_GET['out_action']) : '';
+    $location_filter = isset($_GET['out_location']) ? sanitizeInput($_GET['out_location']) : '';
+    $month_filter = isset($_GET['out_month']) ? sanitizeInput($_GET['out_month']) : '';
+    $year_filter = isset($_GET['out_year']) ? sanitizeInput($_GET['out_year']) : '';
+    $search_query = isset($_GET['out_search']) ? sanitizeInput($_GET['out_search']) : '';
+    $sort_option = isset($_GET['out_sort_option']) ? sanitizeInput($_GET['out_sort_option']) : 'date_desc';
+}
+
+// Update the sort mapping to include category sorting
 $sort_mapping = [
     'name_asc' => ['field' => 'si.name', 'direction' => 'ASC'],
     'name_desc' => ['field' => 'si.name', 'direction' => 'DESC'],
@@ -303,12 +319,23 @@ $stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
 $in_page = isset($_GET['in_page']) ? (int)$_GET['in_page'] : 1;
 $in_limit = 10;
 $in_offset = ($in_page - 1) * $in_limit;
+// Get filters for stock in
+$in_year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
+$in_month_filter = isset($_GET['month']) && $_GET['month'] != 0 ? (int)$_GET['month'] : null;
+$in_location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
+$in_category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
+$in_action_filter = isset($_GET['action']) ? sanitizeInput($_GET['action']) : '';
+$in_search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+$in_sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
 
-// Get filters
-$year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
-$month_filter = isset($_GET['month']) && $_GET['month'] != 0 ? (int)$_GET['month'] : null;
-$location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
-$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+// Get filters for stock out
+$out_year_filter = isset($_GET['out_year']) && $_GET['out_year'] != 0 ? (int)$_GET['out_year'] : null;
+$out_month_filter = isset($_GET['out_month']) && $_GET['out_month'] != 0 ? (int)$_GET['out_month'] : null;
+$out_location_filter = isset($_GET['out_location']) ? (int)$_GET['out_location'] : null;
+$out_category_filter = isset($_GET['out_category']) ? (int)$_GET['out_category'] : null;
+$out_action_filter = isset($_GET['out_action']) ? sanitizeInput($_GET['out_action']) : '';
+$out_search_query = isset($_GET['out_search']) ? sanitizeInput($_GET['out_search']) : '';
+$out_sort_option = isset($_GET['out_sort_option']) ? sanitizeInput($_GET['out_sort_option']) : 'date_desc';
 
 // Build query for stock in history
 $in_query = "SELECT 
@@ -343,29 +370,39 @@ WHERE 1=1";
 
 $in_params = [];
 
-// Add filters
-if ($year_filter !== null) {
+// Add filters for stock in
+if ($in_year_filter !== null) {
     $in_query .= " AND YEAR(si.date) = :year";
-    $in_params[':year'] = $year_filter;
+    $in_params[':year'] = $in_year_filter;
 }
 
-if ($month_filter !== null) {
+if ($in_month_filter !== null) {
     $in_query .= " AND MONTH(si.date) = :month";
-    $in_params[':month'] = $month_filter;
+    $in_params[':month'] = $in_month_filter;
 }
 
-if ($location_filter) {
+if ($in_location_filter) {
     $in_query .= " AND si.location_id = :location_id";
-    $in_params[':location_id'] = $location_filter;
+    $in_params[':location_id'] = $in_location_filter;
 }
 
-if ($search_query) {
+if ($in_category_filter) {
+    $in_query .= " AND si.category_id = :category_id";
+    $in_params[':category_id'] = $in_category_filter;
+}
+
+if ($in_action_filter) {
+    $in_query .= " AND si.action_type = :action_type";
+    $in_params[':action_type'] = $in_action_filter;
+}
+
+if ($in_search_query) {
     $in_query .= " AND (si.name LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
-    $in_params[':search'] = "%$search_query%";
+    $in_params[':search'] = "%$in_search_query%";
 }
 
-// Order by action date (newest first)
-$in_query .= " ORDER BY si.action_at DESC";
+// Order by
+$in_query .= " ORDER BY $sort_by $sort_order";
 
 // Get total count for in history pagination
 $in_count_query = "SELECT COUNT(*) as total FROM stock_in_history si
@@ -373,13 +410,40 @@ $in_count_query = "SELECT COUNT(*) as total FROM stock_in_history si
                 JOIN locations l ON si.location_id = l.id
                 WHERE 1=1";
 
-if ($year_filter !== null) $in_count_query .= " AND YEAR(si.date) = :year";
-if ($month_filter !== null) $in_count_query .= " AND MONTH(si.date) = :month";
-if ($location_filter) $in_count_query .= " AND si.location_id = :location_id";
-if ($search_query) $in_count_query .= " AND (si.name LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
+$in_count_params = [];
+
+if ($in_year_filter !== null) {
+    $in_count_query .= " AND YEAR(si.date) = :year";
+    $in_count_params[':year'] = $in_year_filter;
+}
+
+if ($in_month_filter !== null) {
+    $in_count_query .= " AND MONTH(si.date) = :month";
+    $in_count_params[':month'] = $in_month_filter;
+}
+
+if ($in_location_filter) {
+    $in_count_query .= " AND si.location_id = :location_id";
+    $in_count_params[':location_id'] = $in_location_filter;
+}
+
+if ($in_category_filter) {
+    $in_count_query .= " AND si.category_id = :category_id";
+    $in_count_params[':category_id'] = $in_category_filter;
+}
+
+if ($in_action_filter) {
+    $in_count_query .= " AND si.action_type = :action_type";
+    $in_count_params[':action_type'] = $in_action_filter;
+}
+
+if ($in_search_query) {
+    $in_count_query .= " AND (si.name LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
+    $in_count_params[':search'] = "%$in_search_query%";
+}
 
 $in_stmt = $pdo->prepare($in_count_query);
-foreach ($in_params as $key => $value) {
+foreach ($in_count_params as $key => $value) {
     $in_stmt->bindValue($key, $value);
 }
 $in_stmt->execute();
@@ -435,29 +499,59 @@ WHERE 1=1";
 
 $out_params = [];
 
-// Add filters (same as in history)
-if ($year_filter !== null) {
+// Add filters for stock out
+// Add filters for stock out
+if ($out_year_filter !== null) {
     $out_query .= " AND YEAR(so.date) = :year";
-    $out_params[':year'] = $year_filter;
+    $out_params[':year'] = $out_year_filter;
 }
 
-if ($month_filter !== null) {
+if ($out_month_filter !== null) {
     $out_query .= " AND MONTH(so.date) = :month";
-    $out_params[':month'] = $month_filter;
+    $out_params[':month'] = $out_month_filter;
 }
 
-if ($location_filter) {
+if ($out_location_filter) {
     $out_query .= " AND so.location_id = :location_id";
-    $out_params[':location_id'] = $location_filter;
+    $out_params[':location_id'] = $out_location_filter;
 }
 
-if ($search_query) {
+if ($out_category_filter) {
+    $out_query .= " AND so.category_id = :category_id";
+    $out_params[':category_id'] = $out_category_filter;
+}
+
+if ($out_action_filter) {
+    $out_query .= " AND so.action_type = :action_type";
+    $out_params[':action_type'] = $out_action_filter;
+}
+
+if ($out_search_query) {
     $out_query .= " AND (so.name LIKE :search OR so.invoice_no LIKE :search OR so.remark LIKE :search)";
-    $out_params[':search'] = "%$search_query%";
+    $out_params[':search'] = "%$out_search_query%";
+}
+$out_sort_mapping = [
+    'name_asc' => ['field' => 'so.name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'so.name', 'direction' => 'DESC'],
+    'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
+    'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'so.date', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'so.date', 'direction' => 'DESC'],
+    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
+    'action_asc' => ['field' => 'so.action_type', 'direction' => 'ASC'],
+    'action_desc' => ['field' => 'so.action_type', 'direction' => 'DESC'],
+    'action_by_asc' => ['field' => 'u.username', 'direction' => 'ASC'],
+    'action_by_desc' => ['field' => 'u.username', 'direction' => 'DESC']
+];
+if (!array_key_exists($out_sort_option, $out_sort_mapping)) {
+    $out_sort_option = 'date_desc';
 }
 
+$out_sort_by = $out_sort_mapping[$out_sort_option]['field'];
+$out_sort_order = $out_sort_mapping[$out_sort_option]['direction'];
 // Order by action date (newest first)
-$out_query .= " ORDER BY so.action_at DESC";
+$out_query .= " ORDER BY $out_sort_by $out_sort_order";
 
 // Get total count for out history pagination
 $out_count_query = "SELECT COUNT(*) as total FROM stock_out_history so
@@ -465,13 +559,40 @@ $out_count_query = "SELECT COUNT(*) as total FROM stock_out_history so
                 JOIN locations l ON so.location_id = l.id
                 WHERE 1=1";
 
-if ($year_filter !== null) $out_count_query .= " AND YEAR(so.date) = :year";
-if ($month_filter !== null) $out_count_query .= " AND MONTH(so.date) = :month";
-if ($location_filter) $out_count_query .= " AND so.location_id = :location_id";
-if ($search_query) $out_count_query .= " AND (so.name LIKE :search OR so.invoice_no LIKE :search OR so.remark LIKE :search)";
+$out_count_params = [];
+
+if ($out_year_filter !== null) {
+    $out_count_query .= " AND YEAR(so.date) = :year";
+    $out_count_params[':year'] = $out_year_filter;
+}
+
+if ($out_month_filter !== null) {
+    $out_count_query .= " AND MONTH(so.date) = :month";
+    $out_count_params[':month'] = $out_month_filter;
+}
+
+if ($out_location_filter) {
+    $out_count_query .= " AND so.location_id = :location_id";
+    $out_count_params[':location_id'] = $out_location_filter;
+}
+
+if ($out_category_filter) {
+    $out_count_query .= " AND so.category_id = :category_id";
+    $out_count_params[':category_id'] = $out_category_filter;
+}
+
+if ($out_action_filter) {
+    $out_count_query .= " AND so.action_type = :action_type";
+    $out_count_params[':action_type'] = $out_action_filter;
+}
+
+if ($out_search_query) {
+    $out_count_query .= " AND (so.name LIKE :search OR so.invoice_no LIKE :search OR so.remark LIKE :search)";
+    $out_count_params[':search'] = "%$out_search_query%";
+}
 
 $out_stmt = $pdo->prepare($out_count_query);
-foreach ($out_params as $key => $value) {
+foreach ($out_count_params as $key => $value) {
     $out_stmt->bindValue($key, $value);
 }
 $out_stmt->execute();
@@ -490,7 +611,7 @@ $out_stmt->execute();
 $out_history = $out_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get all locations for filter dropdown
-$stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
+$stmt = $pdo->query("SELECT * FROM locations WHERE type !='repair' ORDER BY name");
 $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get all categories
@@ -647,15 +768,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -994,15 +1107,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -1483,81 +1588,118 @@ table th{
     <!-- Tab Navigation -->
     <ul class="nav nav-tabs mb-4" id="itemTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="in-tab" data-bs-toggle="tab" data-bs-target="#in-tab-pane" type="button" role="tab" aria-controls="in-tab-pane" aria-selected="true">
+            <button class="nav-link <?php echo $active_tab === 'in' ? 'active' : ''; ?>" id="in-tab" data-bs-toggle="tab" data-bs-target="#in-tab-pane" type="button" role="tab" aria-controls="in-tab-pane" aria-selected="<?php echo $active_tab === 'in' ? 'true' : 'false'; ?>">
                 <?php echo t('stock_in_history'); ?>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="out-tab" data-bs-toggle="tab" data-bs-target="#out-tab-pane" type="button" role="tab" aria-controls="out-tab-pane" aria-selected="false">
+            <button class="nav-link <?php echo $active_tab === 'out' ? 'active' : ''; ?>" id="out-tab" data-bs-toggle="tab" data-bs-target="#out-tab-pane" type="button" role="tab" aria-controls="out-tab-pane" aria-selected="<?php echo $active_tab === 'out' ? 'true' : 'false'; ?>">
                 <?php echo t('stock_out_history'); ?>
             </button>
         </li>
     </ul>
     
-
-    
     <!-- Tab Content -->
     <div class="tab-content" id="itemTabsContent">
-        <!-- Stock In History Tab -->
-        <div class="tab-pane fade show active" id="in-tab-pane" role="tabpanel" aria-labelledby="in-tab" tabindex="0">
-            <div class="card mb-4">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-    <h5 class="mb-0"><?php echo t('stock_in_history'); ?></h5>
-    <div>
-        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addItemModal">
-            <i class="bi bi-plus-circle"></i> <?php echo t('add_new_item'); ?>
-        </button>
-        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addQtyModal">
-            <i class="bi bi-plus-lg"></i> <?php echo t('add_qty'); ?>
-        </button>
-    </div>
-</div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <form method="GET" class="row g-2">
-                                <div class="col-md-2">
-                                    <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="location" class="form-select">
-                                        <option value=""><?php echo t('report_all_location'); ?></option>
-                                        <?php foreach ($locations as $location): ?>
-                                            <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
-                                                <?php echo $location['name']; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="month" class="form-select">
-                                        <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
-                                        <?php for ($m = 1; $m <= 12; $m++): ?>
-                                            <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
-                                                <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="year" class="form-select">
-                                        <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
-                                        <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-                                            <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
-                                                <?php echo $y; ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-primary w-100"><?php echo t('search'); ?></button>
-                                </div>
-                                <div class="col-md-2">
-                                    <a href="items.php" class="btn btn-danger w-100"><?php echo t('reset'); ?></a>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+      <!-- Stock In History Tab -->
+      <div class="tab-pane fade <?php echo $active_tab === 'in' ? 'show active' : ''; ?>" id="in-tab-pane" role="tabpanel" aria-labelledby="in-tab" tabindex="0">
+          <!-- Filter Card -->
+          <div class="card mb-4">
+              <div class="card-header bg-primary text-white">
+                  <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
+              </div>
+              <div class="card-body">
+                  <div class="row mb-3">
+                      <div class="col-md-12">
+                          <form method="GET" class="row g-2">
+                              <input type="hidden" name="tab" value="in">
+                              <div class="col-md-2">
+                                  <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $in_search_query; ?>">
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="location" class="form-select">
+                                      <option value=""><?php echo t('report_all_location'); ?></option>
+                                      <?php foreach ($locations as $location): ?>
+                                          <option value="<?php echo $location['id']; ?>" <?php echo $in_location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                              <?php echo $location['name']; ?>
+                                          </option>
+                                      <?php endforeach; ?>
+                                  </select>
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="category" class="form-select">
+                                      <option value=""><?php echo t('all_categories'); ?></option>
+                                      <?php foreach ($categories as $category): ?>
+                                          <option value="<?php echo $category['id']; ?>" <?php echo $in_category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                              <?php echo $category['name']; ?>
+                                          </option>
+                                      <?php endforeach; ?>
+                                  </select>
+                              </div>
+                     
+                              <div class="col-md-2">
+                                  <select name="month" class="form-select">
+                                      <option value="0" <?php echo $in_month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
+                                      <?php for ($m = 1; $m <= 12; $m++): ?>
+                                          <option value="<?php echo $m; ?>" <?php echo $in_month_filter == $m ? 'selected' : ''; ?>>
+                                              <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
+                                          </option>
+                                      <?php endfor; ?>
+                                  </select>
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="year" class="form-select">
+                                      <option value="0" <?php echo $in_year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
+                                      <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                                          <option value="<?php echo $y; ?>" <?php echo $in_year_filter == $y ? 'selected' : ''; ?>>
+                                              <?php echo $y; ?>
+                                          </option>
+                                      <?php endfor; ?>
+                                  </select>
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="sort_option" class="form-select">
+                                      <option value="date_desc" <?php echo $in_sort_option === 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
+                                      <option value="date_asc" <?php echo $in_sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
+                                      <option value="name_asc" <?php echo $in_sort_option === 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
+                                      <option value="name_desc" <?php echo $in_sort_option === 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
+                                      <option value="location_asc" <?php echo $in_sort_option === 'location_asc' ? 'selected' : ''; ?>><?php echo t('location_a_to_z'); ?></option>
+                                      <option value="location_desc" <?php echo $in_sort_option === 'location_desc' ? 'selected' : ''; ?>><?php echo t('location_z_to_a'); ?></option>
+                                      <option value="category_asc" <?php echo $in_sort_option === 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
+                                      <option value="category_desc" <?php echo $in_sort_option === 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
+                                      <option value="action_asc" <?php echo $in_sort_option === 'action_asc' ? 'selected' : ''; ?>><?php echo t('action_a_to_z'); ?></option>
+                                      <option value="action_desc" <?php echo $in_sort_option === 'action_desc' ? 'selected' : ''; ?>><?php echo t('action_z_to_a'); ?></option>
+                                  </select>
+                              </div>
+                             
+                              <div class="action-buttons">
+                                  <button type="submit" class="btn btn-primary">
+                                  <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                                  </button>
+                                  <a href="items.php?tab=in" class="btn btn-outline-secondary">
+                                  <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                                  </a>
+                              </div>
+                          </form>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          
+          <!-- Data Table Card -->
+          <div class="card mb-4">
+              <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                  <h5 class="mb-0"><?php echo t('stock_in_history'); ?></h5>
+                  <div>
+                      <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                          <i class="bi bi-plus-circle"></i> <?php echo t('add_new_item'); ?>
+                      </button>
+                      <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addQtyModal">
+                          <i class="bi bi-plus-lg"></i> <?php echo t('add_qty'); ?>
+                      </button>
+                  </div>
+              </div>
+              <div class="card-body">
                     
                     <div class="table-responsive">
                         <table class="table table-striped">
@@ -1620,138 +1762,191 @@ table th{
                             </tbody>
                         </table>
                     </div>
-                    
-                    <!-- Pagination -->
-                    <?php if ($total_in_pages > 1): ?>
-                        <nav aria-label="Page navigation" class="mt-3">
-                            <ul class="pagination justify-content-center">
-                                <?php if ($in_page > 1): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['in_page' => 1, 'tab' => 'in'])); ?>" aria-label="First">
-                                            <span aria-hidden="true">&laquo;&laquo;</span>
-                                        </a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['in_page' => $in_page - 1, 'tab' => 'in'])); ?>" aria-label="Previous">
-                                            <span aria-hidden="true">&laquo;</span>
-                                        </a>
-                                    </li>
-                                <?php else: ?>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&laquo;&laquo;</span>
-                                    </li>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&laquo;</span>
-                                    </li>
-                                <?php endif; ?>
+<!-- Pagination for Stock In -->
+<?php if ($total_in_pages >= 1): ?>
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination justify-content-center">
+            <?php 
+            // Create a parameter array for in filters
+            $in_params_for_pagination = [
+                'tab' => 'in',
+                'search' => $in_search_query,
+                'location' => $in_location_filter,
+                'category' => $in_category_filter,
+                'action' => $in_action_filter,
+                'month' => $in_month_filter,
+                'year' => $in_year_filter,
+                'sort_option' => $in_sort_option
+            ];
+            
+            // Merge with existing GET parameters but prioritize our in parameters
+            $pagination_params = array_merge($_GET, $in_params_for_pagination);
+            ?>
+            
+            <?php if ($in_page > 1): ?>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['in_page' => 1])); ?>" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['in_page' => $in_page - 1])); ?>" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo;&laquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo;</span>
+                </li>
+            <?php endif; ?>
 
-                                <?php 
-                                // Show page numbers
-                                $start_page = max(1, $in_page - 2);
-                                $end_page = min($total_in_pages, $in_page + 2);
-                                
-                                if ($start_page > 1) {
-                                    echo '<li class="page-item"><span class="page-link">...</span></li>';
-                                }
-                                
-                                for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                    <li class="page-item <?php echo $i == $in_page ? 'active' : ''; ?>">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['in_page' => $i, 'tab' => 'in'])); ?>"><?php echo $i; ?></a>
-                                    </li>
-                                <?php endfor;
-                                
-                                if ($end_page < $total_in_pages) {
-                                    echo '<li class="page-item"><span class="page-link">...</span></li>';
-                                }
-                                ?>
+            <?php 
+            // Show page numbers
+            $start_page = max(1, $in_page - 2);
+            $end_page = min($total_in_pages, $in_page + 2);
+            
+            if ($start_page > 1) {
+                echo '<li class="page-item"><span class="page-link">...</span></li>';
+            }
+            
+            for ($i = $start_page; $i <= $end_page; $i++): ?>
+                <li class="page-item <?php echo $i == $in_page ? 'active' : ''; ?>">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['in_page' => $i])); ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor;
+            
+            if ($end_page < $total_in_pages) {
+                echo '<li class="page-item"><span class="page-link">...</span></li>';
+            }
+            ?>
 
-                                <?php if ($in_page < $total_in_pages): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['in_page' => $in_page + 1, 'tab' => 'in'])); ?>" aria-label="Next">
-                                            <span aria-hidden="true">&raquo;</span>
-                                        </a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['in_page' => $total_in_pages, 'tab' => 'in'])); ?>" aria-label="Last">
-                                            <span aria-hidden="true">&raquo;&raquo;</span>
-                                        </a>
-                                    </li>
-                                <?php else: ?>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&raquo;</span>
-                                    </li>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&raquo;&raquo;</span>
-                                    </li>
-                                <?php endif; ?>
-                            </ul>
-                        </nav>
-                        <div class="text-center text-muted">
-                            <?php echo t('page'); ?> <?php echo $in_page; ?> <?php echo t('page_of'); ?> <?php echo $total_in_pages; ?> 
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stock Out History Tab -->
-        <div class="tab-pane fade" id="out-tab-pane" role="tabpanel" aria-labelledby="out-tab" tabindex="0">
-            <div class="card mb-4">
-            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-    <h5 class="mb-0"><?php echo t('stock_out_history'); ?></h5>
-    <div>
-        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#deductQtyModal">
-            <i class="bi bi-dash-lg"></i> <?php echo t('deduct_qty'); ?>
-        </button>
+            <?php if ($in_page < $total_in_pages): ?>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['in_page' => $in_page + 1])); ?>" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['in_page' => $total_in_pages])); ?>" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link">&raquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">&raquo;&raquo;</span>
+                </li>
+            <?php endif; ?>
+        </ul>
+    </nav>
+    <div class="text-center text-muted">
+        <?php echo t('page'); ?> <?php echo $in_page; ?> <?php echo t('page_of'); ?> <?php echo $total_in_pages; ?> 
     </div>
-</div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <form method="GET" class="row g-2">
-                                <div class="col-md-2">
-                                    <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="location" class="form-select">
-                                        <option value=""><?php echo t('report_all_location'); ?></option>
-                                        <?php foreach ($locations as $location): ?>
-                                            <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
-                                                <?php echo $location['name']; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="month" class="form-select">
-                                        <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
-                                        <?php for ($m = 1; $m <= 12; $m++): ?>
-                                            <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
-                                                <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="year" class="form-select">
-                                        <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
-                                        <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-                                            <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
-                                                <?php echo $y; ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-primary w-100"><?php echo t('search'); ?></button>
-                                </div>
-                                <div class="col-md-2">
-                                    <a href="item.php" class="btn btn-danger w-100"><?php echo t('reset'); ?></a>
-                                </div>
-                            </form>
-                        </div>
+<?php endif; ?>
                     </div>
                     
+                    
+            </div>
+        </div>
+        <!-- Stock Out History Tab -->
+      <div class="tab-pane fade <?php echo $active_tab === 'out' ? 'show active' : ''; ?>" id="out-tab-pane" role="tabpanel" aria-labelledby="out-tab" tabindex="0">
+          <!-- Filter Card for Stock Out -->
+          <div class="card mb-4">
+              <div class="card-header bg-primary text-white">
+                  <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
+              </div>
+              <div class="card-body">
+                  <div class="row mb-3">
+                      <div class="col-md-12">
+                          <form method="GET" class="row g-2">
+                              <input type="hidden" name="tab" value="out">
+                              <div class="col-md-2">
+                                  <input type="text" name="out_search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $out_search_query; ?>">
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="out_location" class="form-select">
+                                      <option value=""><?php echo t('report_all_location'); ?></option>
+                                      <?php foreach ($locations as $location): ?>
+                                          <option value="<?php echo $location['id']; ?>" <?php echo $out_location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                              <?php echo $location['name']; ?>
+                                          </option>
+                                      <?php endforeach; ?>
+                                  </select>
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="out_category" class="form-select">
+                                      <option value=""><?php echo t('all_categories'); ?></option>
+                                      <?php foreach ($categories as $category): ?>
+                                          <option value="<?php echo $category['id']; ?>" <?php echo $out_category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                              <?php echo $category['name']; ?>
+                                          </option>
+                                      <?php endforeach; ?>
+                                  </select>
+                              </div>
+                          
+                              <div class="col-md-2">
+                                  <select name="out_month" class="form-select">
+                                      <option value="0" <?php echo $out_month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
+                                      <?php for ($m = 1; $m <= 12; $m++): ?>
+                                          <option value="<?php echo $m; ?>" <?php echo $out_month_filter == $m ? 'selected' : ''; ?>>
+                                              <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
+                                          </option>
+                                      <?php endfor; ?>
+                                  </select>
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="out_year" class="form-select">
+                                      <option value="0" <?php echo $out_year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
+                                      <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                                          <option value="<?php echo $y; ?>" <?php echo $out_year_filter == $y ? 'selected' : ''; ?>>
+                                              <?php echo $y; ?>
+                                          </option>
+                                      <?php endfor; ?>
+                                  </select>
+                              </div>
+                              <div class="col-md-2">
+                                  <select name="out_sort_option" class="form-select">
+                                      <option value="date_desc" <?php echo $out_sort_option === 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
+                                      <option value="date_asc" <?php echo $out_sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
+                                      <option value="name_asc" <?php echo $out_sort_option === 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
+                                      <option value="name_desc" <?php echo $out_sort_option === 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
+                                      <option value="location_asc" <?php echo $out_sort_option === 'location_asc' ? 'selected' : ''; ?>><?php echo t('location_a_to_z'); ?></option>
+                                      <option value="location_desc" <?php echo $out_sort_option === 'location_desc' ? 'selected' : ''; ?>><?php echo t('location_z_to_a'); ?></option>
+                                      <option value="category_asc" <?php echo $out_sort_option === 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
+                                      <option value="category_desc" <?php echo $out_sort_option === 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
+                                  </select>
+                              </div>
+                             
+                              <div class="action-buttons">
+                                  <button type="submit" class="btn btn-primary">
+                                      <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                                  </button>
+                                  <a href="items.php?tab=out" class="btn btn-outline-secondary">
+                                      <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                                  </a>
+                              </div>
+                          </form>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          
+          <!-- Data Table Card for Stock Out -->
+          <div class="card mb-4">
+              <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                  <h5 class="mb-0"><?php echo t('stock_out_history'); ?></h5>
+                  <div>
+                      <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#deductQtyModal">
+                          <i class="bi bi-dash-lg"></i> <?php echo t('deduct_qty'); ?>
+                      </button>
+                  </div>
+              </div>
+              <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
@@ -1813,76 +2008,97 @@ table th{
                             </tbody>
                         </table>
                     </div>
-                    
-                    <!-- Pagination -->
-                    <?php if ($total_out_pages > 1): ?>
-                        <nav aria-label="Page navigation" class="mt-3">
-                            <ul class="pagination justify-content-center">
-                                <?php if ($out_page > 1): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['out_page' => 1, 'tab' => 'out'])); ?>" aria-label="First">
-                                            <span aria-hidden="true">&laquo;&laquo;</span>
-                                        </a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['out_page' => $out_page - 1, 'tab' => 'out'])); ?>" aria-label="Previous">
-                                            <span aria-hidden="true">&laquo;</span>
-                                        </a>
-                                    </li>
-                                <?php else: ?>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&laquo;&laquo;</span>
-                                    </li>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&laquo;</span>
-                                    </li>
-                                <?php endif; ?>
+                      <!-- Pagination for Stock Out -->
+<?php if ($total_out_pages >= 1): ?>
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination justify-content-center">
+            <?php 
+            // Create a parameter array for out filters
+            $out_params_for_pagination = [
+                'tab' => 'out',
+                'out_search' => $out_search_query,
+                'out_location' => $out_location_filter,
+                'out_category' => $out_category_filter,
+                'out_action' => $out_action_filter,
+                'out_month' => $out_month_filter,
+                'out_year' => $out_year_filter,
+                'out_sort_option' => $out_sort_option
+            ];
+            
+            // Merge with existing GET parameters but prioritize our out parameters
+            $pagination_params = array_merge($_GET, $out_params_for_pagination);
+            ?>
+            
+            <?php if ($out_page > 1): ?>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['out_page' => 1])); ?>" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['out_page' => $out_page - 1])); ?>" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo;&laquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo;</span>
+                </li>
+            <?php endif; ?>
 
-                                <?php 
-                                // Show page numbers
-                                $start_page = max(1, $out_page - 2);
-                                $end_page = min($total_out_pages, $out_page + 2);
-                                
-                                if ($start_page > 1) {
-                                    echo '<li class="page-item"><span class="page-link">...</span></li>';
-                                }
-                                
-                                for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                    <li class="page-item <?php echo $i == $out_page ? 'active' : ''; ?>">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['out_page' => $i, 'tab' => 'out'])); ?>"><?php echo $i; ?></a>
-                                    </li>
-                                <?php endfor;
-                                
-                                if ($end_page < $total_out_pages) {
-                                    echo '<li class="page-item"><span class="page-link">...</span></li>';
-                                }
-                                ?>
+            <?php 
+            // Show page numbers
+            $start_page = max(1, $out_page - 2);
+            $end_page = min($total_out_pages, $out_page + 2);
+            
+            if ($start_page > 1) {
+                echo '<li class="page-item"><span class="page-link">...</span></li>';
+            }
+            
+            for ($i = $start_page; $i <= $end_page; $i++): ?>
+                <li class="page-item <?php echo $i == $out_page ? 'active' : ''; ?>">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['out_page' => $i])); ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor;
+            
+            if ($end_page < $total_out_pages) {
+                echo '<li class="page-item"><span class="page-link">...</span></li>';
+            }
+            ?>
 
-                                <?php if ($out_page < $total_out_pages): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['out_page' => $out_page + 1, 'tab' => 'out'])); ?>" aria-label="Next">
-                                            <span aria-hidden="true">&raquo;</span>
-                                        </a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['out_page' => $total_out_pages, 'tab' => 'out'])); ?>" aria-label="Last">
-                                            <span aria-hidden="true">&raquo;&raquo;</span>
-                                        </a>
-                                    </li>
-                                <?php else: ?>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&raquo;</span>
-                                    </li>
-                                    <li class="page-item disabled">
-                                        <span class="page-link">&raquo;&raquo;</span>
-                                    </li>
-                                <?php endif; ?>
-                            </ul>
-                        </nav>
-                        <div class="text-center text-muted">
-                            <?php echo t('page'); ?> <?php echo $out_page; ?> <?php echo t('page_of'); ?> <?php echo $total_out_pages; ?> 
-                        </div>
-                    <?php endif; ?>
+            <?php if ($out_page < $total_out_pages): ?>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['out_page' => $out_page + 1])); ?>" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['out_page' => $total_out_pages])); ?>" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link">&raquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">&raquo;&raquo;</span>
+                </li>
+            <?php endif; ?>
+        </ul>
+    </nav>
+    <div class="text-center text-muted">
+        <?php echo t('page'); ?> <?php echo $out_page; ?> <?php echo t('page_of'); ?> <?php echo $total_out_pages; ?> 
+    </div>
+<?php endif; ?>
+                    </div>
+                    </div>
+                    </div>
+                    </div>
+                
                 </div>
             </div>
         </div>
@@ -2266,17 +2482,39 @@ table th{
 </div>
 
 <script>
-// Preserve tab state on page load
+    // Add this to your existing JavaScript
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle tab clicks to preserve pagination
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            const targetTab = e.target.getAttribute('data-bs-target');
+            const url = new URL(window.location);
+            
+            // Update the tab parameter
+            if (targetTab === '#in-tab-pane') {
+                url.searchParams.set('tab', 'in');
+            } else if (targetTab === '#out-tab-pane') {
+                url.searchParams.set('tab', 'out');
+            }
+            
+            // Update URL without reloading
+            window.history.replaceState({}, '', url);
+        });
+    });
+    
+    // Ensure correct tab is active on page load
     const urlParams = new URLSearchParams(window.location.search);
     const activeTab = urlParams.get('tab');
     
     if (activeTab === 'out') {
-        // Show out tab
         const outTab = new bootstrap.Tab(document.getElementById('out-tab'));
         outTab.show();
+    } else {
+        const inTab = new bootstrap.Tab(document.getElementById('in-tab'));
+        inTab.show();
     }
 });
+
 
 // Image gallery functionality
 document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {

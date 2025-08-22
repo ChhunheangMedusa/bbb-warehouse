@@ -22,14 +22,14 @@ $year_filter = isset($_GET['year']) ? (int)$_GET['year'] : 0;
 $sort_by = isset($_GET['sort']) ? $_GET['sort'] : 'quantity_asc';
 
 // Get all locations for filter dropdown
-$location_stmt = $pdo->query("SELECT id, name FROM locations ORDER BY name");
+$location_stmt = $pdo->query("SELECT id, name FROM locations WHERE type != 'repair'  ORDER BY name");
 $locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Build query with filters
 $query = "SELECT i.id, i.name, i.quantity, i.size, l.name as location, i.created_at 
           FROM items i 
           JOIN locations l ON i.location_id = l.id 
-          WHERE i.quantity < 10";
+          WHERE i.quantity < 10 and  type != 'repair'";
 
 $count_query = "SELECT COUNT(*) as total 
                 FROM items i 
@@ -277,15 +277,9 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
+
+
 
 .btn-outline-primary {
   color: var(--primary);
@@ -786,10 +780,10 @@ body {
                 
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> <?php echo t('search');?>
+                    <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                     </button>
                     <a href="low-stock-alert.php" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> <?php echo t('reset');?>
+                    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
                     </a>
                 </div>
                 

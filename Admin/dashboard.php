@@ -55,8 +55,17 @@ $stmt = $pdo->prepare("SELECT COUNT(*) as new_repair FROM repair_items WHERE DAT
 $stmt->execute();
 $new_repair = $stmt->fetch(PDO::FETCH_ASSOC)['new_repair'];
 
+// Count of new repairs today from repair_history table
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_repair_history FROM repair_history 
+                      WHERE DATE(history_action_at) = CURDATE() 
+                      AND action_type = 'send_for_repair'");
+$stmt->execute();
+$new_repair_history = $stmt->fetch(PDO::FETCH_ASSOC)['new_repair_history'];
 
+// Add to your existing total if needed, or use it separately
 $total_new_repair = $new_repair;
+$total_new_repair_history = $new_repair_history;
+
 $total_new_transfer=$new_transfer;
 
 
@@ -856,16 +865,16 @@ body {
                 </div>
             </div></a>
         </div>
-<div class="col-md-3">
+        <div class="col-md-3">
     <a href="today_repairs.php" style="text-decoration: none;">
-        <div class="card bg-warning text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayRepairsModal">
+        <div class="card bg-warning text-white stat-card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h5 class="card-title"><?php echo t('repairs_card'); ?></h5>
-                        <h2 class="mb-0"><?php echo $total_new_repair; ?></h2>
+                        <h2 class="mb-0"><?php echo $total_new_repair_history; ?></h2>
                     </div>
-                    <i class="bi bi-tools fs-1"></i>
+                    <i class="bi bi-clock-history fs-1"></i>
                 </div>
             </div>
         </div>

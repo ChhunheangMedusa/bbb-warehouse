@@ -309,15 +309,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -803,10 +795,10 @@ body {
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-search"></i> <?php echo t('search'); ?>
+                    <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                     </button>
                     <a href="category.php" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> <?php echo t('reset');?>
+                    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
                     </a>
                 </div>
             </form>

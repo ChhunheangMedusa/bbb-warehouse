@@ -386,11 +386,29 @@ $translations = [
 'all_categories'=>'ប្រភេទសម្ភារៈទាំងអស់',
 'transferss'=>'ផ្ទេរ',
 'action_a_to_z'=>'សកម្មភាព (A-Z)',
-'action_z_to_a'=>'សកម្មភាព (Z-A)'
+'action_z_to_a'=>'សកម្មភាព (Z-A)',
+'all_actions'=>'សកម្មភាពទាំងអស់',
+'action_new'=>'ថ្មី',
+
+'action_add'=>'បន្ថែម',
+'repair_sent_success'=>'សម្ភារៈត្រូវបានបញ្ជូនមកកាន់កន្លែងជួសជុលដោយជោគជ័យ',
+'preview_report'=>'ពិនិត្យមើល',
+'download_excel'=>'ទាញយក',
+'report_preview'=>'ពិនិត្យមើលរបាយការណ៍',
+'report_generated_on'=>'របាយការណ៍ត្រូវបានបង្កើតនៅ'
     ],
 
 
     'en' => [
+        'report_generated_on'=>'Report generated on',
+        'report_preview'=>'Report Preview',
+        'download_excel'=>'Download',
+        'preview_report'=>'Preview',
+        'repair_sent_success'=>'The item has been send to repair shop successfully',
+        'action_new'=>'New',
+
+'action_add'=>'Add',
+        'all_actions'=>'All Actions',
         'action_a_to_z'=>'Action (A-Z)',
 'action_z_to_a'=>'Action (Z-A)',
         'transferss'=>'Transfer',

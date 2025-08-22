@@ -128,28 +128,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception("Cannot return more than was sent for repair");
                 }
                 
-                // Update repair item (mark as returned)
-                $stmt = $pdo->prepare("UPDATE repair_items 
-                    SET action_type = 'return_from_repair', 
-                        to_location_id = ?,
-                        remark = ?,
-                        action_by = ?,
-                        action_at = CURRENT_TIMESTAMP
-                    WHERE id = ?");
-                $stmt->execute([
-                    $to_location_id,
-                    $remark,
-                    $_SESSION['user_id'],
-                    $repair_item_id
-                ]);
-                
-                // Record history
+                // Record history BEFORE deleting
                 $stmt = $pdo->prepare("INSERT INTO repair_history 
-                    (repair_item_id, item_code, category_id, invoice_no, date, item_name, quantity, 
-                    action_type, size, from_location_id, to_location_id, remark, action_by, history_action)
-                    SELECT id, item_code, category_id, invoice_no, date, item_name, quantity, 
-                    action_type, size, from_location_id, to_location_id, remark, action_by, 'updated'
-                    FROM repair_items WHERE id = ?");
+                (repair_item_id, item_code, category_id, invoice_no, date, item_name, quantity, 
+                action_type, size, from_location_id, to_location_id, remark, action_by, history_action)
+                SELECT id, item_code, category_id, invoice_no, date, item_name, quantity, 
+                'return_from_repair', size, from_location_id, to_location_id, remark, action_by, 'updated'
+                FROM repair_items WHERE id = ?");
                 $stmt->execute([$repair_item_id]);
                 
                 // Find original item and update quantity
@@ -180,6 +165,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
                 
+                // DELETE the repair item after successful return
+                $stmt = $pdo->prepare("DELETE FROM repair_items WHERE id = ?");
+                $stmt->execute([$repair_item_id]);
+                
                 // Log activity
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
                 $stmt->execute([$repair_item['from_location_id']]);
@@ -189,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$to_location_id]);
                 $to_location = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                $log_message = "Returned from repair: {$repair_item['item_name']} ($quantity {$repair_item['size']}) from {$from_location['name']} to {$to_location['name']}";
+                $log_message = "Returned from repair and deleted repair record: {$repair_item['item_name']} ($quantity {$repair_item['size']}) from {$from_location['name']} to {$to_location['name']}";
                 logActivity($_SESSION['user_id'], 'Return Repair', $log_message);
             }
             
@@ -228,19 +217,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
+// Get active tab from request or default to 'current'
+$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'current';
 // Get all repair locations (locations with type 'repair')
 $repair_locations = $pdo->query("SELECT * FROM locations WHERE type = 'repair' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 // Get all non-repair locations
 $non_repair_locations = $pdo->query("SELECT * FROM locations WHERE type != 'repair' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
-// Get pagination parameters
+// Get pagination parameters for current repairs
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
-// Get filters
+// Get filters for current repairs
 $year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
 $month_filter = isset($_GET['month']) && $_GET['month'] != 0 ? (int)$_GET['month'] : null;
 $location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
@@ -248,10 +238,10 @@ $category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
 $action_type_filter = isset($_GET['action_type']) ? $_GET['action_type'] : null;
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 
-// Get sort option
+// Get sort option for current repairs
 $sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
 
-// Validate and parse sort option
+// Validate and parse sort option for current repairs
 $sort_mapping = [
     'name_asc' => ['field' => 'r.item_name', 'direction' => 'ASC'],
     'name_desc' => ['field' => 'r.item_name', 'direction' => 'DESC'],
@@ -267,7 +257,7 @@ $sort_mapping = [
     'action_desc' => ['field' => 'r.action_type', 'direction' => 'DESC']
 ];
 
-// Default to date_desc if invalid option
+// Default to date_desc if invalid option for current repairs
 if (!array_key_exists($sort_option, $sort_mapping)) {
     $sort_option = 'date_desc';
 }
@@ -310,7 +300,7 @@ WHERE 1=1";
 
 $params = [];
 
-// Add filters
+// Add filters for current repairs
 if ($year_filter !== null) {
     $query .= " AND YEAR(r.date) = :year";
     $params[':year'] = $year_filter;
@@ -341,10 +331,10 @@ if ($search_query) {
     $params[':search'] = "%$search_query%";
 }
 
-// Add sorting
+// Add sorting for current repairs
 $query .= " ORDER BY $sort_by $sort_order";
 
-// Get total count for pagination
+// Get total count for pagination for current repairs
 $count_query = "SELECT COUNT(*) as total FROM repair_items r
                 LEFT JOIN categories c ON r.category_id = c.id
                 JOIN locations fl ON r.from_location_id = fl.id
@@ -366,7 +356,7 @@ $stmt->execute();
 $total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 $total_pages = ceil($total_items / $limit);
 
-// Get paginated results
+// Get paginated results for current repairs
 $query .= " LIMIT :limit OFFSET :offset";
 $stmt = $pdo->prepare($query);
 foreach ($params as $key => $value) {
@@ -378,7 +368,7 @@ $stmt->execute();
 $repair_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get all locations for filter dropdown
-$all_locations = $pdo->query("SELECT * FROM locations ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$all_locations = $pdo->query("SELECT * FROM locations WHERE  type != 'repair' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 // Get all categories for filter dropdown
 $all_categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
@@ -402,7 +392,49 @@ foreach ($repair_locations as $location) {
     $items_in_repair[$location['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Get repair history
+// Get pagination parameters for history
+$history_page = isset($_GET['history_page']) ? (int)$_GET['history_page'] : 1;
+$history_limit = 10;
+$history_offset = ($history_page - 1) * $history_limit;
+
+// Get filters for history
+$history_year_filter = isset($_GET['history_year']) && $_GET['history_year'] != 0 ? (int)$_GET['history_year'] : null;
+$history_month_filter = isset($_GET['history_month']) && $_GET['history_month'] != 0 ? (int)$_GET['history_month'] : null;
+$history_location_filter = isset($_GET['history_location']) ? (int)$_GET['history_location'] : null;
+$history_category_filter = isset($_GET['history_category']) ? (int)$_GET['history_category'] : null;
+$history_action_type_filter = isset($_GET['history_action_type']) ? $_GET['history_action_type'] : null;
+$history_search_query = isset($_GET['history_search']) ? sanitizeInput($_GET['history_search']) : '';
+
+// Get sort option for history
+$history_sort_option = isset($_GET['history_sort_option']) ? sanitizeInput($_GET['history_sort_option']) : 'date_desc';
+
+// Validate and parse sort option for history
+$history_sort_mapping = [
+    'name_asc' => ['field' => 'rh.item_name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'rh.item_name', 'direction' => 'DESC'],
+    'location_asc' => ['field' => 'fl.name', 'direction' => 'ASC'],
+    'location_desc' => ['field' => 'fl.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'rh.date', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'rh.date', 'direction' => 'DESC'],
+    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
+    'action_by_asc' => ['field' => 'u.username', 'direction' => 'ASC'],
+    'action_by_desc' => ['field' => 'u.username', 'direction' => 'DESC'],
+    'action_asc' => ['field' => 'rh.action_type', 'direction' => 'ASC'],
+    'action_desc' => ['field' => 'rh.action_type', 'direction' => 'DESC'],
+    'history_action_asc' => ['field' => 'rh.history_action', 'direction' => 'ASC'],
+    'history_action_desc' => ['field' => 'rh.history_action', 'direction' => 'DESC']
+];
+
+// Default to date_desc if invalid option for history
+if (!array_key_exists($history_sort_option, $history_sort_mapping)) {
+    $history_sort_option = 'date_desc';
+}
+
+$history_sort_by = $history_sort_mapping[$history_sort_option]['field'];
+$history_sort_order = $history_sort_mapping[$history_sort_option]['direction'];
+
+// Build query for repair history
 $history_query = "SELECT 
     rh.*,
     c.name as category_name,
@@ -420,10 +452,76 @@ JOIN
     locations tl ON rh.to_location_id = tl.id
 JOIN
     users u ON rh.action_by = u.id
-ORDER BY rh.history_action_at DESC
-LIMIT 100";
+WHERE 1=1";
 
-$history_items = $pdo->query($history_query)->fetchAll(PDO::FETCH_ASSOC);
+$history_params = [];
+
+// Add filters for history
+if ($history_year_filter !== null) {
+    $history_query .= " AND YEAR(rh.date) = :history_year";
+    $history_params[':history_year'] = $history_year_filter;
+}
+
+if ($history_month_filter !== null) {
+    $history_query .= " AND MONTH(rh.date) = :history_month";
+    $history_params[':history_month'] = $history_month_filter;
+}
+
+if ($history_location_filter) {
+    $history_query .= " AND (rh.from_location_id = :history_location_id OR rh.to_location_id = :history_location_id)";
+    $history_params[':history_location_id'] = $history_location_filter;
+}
+
+if ($history_category_filter) {
+    $history_query .= " AND rh.category_id = :history_category_id";
+    $history_params[':history_category_id'] = $history_category_filter;
+}
+
+if ($history_action_type_filter) {
+    $history_query .= " AND rh.action_type = :history_action_type";
+    $history_params[':history_action_type'] = $history_action_type_filter;
+}
+
+if ($history_search_query) {
+    $history_query .= " AND (rh.item_name LIKE :history_search OR rh.invoice_no LIKE :history_search OR rh.remark LIKE :history_search)";
+    $history_params[':history_search'] = "%$history_search_query%";
+}
+
+// Add sorting for history
+$history_query .= " ORDER BY $history_sort_by $history_sort_order";
+
+// Get total count for pagination for history
+$history_count_query = "SELECT COUNT(*) as total FROM repair_history rh
+                        LEFT JOIN categories c ON rh.category_id = c.id
+                        JOIN locations fl ON rh.from_location_id = fl.id
+                        JOIN locations tl ON rh.to_location_id = tl.id
+                        WHERE 1=1";
+
+if ($history_year_filter !== null) $history_count_query .= " AND YEAR(rh.date) = :history_year";
+if ($history_month_filter !== null) $history_count_query .= " AND MONTH(rh.date) = :history_month";
+if ($history_location_filter) $history_count_query .= " AND (rh.from_location_id = :history_location_id OR rh.to_location_id = :history_location_id)";
+if ($history_category_filter) $history_count_query .= " AND rh.category_id = :history_category_id";
+if ($history_action_type_filter) $history_count_query .= " AND rh.action_type = :history_action_type";
+if ($history_search_query) $history_count_query .= " AND (rh.item_name LIKE :history_search OR rh.invoice_no LIKE :history_search OR rh.remark LIKE :history_search)";
+
+$history_stmt = $pdo->prepare($history_count_query);
+foreach ($history_params as $key => $value) {
+    $history_stmt->bindValue($key, $value);
+}
+$history_stmt->execute();
+$history_total_items = $history_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$history_total_pages = ceil($history_total_items / $history_limit);
+
+// Get paginated results for history
+$history_query .= " LIMIT :history_limit OFFSET :history_offset";
+$history_stmt = $pdo->prepare($history_query);
+foreach ($history_params as $key => $value) {
+    $history_stmt->bindValue($key, $value);
+}
+$history_stmt->bindValue(':history_limit', $history_limit, PDO::PARAM_INT);
+$history_stmt->bindValue(':history_offset', $history_offset, PDO::PARAM_INT);
+$history_stmt->execute();
+$history_items = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <style>
       :root {
@@ -565,15 +663,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -912,15 +1002,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -1445,12 +1527,12 @@ table th{
     <!-- Tab Navigation -->
     <ul class="nav nav-tabs mb-4" id="repairTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current-repairs" type="button" role="tab" aria-controls="current-repairs" aria-selected="true">
+            <button class="nav-link <?php echo $active_tab === 'current' ? 'active' : ''; ?>" id="current-tab" data-bs-toggle="tab" data-bs-target="#current-repairs" type="button" role="tab" aria-controls="current-repairs" aria-selected="<?php echo $active_tab === 'current' ? 'true' : 'false'; ?>">
                 <?php echo t('current_repairs'); ?>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#repair-history" type="button" role="tab" aria-controls="repair-history" aria-selected="false">
+            <button class="nav-link <?php echo $active_tab === 'history' ? 'active' : ''; ?>" id="history-tab" data-bs-toggle="tab" data-bs-target="#repair-history" type="button" role="tab" aria-controls="repair-history" aria-selected="<?php echo $active_tab === 'history' ? 'true' : 'false'; ?>">
                 <?php echo t('repair_history'); ?>
             </button>
         </li>
@@ -1459,7 +1541,7 @@ table th{
     <!-- Tab Content -->
     <div class="tab-content" id="repairTabsContent">
         <!-- Current Repairs Tab -->
-        <div class="tab-pane fade show active" id="current-repairs" role="tabpanel" aria-labelledby="current-tab">
+        <div class="tab-pane fade <?php echo $active_tab === 'current' ? 'show active' : ''; ?>" id="current-repairs" role="tabpanel" aria-labelledby="current-tab">
             <!-- Filter Card -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
@@ -1467,6 +1549,7 @@ table th{
                 </div>
                 <div class="card-body">
                     <form method="GET" class="filter-form">
+                        <input type="hidden" name="tab" value="current">
                         <div class="row mb-3">
                             <div class="col-md-2">
                                 <label class="form-label"><?php echo t('search'); ?></label>
@@ -1494,7 +1577,18 @@ table th{
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                    
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('action_type'); ?></label>
+                                <select name="action_type" class="form-select">
+                                    <option value=""><?php echo t('all_actions'); ?></option>
+                                    <option value="send_for_repair" <?php echo $action_type_filter == 'send_for_repair' ? 'selected' : ''; ?>>
+                                        <?php echo t('send_for_repair'); ?>
+                                    </option>
+                                    <option value="return_from_repair" <?php echo $action_type_filter == 'return_from_repair' ? 'selected' : ''; ?>>
+                                        <?php echo t('return_back'); ?>
+                                    </option>
+                                </select>
+                            </div>
                             <div class="col-md-2">
                                 <label class="form-label"><?php echo t('month'); ?></label>
                                 <select name="month" class="form-select">
@@ -1517,7 +1611,9 @@ table th{
                                     <?php endfor; ?>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
                                 <label class="form-label"><?php echo t('sort'); ?></label>
                                 <select name="sort_option" class="form-select">
                                     <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>>
@@ -1562,10 +1658,10 @@ table th{
                         
                         <div class="action-buttons">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-filter"></i> <?php echo t('search'); ?>
+                            <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                             </button>
-                            <a href="repair.php" class="btn btn-outline-secondary">
-                                <i class="fas fa-times"></i> <?php echo t('reset'); ?>
+                            <a href="repair.php?tab=current" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
                             </a>
                         </div>
                         
@@ -1719,17 +1815,17 @@ table th{
                     </div>
                     
                     <!-- Pagination -->
-                    <?php if ($total_pages > 1): ?>
+                    <?php if ($total_pages >= 1): ?>
                         <nav aria-label="Page navigation" class="mt-3">
                             <ul class="pagination justify-content-center">
                                 <?php if ($page > 1): ?>
                                     <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1, 'tab' => 'current'])); ?>" aria-label="First">
                                             <span aria-hidden="true">&laquo;&laquo;</span>
                                         </a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1, 'tab' => 'current'])); ?>" aria-label="Previous">
                                             <span aria-hidden="true">&laquo;</span>
                                         </a>
                                     </li>
@@ -1753,7 +1849,7 @@ table th{
                                 
                                 for ($i = $start_page; $i <= $end_page; $i++): ?>
                                     <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i, 'tab' => 'current'])); ?>"><?php echo $i; ?></a>
                                     </li>
                                 <?php endfor;
                                 
@@ -1764,12 +1860,12 @@ table th{
 
                                 <?php if ($page < $total_pages): ?>
                                     <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1, 'tab' => 'current'])); ?>" aria-label="Next">
                                             <span aria-hidden="true">&raquo;</span>
                                         </a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages, 'tab' => 'current'])); ?>" aria-label="Last">
                                             <span aria-hidden="true">&raquo;&raquo;</span>
                                         </a>
                                     </li>
@@ -1792,12 +1888,190 @@ table th{
         </div>
         
         <!-- Repair History Tab -->
-        <div class="tab-pane fade" id="repair-history" role="tabpanel" aria-labelledby="history-tab">
+        <div class="tab-pane fade <?php echo $active_tab === 'history' ? 'show active' : ''; ?>" id="repair-history" role="tabpanel" aria-labelledby="history-tab">
+            <!-- Filter Card for History -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="filter-form">
+                        <input type="hidden" name="tab" value="history">
+                        <div class="row mb-3">
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('search'); ?></label>
+                                <input type="text" name="history_search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $history_search_query; ?>">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('location'); ?></label>
+                                <select name="history_location" class="form-select">
+                                    <option value=""><?php echo t('report_all_location'); ?></option>
+                                    <?php foreach ($all_locations as $location): ?>
+                                        <option value="<?php echo $location['id']; ?>" <?php echo $history_location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                            <?php echo $location['name']; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('category'); ?></label>
+                                <select name="history_category" class="form-select">
+                                    <option value=""><?php echo t('all_categories'); ?></option>
+                                    <?php foreach ($all_categories as $category): ?>
+                                        <option value="<?php echo $category['id']; ?>" <?php echo $history_category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                            <?php echo $category['name']; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('action_type'); ?></label>
+                                <select name="history_action_type" class="form-select">
+                                    <option value=""><?php echo t('all_actions'); ?></option>
+                                    <option value="send_for_repair" <?php echo $history_action_type_filter == 'send_for_repair' ? 'selected' : ''; ?>>
+                                        <?php echo t('send_for_repair'); ?>
+                                    </option>
+                                    <option value="return_from_repair" <?php echo $history_action_type_filter == 'return_from_repair' ? 'selected' : ''; ?>>
+                                        <?php echo t('return_back'); ?>
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('month'); ?></label>
+                                <select name="history_month" class="form-select">
+                                    <option value="0" <?php echo $history_month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
+                                    <?php for ($m = 1; $m <= 12; $m++): ?>
+                                        <option value="<?php echo $m; ?>" <?php echo $history_month_filter == $m ? 'selected' : ''; ?>>
+                                            <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"><?php echo t('year'); ?></label>
+                                <select name="history_year" class="form-select">
+                                    <option value="0" <?php echo $history_year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
+                                    <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                                        <option value="<?php echo $y; ?>" <?php echo $history_year_filter == $y ? 'selected' : ''; ?>>
+                                            <?php echo $y; ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label"><?php echo t('sort'); ?></label>
+                                <select name="history_sort_option" class="form-select">
+                                    <option value="name_asc" <?php echo $history_sort_option == 'name_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('name_a_to_z'); ?>
+                                    </option>
+                                    <option value="name_desc" <?php echo $history_sort_option == 'name_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('name_z_to_a'); ?>
+                                    </option>
+                                    <option value="location_asc" <?php echo $history_sort_option == 'location_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('location_a_to_z'); ?>
+                                    </option>
+                                    <option value="location_desc" <?php echo $history_sort_option == 'location_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('location_z_to_a'); ?>
+                                    </option>
+                                    <option value="date_asc" <?php echo $history_sort_option == 'date_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('date_oldest_first'); ?>
+                                    </option>
+                                    <option value="date_desc" <?php echo $history_sort_option == 'date_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('date_newest_first'); ?>
+                                    </option>
+                                    <option value="category_asc" <?php echo $history_sort_option == 'category_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('category_az'); ?>
+                                    </option>
+                                    <option value="category_desc" <?php echo $history_sort_option == 'category_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('category_za'); ?>
+                                    </option>
+                                    <option value="action_by_asc" <?php echo $history_sort_option == 'action_by_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_by_a_to_z'); ?>
+                                    </option>
+                                    <option value="action_by_desc" <?php echo $history_sort_option == 'action_by_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_by_z_to_a'); ?>
+                                    </option>
+                                    <option value="action_asc" <?php echo $history_sort_option == 'action_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_a_to_z'); ?>
+                                    </option>
+                                    <option value="action_desc" <?php echo $history_sort_option == 'action_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('action_z_to_a'); ?>
+                                    </option>
+                                    <option value="history_action_asc" <?php echo $history_sort_option == 'history_action_asc' ? 'selected' : ''; ?>>
+                                        <?php echo t('history_action_a_to_z'); ?>
+                                    </option>
+                                    <option value="history_action_desc" <?php echo $history_sort_option == 'history_action_desc' ? 'selected' : ''; ?>>
+                                        <?php echo t('history_action_z_to_a'); ?>
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                            </button>
+                            <a href="repair.php?tab=history" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                            </a>
+                        </div>
+                        
+                        <input type="hidden" name="history_page" value="1">
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Data Card for History -->
             <div class="card mb-4">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><?php echo t('repair_history'); ?></h5>
                 </div>
                 <div class="card-body">
+                    <?php if (!empty($history_search_query) || $history_location_filter || $history_category_filter || $history_action_type_filter || $history_month_filter || $history_year_filter): ?>
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle"></i> 
+                            <?php echo t('showing_filtered_results'); ?>
+                            <?php if (!empty($history_search_query)): ?>
+                                <span class="badge bg-secondary"><?php echo t('search'); ?>: <?php echo htmlspecialchars($history_search_query); ?></span>
+                            <?php endif; ?>
+                            <?php if ($history_location_filter): ?>
+                                <?php 
+                                $location_name = '';
+                                foreach ($all_locations as $location) {
+                                    if ($location['id'] == $history_location_filter) {
+                                        $location_name = $location['name'];
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <span class="badge bg-secondary"><?php echo t('location'); ?>: <?php echo $location_name; ?></span>
+                            <?php endif; ?>
+                            <?php if ($history_category_filter): ?>
+                                <?php 
+                                $category_name = '';
+                                foreach ($all_categories as $category) {
+                                    if ($category['id'] == $history_category_filter) {
+                                        $category_name = $category['name'];
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <span class="badge bg-secondary"><?php echo t('category'); ?>: <?php echo $category_name; ?></span>
+                            <?php endif; ?>
+                            <?php if ($history_action_type_filter): ?>
+                                <span class="badge bg-secondary"><?php echo t('action'); ?>: <?php echo $history_action_type_filter; ?></span>
+                            <?php endif; ?>
+                            <?php if ($history_month_filter && $history_month_filter != 0): ?>
+                                <span class="badge bg-secondary"><?php echo t('month'); ?>: <?php echo date('F', mktime(0, 0, 0, $history_month_filter, 1)); ?></span>
+                            <?php endif; ?>
+                            <?php if ($history_year_filter && $history_year_filter != 0): ?>
+                                <span class="badge bg-secondary"><?php echo t('year'); ?>: <?php echo $history_year_filter; ?></span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                    
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
@@ -1828,7 +2102,7 @@ table th{
                                 <?php else: ?>
                                     <?php foreach ($history_items as $index => $item): ?>
                                         <tr>
-                                            <td><?php echo $index + 1; ?></td>
+                                            <td><?php echo $index + 1 + $history_offset; ?></td>
                                             <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
                                             <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                             <td><?php echo $item['invoice_no']; ?></td>
@@ -1867,7 +2141,7 @@ table th{
                                             <td>
                                                 <span class="badge bg-<?php 
                                                     echo $item['history_action'] == 'created' ? 'success' : 
-                                                         ($item['history_action'] == 'updated' ? 'warning' : 'danger'); 
+                                                         ($item['history_action'] == 'updated' ? 'warning' : ''); 
                                                 ?>">
                                                     <?php echo t($item['history_action']); ?>
                                                 </span>
@@ -1879,12 +2153,81 @@ table th{
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Pagination for History -->
+                    <?php if ($history_total_pages >= 1): ?>
+                        <nav aria-label="Page navigation" class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                <?php if ($history_page > 1): ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['history_page' => 1, 'tab' => 'history'])); ?>" aria-label="First">
+                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['history_page' => $history_page - 1, 'tab' => 'history'])); ?>" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                <?php else: ?>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">&laquo;&laquo;</span>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">&laquo;</span>
+                                    </li>
+                                <?php endif; ?>
+
+                                <?php 
+                                // Show page numbers
+                                $start_page = max(1, $history_page - 2);
+                                $end_page = min($history_total_pages, $history_page + 2);
+                                
+                                if ($start_page > 1) {
+                                    echo '<li class="page-item"><span class="page-link">...</span></li>';
+                                }
+                                
+                                for ($i = $start_page; $i <= $end_page; $i++): ?>
+                                    <li class="page-item <?php echo $i == $history_page ? 'active' : ''; ?>">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['history_page' => $i, 'tab' => 'history'])); ?>"><?php echo $i; ?></a>
+                                    </li>
+                                <?php endfor;
+                                
+                                if ($end_page < $history_total_pages) {
+                                    echo '<li class="page-item"><span class="page-link">...</span></li>';
+                                }
+                                ?>
+
+                                <?php if ($history_page < $history_total_pages): ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['history_page' => $history_page + 1, 'tab' => 'history'])); ?>" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['history_page' => $history_total_pages, 'tab' => 'history'])); ?>" aria-label="Last">
+                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                        </a>
+                                    </li>
+                                <?php else: ?>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">&raquo;</span>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">&raquo;&raquo;</span>
+                                    </li>
+                                <?php endif; ?>
+                            </ul>
+                        </nav>
+                        <div class="text-center text-muted">
+                            <?php echo t('page'); ?> <?php echo $history_page; ?> <?php echo t('page_of'); ?> <?php echo $history_total_pages; ?> 
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 <!-- Send for Repair Modal -->
 <div class="modal fade" id="sendForRepairModal" tabindex="-1" aria-labelledby="sendForRepairModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

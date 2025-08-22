@@ -20,37 +20,38 @@ $today = date('Y-m-d');
 
 // Query to get today's repair records
 $query = "SELECT 
-    r.id,
-    r.item_code, 
-    r.category_id,
+    rh.id,
+    rh.item_code, 
+    rh.category_id,
     c.name as category_name,
-    r.invoice_no,
-    r.date,
-    r.item_name,
-    r.quantity,
-    r.action_type,
-    r.size,
-    r.from_location_id,
+    rh.invoice_no,
+    rh.date,
+    rh.item_name,
+    rh.quantity,
+    rh.action_type,
+    rh.size,
+    rh.from_location_id,
     fl.name as from_location_name,
-    r.to_location_id,
+    rh.to_location_id,
     tl.name as to_location_name,
-    r.remark,
-    r.action_by,
+    rh.remark,
+    rh.action_by,
     u.username as action_by_name,
-    r.action_at,
-    (SELECT id FROM item_images WHERE item_id = (SELECT id FROM items WHERE name = r.item_name LIMIT 1) ORDER BY id DESC LIMIT 1) as image_id
+    rh.history_action_at as action_at,
+    (SELECT id FROM item_images WHERE item_id = (SELECT id FROM items WHERE name = rh.item_name LIMIT 1) ORDER BY id DESC LIMIT 1) as image_id
 FROM 
-    repair_items r
+    repair_history rh
 LEFT JOIN 
-    categories c ON r.category_id = c.id
+    categories c ON rh.category_id = c.id
 JOIN 
-    locations fl ON r.from_location_id = fl.id
+    locations fl ON rh.from_location_id = fl.id
 JOIN 
-    locations tl ON r.to_location_id = tl.id
+    locations tl ON rh.to_location_id = tl.id
 JOIN
-    users u ON r.action_by = u.id
-WHERE DATE(r.action_at) = :today
-ORDER BY r.action_at DESC";
+    users u ON rh.action_by = u.id
+WHERE DATE(rh.history_action_at) = :today 
+AND rh.action_type = 'send_for_repair'
+ORDER BY rh.history_action_at DESC";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute([':today' => $today]);

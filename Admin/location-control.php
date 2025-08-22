@@ -380,15 +380,6 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -912,10 +903,10 @@ body {
                 
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> <?php echo t('search');?>
+                    <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                     </button>
                     <a href="location-control.php" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> <?php echo t('reset');?>
+                    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
                     </a>
                 </div>
                 

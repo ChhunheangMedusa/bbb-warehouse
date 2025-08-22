@@ -281,15 +281,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -719,6 +711,8 @@ body {
     }
 }
 </style>
+<div class="container-fluid">
+    <h2 class="mb-4"><?php echo t('logs_button');?></h2>
 <!-- Filter Card -->
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
@@ -796,10 +790,10 @@ body {
             
             <div class="action-buttons">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-filter"></i> <?php echo t('search');?>
+                <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                 </button>
                 <a href="access-log.php" class="btn btn-outline-secondary">
-                    <i class="fas fa-times"></i> <?php echo t('reset');?>
+                <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
                 </a>
             </div>
             
@@ -931,7 +925,7 @@ body {
         </div>
     </div>
 </div>
-
+</div>
 <?php
 require_once '../includes/footer.php';
 ?>
