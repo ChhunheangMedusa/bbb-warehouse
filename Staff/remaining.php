@@ -2,10 +2,11 @@
 ob_start();
 
 // Includes in correct order
-require_once 'config/database.php';
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
-require_once 'includes/header-staff.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once '../includes/auth.php';
+require_once '../includes/header-staff.php';
+require_once  'translate.php'; 
 if (!isStaff()) {
     $_SESSION['error'] = "You don't have permission to access this page";
     header('Location: dashboard.php');
@@ -27,13 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Loop through each item
             foreach ($_POST['name'] as $index => $name) {
+                $item_code = sanitizeInput($_POST['item_code'][$index]);
+$category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
                 $location_id = (int)$_POST['location_id'][$index];
                 $name = sanitizeInput($name);
                 $quantity = (float)$_POST['quantity'][$index];
                 $alert_quantity = (int)$_POST['alert_quantity'][$index];
                 $size = sanitizeInput($_POST['size'][$index]);
                 $remark = sanitizeInput($_POST['remark'][$index]);
-
+                $dupli=t('duplicate_itm2');
                 $stmt = $pdo->prepare("SELECT id FROM items WHERE name = ? AND location_id = ?");
             $stmt->execute([$name, $location_id]);
             if ($stmt->fetch()) {
@@ -43,12 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         duplicateModal.show();
                     });
                 </script>';
-                throw new Exception("ទំនិញមានឈ្មោះដូចគ្នានៅទីតាំងនេះរួចហើយ");
+                throw new Exception("$dupli");
             }
                 // Insert the item into the database
-                $stmt = $pdo->prepare("INSERT INTO items (invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
-                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
+                $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
                 $item_id = $pdo->lastInsertId();
                    // Also insert into addnewitems table
             $stmt = $pdo->prepare("INSERT INTO addnewitems 
@@ -99,16 +102,18 @@ $_SESSION['user_id']
             }
             
             $pdo->commit();
-            
-            $_SESSION['success'] = "ទំនិញថ្មីត្រូវបានបន្ថែមដោយជោគជ័យ។";
-            redirect('item-control-staff.php');
+            $dupli2=t('duplicate_itm2');
+            $dupli3=t('item_succ1');
+            $dupli4=t('item_succ2');
+            $_SESSION['success'] = "$dupli3";
+            redirect('remaining.php');
         } catch (PDOException $e) {
             $pdo->rollBack();
             
             if ($e->errorInfo[1] == 1062) {
-                $_SESSION['error'] = "ទំនិញមានឈ្មោះដូចគ្នានៅទីតាំងនេះរួចហើយ។";
+                $_SESSION['error'] = "$dupli2";
             } else {
-                $_SESSION['error'] = "មានបញ្ហាក្នុងការបន្ថែមទំនិញ។";
+                $_SESSION['error'] = "$dupli4";
             }
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -164,12 +169,14 @@ $_SESSION['user_id']
             }
             
             $pdo->commit();
+            $add_qty1=t('add_qty1');
+            $add_qty2=t('add_qty2');
             
-            $_SESSION['success'] = "បរិមាណទំនិញត្រូវបានបន្ថែមដោយជោគជ័យ។";
-            redirect('item-control-staff.php');
+            $_SESSION['success'] = "$add_qty1";
+            redirect('remaining.php');
         } catch (PDOException $e) {
             $pdo->rollBack();
-            $_SESSION['error'] = "មានបញ្ហាក្នុងការបន្ថែមបរិមាណទំនិញ។";
+            $_SESSION['error'] = "$add_qty2";
         }
     } 
     
@@ -195,9 +202,9 @@ $_SESSION['user_id']
                 $item = $stmt->fetch(PDO::FETCH_ASSOC);
                 $old_qty = $item['quantity'];
                 $item_name = $item['name'];
-                
+                $deduct_qty1=t('deduct_qty1');
                 if ($quantity > $old_qty) {
-                    throw new Exception("បរិមាណដកចេញលើសពីបរិមាណស្តុកសម្រាប់ទំនិញ: $item_name");
+                    throw new Exception("$deduct_qty1: $item_name");
                 }
                 
                 // Update quantity
@@ -215,12 +222,13 @@ $_SESSION['user_id']
             }
             
             $pdo->commit();
-            
-            $_SESSION['success'] = "បរិមាណទំនិញត្រូវបានដកចេញដោយជោគជ័យ។";
-            redirect('item-control-staff.php');
+            $deduct_qty2=t('deduct_qty2');
+            $deduct_qty3=t('deduct_qty3');
+            $_SESSION['success'] = "$deduct_qty2";
+            redirect('remaining.php');
         } catch (PDOException $e) {
             $pdo->rollBack();
-            $_SESSION['error'] = "មានបញ្ហាក្នុងការដកបរិមាណទំនិញ។";
+            $_SESSION['error'] = "$deduct_qty3";
         } catch (Exception $e) {
             $_SESSION['error'] = $e->getMessage();
         }
@@ -236,7 +244,8 @@ $_SESSION['user_id']
         $size = sanitizeInput($_POST['size']);
         $location_id = (int)$_POST['location_id'];
         $remark = sanitizeInput($_POST['remark']);
-        
+        $item_code = sanitizeInput($_POST['item_code']);
+$category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
         try {
             $pdo->beginTransaction();
             
@@ -272,7 +281,7 @@ $_SESSION['user_id']
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['error'] = "Image upload failed: " . $e->getMessage();
-            redirect('item-control-staff.php');
+            redirect('remaining.php');
         }
     }
             // Get new location name for comparison
@@ -281,9 +290,8 @@ $_SESSION['user_id']
             $new_location = $stmt->fetch(PDO::FETCH_ASSOC);
     
             // Update item details
-            $stmt = $pdo->prepare("UPDATE items SET invoice_no=?, date=?, name=?, quantity=?, size=?, location_id=?, remark=? WHERE id=?");
-            $stmt->execute([$invoice_no, $date, $name, $quantity, $size, $location_id, $remark, $id]);
-    
+            $stmt = $pdo->prepare("UPDATE items SET item_code=?, category_id=?, invoice_no=?, date=?, name=?, quantity=?, size=?, location_id=?, remark=? WHERE id=?");
+$stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $size, $location_id, $remark, $id]);
    
           
             
@@ -292,12 +300,26 @@ $_SESSION['user_id']
             // Prepare log message with changes
             $log_message = "";
             $changes = [];
-            
+            // In the changes array, add these checks:
+if ($old_item['item_code'] != $item_code) {
+    $old_code = $old_item['item_code'] ?: 'N/A';
+    $new_code = $item_code ?: 'N/A';
+    $changes[] = "Updated item code ($name) : $old_code → $new_code ";
+}
+
+if ($old_item['category_id'] != $category_id) {
+    $old_category = $old_item['category_id'] ? getCategoryName($pdo, $old_item['category_id']) : 'N/A';
+    $new_category = $category_id ? getCategoryName($pdo, $category_id) : 'N/A';
+    $changes[] = "Updated item category ($name) : $old_category → $new_category";
+}
+
+
             if ($old_item['invoice_no'] != $invoice_no) {
                 $old_invoice = $old_item['invoice_no'] ?: 'N/A';
                 $new_invoice = $invoice_no ?: 'N/A';
                 $changes[] = "Updated item invoice ($name) : $old_invoice → $new_invoice";
             }
+
             if ($old_item['date'] != $date) {
                 $changes[] = "Updated item date ($name) : {$old_item['date']} → $date";
             }
@@ -310,7 +332,7 @@ $_SESSION['user_id']
             if ($old_item['size'] != $size) {
                 $old_size = $old_item['size'] ?: 'N/A';
                 $new_size = $size ?: 'N/A';
-                $changes[] = "Updated item size ($name) : $old_size → $new_size";
+                $changes[] = "Updated item unit ($name) : $old_size → $new_size";
             }
             if ($old_item['location_id'] != $location_id) {
                 $changes[] = "Updated item location ($name) : {$old_item['location_name']} → {$new_location['name']}";
@@ -334,15 +356,17 @@ $_SESSION['user_id']
             } else {
                 $log_message .= implode(', ', $changes);
             }
+            $update_item1=t('update_item1');
+            $update_item2=t('update_item2');
             
-            $_SESSION['success'] = "ទំនិញត្រូវបានកែប្រែដោយជោគជ័យ។";
+            $_SESSION['success'] = "$update_item1";
             logActivity($_SESSION['user_id'], 'Edit Item', $log_message);
             
-            redirect('item-control-staff.php');
+            redirect('remaining.php');
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            $_SESSION['error'] = "មានបញ្ហាក្នុងការកែប្រែទំនិញ: " . $e->getMessage();
+            $_SESSION['error'] = "$update_item2: " . $e->getMessage();
         }
     }
     }
@@ -379,45 +403,84 @@ if (isset($_GET['delete'])) {
             // Then delete the item from main table
             $stmt = $pdo->prepare("DELETE FROM items WHERE id = ?");
             $stmt->execute([$id]);
-            
+            $delete_item1=t('delete_item1');
+            $delete_item2=t('delete_item2');
+            $delete_item3=t('delete_item3');
+
+
             logActivity($_SESSION['user_id'], 'Delete Item', "Removed item: {$item['name']} ({$item['quantity']}) from {$item['location']} ");
-            $_SESSION['success'] = "ទំនិញត្រូវបានលុបដោយជោគជ័យ។";
+            $_SESSION['success'] = "$delete_item1";
         } else {
-            $_SESSION['error'] = "រកមិនឃើញទំនិញ។";
+            $_SESSION['error'] = "$delete_item2";
         }
         
         $pdo->commit();
     } catch (PDOException $e) {
         $pdo->rollBack();
-        $_SESSION['error'] = "មានបញ្ហាក្នុងការលុបទំនិញ។";
+        $_SESSION['error'] = "$delete_item3";
     }
     
-    redirect('item-control-staff.php');
+    redirect('remaining.php');
 }
-
 // Get filter parameters
+$year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
+$month_filter = isset($_GET['month']) && $_GET['month'] != 0 ? (int)$_GET['month'] : null;
 $location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
-$month_filter = isset($_GET['month']) ? (int)$_GET['month'] : date('n');
-$year_filter = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
+$category_filter = isset($_GET['category']) && $_GET['category'] != '' ? (int)$_GET['category'] : null;
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 
+// Get sort parameters
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+
+// Validate and parse sort option
+$sort_mapping = [
+    'name_asc' => ['field' => 'i.name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'i.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'i.date', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'i.date', 'direction' => 'DESC'],
+    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
+    'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
+    'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
+    'quantity_asc' => ['field' => 'i.quantity', 'direction' => 'ASC'],
+    'quantity_desc' => ['field' => 'i.quantity', 'direction' => 'DESC']
+];
+
+// Default to date_desc if invalid option
+if (!array_key_exists($sort_option, $sort_mapping)) {
+    $sort_option = 'date_desc';
+}
+
+$sort_by = $sort_mapping[$sort_option]['field'];
+$sort_order = $sort_mapping[$sort_option]['direction'];
+
 // Build query for items
-$query = "SELECT i.*, l.name as location_name 
+$query = "SELECT i.*, l.name as location_name, c.name as category_name 
           FROM items i 
           JOIN locations l ON i.location_id = l.id 
-          WHERE YEAR(i.date) = :year";
-$params = [':year' => $year_filter];
+          LEFT JOIN categories c ON i.category_id = c.id
+          WHERE 1=1";
+$params = [];
 
-// Add month filter if not "All Months"
-if ($month_filter && $month_filter != 0) {
+// Add filters only if they have values
+if ($year_filter !== null) {
+    $query .= " AND YEAR(i.date) = :year";
+    $params[':year'] = $year_filter;
+}
+
+if ($month_filter !== null) {
     $query .= " AND MONTH(i.date) = :month";
     $params[':month'] = $month_filter;
 }
 
-
 if ($location_filter) {
     $query .= " AND i.location_id = :location_id";
     $params[':location_id'] = $location_filter;
+}
+
+if ($category_filter) {
+    $query .= " AND i.category_id = :category_id";
+    $params[':category_id'] = $category_filter;
 }
 
 if ($search_query) {
@@ -425,7 +488,8 @@ if ($search_query) {
     $params[':search'] = "%$search_query%";
 }
 
-$query .= " ORDER BY i.date DESC, i.created_at DESC";
+// Add sorting
+$query .= " ORDER BY $sort_by $sort_order";
 
 // Get pagination parameters
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -433,7 +497,29 @@ $limit = 10;
 $offset = ($page - 1) * $limit;
 
 // Get total count for pagination
-$stmt = $pdo->prepare(str_replace('SELECT i.*, l.name as location_name', 'SELECT COUNT(*) as total', $query));
+$count_query = "SELECT COUNT(*) as total FROM items i 
+                JOIN locations l ON i.location_id = l.id 
+                LEFT JOIN categories c ON i.category_id = c.id
+                WHERE 1=1";
+
+// Add the same filters to the count query
+if ($year_filter !== null) {
+    $count_query .= " AND YEAR(i.date) = :year";
+}
+if ($month_filter !== null) {
+    $count_query .= " AND MONTH(i.date) = :month";
+}
+if ($location_filter) {
+    $count_query .= " AND i.location_id = :location_id";
+}
+if ($category_filter) {
+    $count_query .= " AND i.category_id = :category_id";
+}
+if ($search_query) {
+    $count_query .= " AND (i.name LIKE :search OR i.invoice_no LIKE :search OR i.remark LIKE :search)";
+}
+
+$stmt = $pdo->prepare($count_query);
 foreach ($params as $key => $value) {
     $stmt->bindValue($key, $value);
 }
@@ -455,6 +541,10 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get all locations for filter dropdown
 $stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
 $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get all categories for filter dropdown
+$stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
+$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get items by location for add/deduct quantity dropdowns
 $items_by_location = [];
@@ -606,15 +696,6 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -953,15 +1034,6 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -1283,7 +1355,7 @@ table th{
 }
 
 #deleteConfirmModal .btn-danger {
-    min-width: 120px;
+
     padding: 8px 20px;
     font-weight: 600;
 }
@@ -1417,142 +1489,298 @@ table th{
     #quantityExceedModal{
         z-index: 1060 !important;
     }
-</style>
-
-<div class="container-fluid">
-    <h2 class="mb-4">គ្រប់គ្រងទំនិញ</h2>
     
+/* Filter section styles */
+.filter-section {
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.sort-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+.sort-select {
+    min-width: 120px;
+}
+
+.sort-order-select {
+    min-width: 100px;
+}
+
+@media (max-width: 768px) {
+    .filter-group {
+        min-width: 100%;
+    }
+    .sort-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .sort-select, .sort-order-select {
+        min-width: 100%;
+    }
+}
+</style>
+<div class="container-fluid">
+    <h2 class="mb-4"><?php echo t('item_management');?></h2>
+    
+    <!-- Filter Card -->
     <div class="card mb-4">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">បញ្ជីទំនិញ</h5>
-    <div>
-    <?php if (isAdmin()): ?>
-        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addItemModal">
-            <i class="bi bi-plus-circle"></i> បន្ថែមទំនិញថ្មី
-        </button>
-        <?php endif?>
-        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addQtyModal">
-            <i class="bi bi-plus-lg"></i> បន្ថែមបរិមាណ
-        </button>
-        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#deductQtyModal">
-            <i class="bi bi-dash-lg"></i> បន្ថយបរិមាណ
-        </button>
-    </div>
-</div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-8">
-                    <form method="GET" class="row g-2">
-                    <div class="col-md-2">
-                            <input type="text" name="search" class="form-control" placeholder="ស្វែងរក..." value="<?php echo $search_query; ?>">
-</div>
-
-                        <div class="col-md-2">
-                            <select name="location" class="form-select">
-                                <option value="">ទីតាំងទាំងអស់</option>
-                                <?php foreach ($locations as $location): ?>
-                                    <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
-                                        <?php echo $location['name']; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2">
-    <select name="month" class="form-select">
-        <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>>ខែទាំងអស់</option>
-        <?php for ($m = 1; $m <= 12; $m++): ?>
-            <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
-                <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
-            </option>
-        <?php endfor; ?>
-    </select>
-</div>
-                        <div class="col-md-2">
-                            <select name="year" class="form-select">
-                                <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-                                    <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
-                                        <?php echo $y; ?>
-                                    </option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">Filter</button>
-                        </div>
-                        <div class="col-md-2">
-            <a href="item-control-staff.php" class="btn btn-danger w-100">Reset</a>
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><?php echo t('filter_options');?></h5>
         </div>
-                    </form>
+        <div class="card-body">
+            <form method="GET" class="filter-form">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('search');?></label>
+                        <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_query); ?>" placeholder="<?php echo t('search');?>...">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('location_column');?></label>
+                        <select name="location" class="form-select">
+                            <option value=""><?php echo t('report_all_location');?></option>
+                            <?php foreach ($locations as $location): ?>
+                                <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                    <?php echo $location['name']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('category');?></label>
+                        <select name="category" class="form-select">
+                            <option value=""><?php echo t('type_all');?></option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['id']; ?>" <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                    <?php echo $category['name']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('month');?></label>
+                        <select name="month" class="form-select">
+                            <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_months');?></option>
+                            <?php for ($m = 1; $m <= 12; $m++): ?>
+                                <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
+                                    <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('year');?></label>
+                        <select name="year" class="form-select">
+                            <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years');?></option>
+                            <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                                <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
+                                    <?php echo $y; ?>
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label"><?php echo t('sort');?></label>
+                        <select name="sort_option" class="form-select">
+                            <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('name_a_to_z'); ?>
+                            </option>
+                            <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('name_z_to_a'); ?>
+                            </option>
+                            <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('date_oldest_first'); ?>
+                            </option>
+                            <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('date_newest_first'); ?>
+                            </option>
+                            <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('category_az'); ?>
+                            </option>
+                            <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('category_za'); ?>
+                            </option>
+                            <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('location_a_to_z'); ?>
+                            </option>
+                            <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('location_z_to_a'); ?>
+                            </option>
+                            <option value="quantity_asc" <?php echo $sort_option == 'quantity_asc' ? 'selected' : ''; ?>>
+                                <?php echo t('quantity_low_to_high'); ?>
+                            </option>
+                            <option value="quantity_desc" <?php echo $sort_option == 'quantity_desc' ? 'selected' : ''; ?>>
+                                <?php echo t('quantity_high_to_low'); ?>
+                            </option>
+                        </select>
+                    </div>
                 </div>
-            </div>
+                
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                    </button>
+                    <a href="remaining.php" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                    </a>
+                </div>
+                
+                <input type="hidden" name="page" value="1">
+            </form>
+        </div>
+    </div>
+    
+    <!-- Data Card -->
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color:#674ea7;">
+            <button class="btn btn-light btn-sm float-end" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                <i class="bi bi-plus-circle"></i> <?php echo t('add_new_item');?>
+            </button>
+            <h5 class="mb-0"><?php echo t('item_list');?></h5>
+        </div>
+        <div class="card-body">
+            <?php if (!empty($search_query) || $location_filter || $category_filter || $month_filter || $year_filter): ?>
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i> 
+                    <?php echo t('showing_filtered_results');?>
+                    <?php if (!empty($search_query)): ?>
+                        <span class="badge bg-secondary"><?php echo t('search');?>: <?php echo htmlspecialchars($search_query); ?></span>
+                    <?php endif; ?>
+                    <?php if ($location_filter): ?>
+                        <span class="badge bg-secondary"><?php echo t('location_column');?>: <?php 
+                            $location_name = '';
+                            foreach ($locations as $loc) {
+                                if ($loc['id'] == $location_filter) {
+                                    $location_name = $loc['name'];
+                                    break;
+                                }
+                            }
+                            echo $location_name;
+                        ?></span>
+                    <?php endif; ?>
+                    <?php if ($category_filter): ?>
+                        <span class="badge bg-secondary"><?php echo t('category');?>: <?php 
+                            $category_name = '';
+                            foreach ($categories as $cat) {
+                                if ($cat['id'] == $category_filter) {
+                                    $category_name = $cat['name'];
+                                    break;
+                                }
+                            }
+                            echo $category_name;
+                        ?></span>
+                    <?php endif; ?>
+                    <?php if ($month_filter && $month_filter != 0): ?>
+                        <span class="badge bg-secondary"><?php echo t('month');?>: <?php echo date('F', mktime(0, 0, 0, $month_filter, 1)); ?></span>
+                    <?php endif; ?>
+                    <?php if ($year_filter && $year_filter != 0): ?>
+                        <span class="badge bg-secondary"><?php echo t('year');?>: <?php echo $year_filter; ?></span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
             
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>ល.រ</th>
-                            <th>លេខវិក័យប័ត្រ</th>
-                            <th>កាលបរិច្ឆេទ</th>
-                            <th>ឈ្មោះទំនិញ</th>
-                            <th>បរិមាណ</th>
-                            <th>ទំហំ</th>
-                            <th>ទីតាំង</th>
-                            <th>ផ្សេងៗ</th>
-                            <th>រូបភាព</th>
-                            <th>សកម្មភាព</th>
+                            <th><?php echo t('item_no');?></th>
+                            <th><?php echo t('item_code');?></th>
+                            <th><?php echo t('category');?></th>
+                            <th><?php echo t('item_invoice');?></th>
+                            <th><?php echo t('item_date');?></th>
+                            <th><?php echo t('item_name');?></th>
+                            <th><?php echo t('item_qty');?></th>
+                            <th><?php echo t('item_size');?></th>
+                            <th><?php echo t('item_location');?></th>
+                            <th><?php echo t('item_remark');?></th>
+                            <th><?php echo t('item_photo');?></th>
+                            <th><?php echo t('column_action');?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($items)): ?>
                             <tr>
-                                <td colspan="10" class="text-center">មិនមានទំនិញ</td>
+                                <td colspan="12" class="text-center"><?php echo t('no_itemss');?></td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($items as $index => $item): ?>
                                 <tr>
                                     <td><?php echo $index + 1 + $offset; ?></td>
+                                    <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
+                                    <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                     <td><?php echo $item['invoice_no']; ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
                                     <td><?php echo $item['name']; ?></td>
                                     <td class="<?php echo $item['quantity'] <= $item['alert_quantity'] ? 'text-danger fw-bold' : ''; ?>">
-    <?php echo $item['quantity']; ?>
-    <?php if ($item['quantity'] <= $item['alert_quantity']): ?>
-        <span class="badge bg-danger">ស្តុកទាប</span>
-    <?php endif; ?>
-</td>
+                                        <?php echo $item['quantity']; ?>
+                                        <?php if ($item['quantity'] <= $item['alert_quantity']): ?>
+                                            <span class="badge bg-danger"><?php echo t('low_stock_title');?></span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?php echo $item['size']; ?></td>
                                     <td><?php echo $item['location_name']; ?></td>
                                     <td><?php echo $item['remark']; ?></td>
-
-                 
-
                                     <td>
-    <?php 
-    $stmt = $pdo->prepare("SELECT id FROM item_images WHERE item_id = ? ORDER BY id DESC LIMIT 1");
-    $stmt->execute([$item['id']]);
-    $image = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($image): ?>
-        <img src="display_image.php?id=<?php echo $image['id']; ?>" 
-             alt="<?php echo htmlspecialchars($item['name']); ?>" 
-             class="img-thumbnail" 
-             width="50"
-             data-bs-toggle="modal" 
-             data-bs-target="#imageGalleryModal"
-             data-item-id="<?php echo $item['id']; ?>">
-    <?php else: ?>
-        <span class="badge bg-secondary">No image</span>
-    <?php endif; ?>
-</td>
+                                        <?php 
+                                        $stmt = $pdo->prepare("SELECT id FROM item_images WHERE item_id = ? ORDER BY id DESC LIMIT 1");
+                                        $stmt->execute([$item['id']]);
+                                        $image = $stmt->fetch(PDO::FETCH_ASSOC);
+                                        
+                                        if ($image): ?>
+                                            <img src="display_image.php?id=<?php echo $image['id']; ?>" 
+                                                 alt="<?php echo htmlspecialchars($item['name']); ?>" 
+                                                 class="img-thumbnail" 
+                                                 width="50"
+                                                 data-bs-toggle="modal" 
+                                                 data-bs-target="#imageGalleryModal"
+                                                 data-item-id="<?php echo $item['id']; ?>">
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">No image</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>
-                                    <button class="btn btn-sm btn-info view-item" 
-            data-id="<?php echo $item['id']; ?>">
-        <i class="bi bi-eye"></i> មើល
-    </button>
+                                        <button class="btn btn-sm btn-info view-item" 
+                                                data-id="<?php echo $item['id']; ?>">
+                                            <i class="bi bi-eye"></i> <?php echo t('view_button');?>
+                                        </button>
                                         <button class="btn btn-sm btn-warning edit-item" 
                                                 data-id="<?php echo $item['id']; ?>"
+                                                data-item_code="<?php echo $item['item_code']; ?>"
+                                                data-category_id="<?php echo $item['category_id']; ?>"
                                                 data-invoice_no="<?php echo $item['invoice_no']; ?>"
                                                 data-date="<?php echo $item['date']; ?>"
                                                 data-name="<?php echo $item['name']; ?>"
@@ -1560,15 +1788,16 @@ table th{
                                                 data-size="<?php echo $item['size']; ?>"
                                                 data-location_id="<?php echo $item['location_id']; ?>"
                                                 data-remark="<?php echo $item['remark']; ?>">
-                                            <i class="bi bi-pencil"></i> កែប្រែ
+                                            <i class="bi bi-pencil"></i> <?php echo t('update_button');?>
                                         </button>
                                         <?php if (isAdmin()): ?>
-                                        <a href="#" class="btn btn-sm btn-danger delete-item" 
-   data-id="<?php echo $item['id']; ?>"
-   data-name="<?php echo htmlspecialchars($item['name']); ?>"
-   data-location="<?php echo htmlspecialchars($item['location_name']); ?>">
-    <i class="bi bi-trash"></i> លុប
-</a><?php endif?>
+                                            <a href="#" class="btn btn-sm btn-danger delete-item" 
+                                               data-id="<?php echo $item['id']; ?>"
+                                               data-name="<?php echo htmlspecialchars($item['name']); ?>"
+                                               data-location="<?php echo htmlspecialchars($item['location_name']); ?>">
+                                                <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
+                                            </a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -1577,121 +1806,140 @@ table th{
                 </table>
             </div>
             
-           <!-- Pagination -->
-<?php if ($total_pages > 1): ?>
-    <nav aria-label="Page navigation" class="mt-3">
-        <ul class="pagination justify-content-center">
-            <?php if ($page > 1): ?>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
-                        <span aria-hidden="true">&laquo;&laquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link">&laquo;&laquo;</span>
-                </li>
-                <li class="page-item disabled">
-                    <span class="page-link">&laquo;</span>
-                </li>
-            <?php endif; ?>
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+                <nav aria-label="Page navigation" class="mt-3">
+                    <ul class="pagination justify-content-center">
+                        <?php if ($page > 1): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        <?php else: ?>
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;&laquo;</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;</span>
+                            </li>
+                        <?php endif; ?>
 
-            <?php 
-            // Show page numbers
-            $start_page = max(1, $page - 2);
-            $end_page = min($total_pages, $page + 2);
-            
-            if ($start_page > 1) {
-                echo '<li class="page-item"><span class="page-link">...</span></li>';
-            }
-            
-            for ($i = $start_page; $i <= $end_page; $i++): ?>
-                <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                </li>
-            <?php endfor;
-            
-            if ($end_page < $total_pages) {
-                echo '<li class="page-item"><span class="page-link">...</span></li>';
-            }
-            ?>
+                        <?php 
+                        // Show page numbers
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        if ($start_page > 1) {
+                            echo '<li class="page-item"><span class="page-link">...</span></li>';
+                        }
+                        
+                        for ($i = $start_page; $i <= $end_page; $i++): ?>
+                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                            </li>
+                        <?php endfor;
+                        
+                        if ($end_page < $total_pages) {
+                            echo '<li class="page-item"><span class="page-link">...</span></li>';
+                        }
+                        ?>
 
-            <?php if ($page < $total_pages): ?>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
-                        <span aria-hidden="true">&raquo;&raquo;</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link">&raquo;</span>
-                </li>
-                <li class="page-item disabled">
-                    <span class="page-link">&raquo;&raquo;</span>
-                </li>
+                        <?php if ($page < $total_pages): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                        <?php else: ?>
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;&raquo;</span>
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </nav>
+                <div class="text-center text-muted">
+                    <?php echo t('page');?> <?php echo $page; ?> <?php echo t('page_of');?> <?php echo $total_pages; ?> 
+                </div>
             <?php endif; ?>
-        </ul>
-    </nav>
-    <div class="text-center text-muted">
-        ទំព័រ <?php echo $page; ?> នៃ <?php echo $total_pages; ?> 
+        </div>
     </div>
-<?php endif; ?>
+</div>
 <!-- View Item Modal -->
 <div class="modal fade" id="viewItemModal" tabindex="-1" aria-labelledby="viewItemModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="viewItemModalLabel">ព័ត៌មានលម្អិតអំពីទំនិញ</h5>
+                <h5 class="modal-title" id="viewItemModalLabel"><?php echo t('view_item_detail');?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
+                    <!-- Left Table (Basic Info) -->
                     <div class="col-md-6">
                         <table class="table table-bordered">
                             <tr>
-                                <th width="40%">លេខវិក័យប័ត្រ</th>
+                                <th width="40%"><?php echo t('item_invoice');?></th>
                                 <td id="view_invoice_no"></td>
                             </tr>
                             <tr>
-                                <th>កាលបរិច្ឆេទ</th>
+                                <th><?php echo t('item_date');?></th>
                                 <td id="view_date"></td>
                             </tr>
                             <tr>
-                                <th>ឈ្មោះទំនិញ</th>
+                                <th><?php echo t('item_name');?></th>
                                 <td id="view_name"></td>
                             </tr>
                             <tr>
-                                <th>បរិមាណ</th>
+                                <th><?php echo t('item_qty');?></th>
                                 <td id="view_quantity"></td>
                             </tr>
                             <tr>
-                                <th>ទំហំ</th>
+                                <th><?php echo t('item_size');?></th>
                                 <td id="view_size"></td>
                             </tr>
-                            <tr>
-                                <th>ទីតាំង</th>
-                                <td id="view_location"></td>
-                            </tr>
-                            <tr>
-                                <th>ផ្សេងៗ</th>
+                             <tr>
+                                <th><?php echo t('item_remark');?></th>
                                 <td id="view_remark"></td>
                             </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Right Table (Code/Category) -->
+                    <div class="col-md-6">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="40%"><?php echo t('item_code');?></th>
+                                <td id="view_item_code"></td>
+                            </tr>
+                            <tr>
+                                <th><?php echo t('category');?></th>
+                                <td id="view_category"></td>
+                            </tr>
+                            <tr>
+                                <th><?php echo t('item_location');?></th>
+                                <td id="view_location"></td>
+                            </tr>
+                           
                         </table>
                     </div>
                 </div>
                 <div class="row mt-3">
                     <div class="col-12">
-                        <h5>រូបភាព</h5>
+                        <h5><?php echo t('item_photo');?></h5>
                         <div class="row g-2" id="view_images">
                             <!-- Images will be loaded here -->
                         </div>
@@ -1699,30 +1947,29 @@ table th{
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">បិទ</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
             </div>
         </div>
     </div>
 </div>
-<?php if (isAdmin()): ?>
 <!-- Add Item Modal -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="POST" enctype="multipart/form-data">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="addItemModalLabel">បន្ថែមទំនិញថ្មី</h5>
+                    <h5 class="modal-title" id="addItemModalLabel"><?php echo t('add_new_item');?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">លេខវិក័យប័ត្រ (សម្រាប់ទំនិញទាំងអស់)</label>
+                            <label class="form-label"><?php echo t('item_invoice');?></label>
                             <input type="text" class="form-control" name="invoice_no" id="main_invoice_no">
                         </div>
                         <div class="col-md-6">
-                            <label for="date" class="form-label">កាលបរិច្ឆេទ</label>
+                            <label for="date" class="form-label"><?php echo t('item_date');?></label>
                             <input type="date" class="form-control" id="date" name="date" required>
                         </div>
                     </div>
@@ -1732,44 +1979,59 @@ table th{
                         <!-- First item row -->
                         <div class="item-row mb-3 border p-3">
                             <div class="row">
-                                <div class="col-md-6">
-                                    <label for="location_id" class="form-label">ទីតាំង</label>
+                                <div class="col-md-4">
+                                    <label for="location_id" class="form-label"><?php echo t('location_column');?></label>
                                     <select class="form-select" id="location_id" name="location_id[]" required>
-                                        <option value="">ជ្រើសរើសទីតាំង</option>
+                                        <option value=""><?php echo t('item_locations');?></option>
                                         <?php foreach ($locations as $location): ?>
                                             <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">ឈ្មោះទំនិញ</label>
-                                    <input type="text" class="form-control" name="name[]" required>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label class="form-label">បរិមាណ</label>
-                                    <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
+                                <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('item_code');?></label>
+                                    <input type="text" class="form-control" name="item_code[]">
                                 </div>
                                 <div class="col-md-4">
-                                <label class="form-label">ស្តុកទាប</label>
-                                 <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
-                                 </div>
+                                    <label class="form-label"><?php echo t('category');?></label>
+                                    <select class="form-select" name="category_id[]" required>
+                                        <option value=""><?php echo t('select_category');?></option>
+                                        <?php 
+                                        $stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
+                                        $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                        foreach ($categories as $category): ?>
+                                            <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6">
-                                    <label class="form-label">ទំហំ</label>
+                                    <label class="form-label"><?php echo t('item_name');?></label>
+                                    <input type="text" class="form-control" name="name[]" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><?php echo t('item_qty');?></label>
+                                    <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('low_stock_title');?></label>
+                                    <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('item_size');?></label>
                                     <input type="text" class="form-control" name="size[]">
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-10 mb-3">
-                                    <label class="form-label">ផ្សេងៗ</label>
+                                <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('item_remark');?></label>
                                     <input type="text" class="form-control" name="remark[]">
                                 </div>
-                                
                             </div>
                             <div class="row">
-                            <div class="col-md-2 mb-3">
-                                    <label class="form-label">រូបភាព</label>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label"><?php echo t('item_photo');?></label>
                                     <input type="file" class="form-control" name="images[0][]" multiple accept="image/*">
                                     <div class="image-preview-container mt-2 row g-1" id="image-preview-0"></div>
                                 </div>
@@ -1778,25 +2040,24 @@ table th{
                     </div>
                     
                     <button type="button" id="add-more-row" class="btn btn-secondary btn-sm mb-3">
-                        <i class="bi bi-plus-circle"></i> បន្ថែមជួរថ្មី
+                        <i class="bi bi-plus-circle"></i> <?php echo t('add_transfer_row');?>
                     </button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">បិទ</button>
-                    <button type="submit" name="add_item" class="btn btn-primary">រក្សាទុក</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
+                    <button type="submit" name="add_item" class="btn btn-primary"><?php echo t('form_save');?></button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-<?php endif?>
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> បញ្ជាក់ការលុប
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('del_item');?>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -1804,16 +2065,16 @@ table th{
                 <div class="mb-3">
                     <i class="bi bi-trash-fill text-danger" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3">តើអ្នកពិតជាចង់លុបទំនិញនេះមែនទេ?</h4>
-                <p>ការលុបនេះមិនអាចត្រឡប់វិញបានទេ។</p>
+                <h4 class="text-danger mb-3"><?php echo t('del_item1');?></h4>
+                <p><?php echo t('del_usr2');?></p>
                 <div id="deleteItemInfo" class="alert alert-light mt-3"></div>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> បោះបង់
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close');?>
                 </button>
                 <a href="#" id="deleteConfirmBtn" class="btn btn-danger">
-                    <i class="bi bi-trash"></i> លុប
+                    <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
                 </a>
             </div>
         </div>
@@ -1826,64 +2087,82 @@ table th{
             <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="id" id="edit_id">
                 <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="editItemModalLabel">កែប្រែទំនិញ</h5>
+                    <h5 class="modal-title" id="editItemModalLabel"><?php echo t('edit_item');?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="edit_invoice_no" class="form-label">លេខវិក័យប័ត្រ</label>
-                            <input type="text" class="form-control" id="edit_invoice_no" name="invoice_no" >
+                            <label for="edit_item_code" class="form-label"><?php echo t('item_code');?></label>
+                            <input type="text" class="form-control" id="edit_item_code" name="item_code">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="edit_date" class="form-label">កាលបរិច្ឆេទ</label>
+                            <label for="edit_category_id" class="form-label"><?php echo t('category');?></label>
+                            <select class="form-select" id="edit_category_id" name="category_id">
+                                <option value=""><?php echo t('select_category');?></option>
+                                <?php 
+                                $stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
+                                $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                foreach ($categories as $category): ?>
+                                    <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_invoice_no" class="form-label"><?php echo t('item_invoice');?></label>
+                            <input type="text" class="form-control" id="edit_invoice_no" name="invoice_no">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_date" class="form-label"><?php echo t('item_date');?></label>
                             <input type="date" class="form-control" id="edit_date" name="date" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="edit_name" class="form-label">ឈ្មោះទំនិញ</label>
+                            <label for="edit_name" class="form-label"><?php echo t('item_name');?></label>
                             <input type="text" class="form-control" id="edit_name" name="name" required>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label for="edit_quantity" class="form-label">បរិមាណ</label>
+                            <label for="edit_quantity" class="form-label"><?php echo t('item_qty');?></label>
                             <input type="number" class="form-control" id="edit_quantity" name="quantity" step="0.5" min="0.5" required>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label for="edit_size" class="form-label">ទំហំ</label>
+                            <label for="edit_size" class="form-label"><?php echo t('item_size');?></label>
                             <input type="text" class="form-control" id="edit_size" name="size">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="edit_location_id" class="form-label">ទីតាំង</label>
+                            <label for="edit_location_id" class="form-label"><?php echo t('location_column');?></label>
                             <select class="form-select" id="edit_location_id" name="location_id" required>
-                                <option value="">ជ្រើសរើសទីតាំង</option>
+                                <option value=""><?php echo t('item_locations');?></option>
                                 <?php foreach ($locations as $location): ?>
                                     <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="edit_remark" class="form-label">ផ្សេងៗ</label>
+                            <label for="edit_remark" class="form-label"><?php echo t('item_remark');?></label>
                             <input type="text" class="form-control" id="edit_remark" name="remark">
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_images" class="form-label">រូបភាព</label>
+                        <label for="edit_images" class="form-label"><?php echo t('item_photo');?></label>
                         <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> ការផ្ទុករូបថ្មីនឹងលុបរូបចាស់ទាំងអស់។
+                            <i class="bi bi-info-circle"></i> <?php echo t('item_photo2');?>
                         </div>
                         <input type="file" class="form-control" id="edit_images" name="images[]" multiple accept="image/*">
-                        <small class="text-muted">អាចជ្រើសរើសច្រើនរូប</small>
+                        <small class="text-muted"><?php echo t('item_photo1');?></small>
                         <div class="mt-3 row" id="current_images">
                             <!-- Current images will be loaded here -->
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">បិទ</button>
-                    <button type="submit" name="edit_item" class="btn btn-warning">រក្សាទុកការកែប្រែ</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
+                    <button type="submit" name="edit_item" class="btn btn-warning"><?php echo t('form_update');?></button>
                 </div>
             </form>
         </div>
@@ -1895,27 +2174,27 @@ table th{
         <div class="modal-content">
             <form method="POST">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="addQtyModalLabel">បន្ថែមបរិមាណទំនិញ</h5>
+                    <h5 class="modal-title" id="addQtyModalLabel"><?php echo t('add_qty');?> </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">លេខវិក័យប័ត្រ (សម្រាប់ទំនិញទាំងអស់)</label>
+                            <label class="form-label"><?php echo t('item_invoice');?></label>
                             <input type="text" class="form-control" name="invoice_no" id="add_invoice_no" >
                         </div>
                         <div class="col-md-6">
-                            <label for="add_date" class="form-label">កាលបរិច្ឆេទ</label>
+                            <label for="add_date" class="form-label"><?php echo t('item_date');?></label>
                             <input type="date" class="form-control" id="add_date" name="date" required>
                         </div>
                     </div>
                     
                     <!-- Location selection -->
                     <div class="mb-3">
-                        <label for="add_location_id" class="form-label">ទីតាំង</label>
+                        <label for="add_location_id" class="form-label"><?php echo t('location_column');?></label>
                         <select class="form-select" id="add_location_id" name="location_id" required>
-                            <option value="">ជ្រើសរើសទីតាំង</option>
+                            <option value=""><?php echo t('item_locations');?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                             <?php endforeach; ?>
@@ -1928,38 +2207,38 @@ table th{
 <div class="add-qty-item-row mb-3 border p-3">
     <div class="row">
     <div class="col-md-8 mb-3">
-                                        <label class="form-label">ឈ្មោះទំនិញ</label>
+                                        <label class="form-label"><?php echo t('item_name');?></label>
                                         <div class="dropdown item-dropdown">
                                             <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                ជ្រើសរើសទំនិញ
+                                            <?php echo t('select_item');?>
                                             </button>
                                             <input type="hidden" name="item_id[]" class="item-id-input" value="">
                                             <ul class="dropdown-menu custom-dropdown-menu p-2">
                                                 <li>
                                                     <div class="px-2 mb-2">
-                                                        <input type="text" class="form-control form-control-sm search-item-input" placeholder="ស្វែងរកទំនិញ...">
+                                                        <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item');?>...">
                                                     </div>
                                                 </li>
                                                 <li><hr class="dropdown-divider"></li>
                                                 <div class="dropdown-item-container">
-                                                    <div class="px-2 py-1 text-muted">សូមជ្រើសរើសទីតាំងជាមុនសិន</div>
+                                                    <div class="px-2 py-1 text-muted"><?php echo t('warning_location1');?></div>
                                                 </div>
                                             </ul>
                                         </div>
                                     </div>
 
         <div class="col-md-4 mb-3">
-            <label class="form-label">បរិមាណ</label>
+            <label class="form-label"><?php echo t('item_qty');?></label>
             <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
         </div>
     </div>
     <div class="row">
         <div class="col-md-6 mb-3">
-            <label class="form-label">ទំហំ</label>
-            <input type="text" class="form-control" name="size[]"readonly>
+            <label class="form-label"><?php echo t('item_size');?></label>
+            <input type="text" class="form-control" name="size[]" readonly>
         </div>
         <div class="col-md-6 mb-3">
-            <label class="form-label">ផ្សេងៗ</label>
+            <label class="form-label"><?php echo t('item_remark');?></label>
             <input type="text" class="form-control" name="remark[]">
         </div>
     </div>
@@ -1967,12 +2246,12 @@ table th{
                     </div>
                     
                     <button type="button" id="add-qty-more-row" class="btn btn-secondary btn-sm mb-3">
-                        <i class="bi bi-plus-circle"></i> បន្ថែមជួរថ្មី
+                        <i class="bi bi-plus-circle"></i> <?php echo t('add_transfer_row');?>
                     </button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">បិទ</button>
-                    <button type="submit" name="add_qty" class="btn btn-success">បន្ថែម</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
+                    <button type="submit" name="add_qty" class="btn btn-success"><?php echo t('add');?></button>
                 </div>
             </form>
         </div>
@@ -1984,7 +2263,7 @@ table th{
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> បញ្ហាបរិមាណ
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('qty_issue1');?>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -1992,12 +2271,12 @@ table th{
                 <div class="mb-3">
                     <i class="bi bi-cart-x-fill text-danger" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3">មិនអាចដកចេញលើសពីបរិមាណស្តុក!</h4>
-                <p id="quantityExceedMessage">អ្នកមិនអាចដកចេញលើសពីបរិមាណដែលមានស្តុកបានទេ។</p>
+                <h4 class="text-danger mb-3"><?php echo t('qty_issue2');?></h4>
+                <p id="quantityExceedMessage" style="text-align:left;"><?php echo t('qty_issue3');?></p>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
-                    <i class="bi bi-check-circle"></i> យល់ព្រម
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree');?>
                 </button>
             </div>
         </div>
@@ -2009,27 +2288,27 @@ table th{
         <div class="modal-content">
             <form method="POST">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="deductQtyModalLabel">បន្ថយបរិមាណទំនិញ</h5>
+                    <h5 class="modal-title" id="deductQtyModalLabel"><?php echo t('deduct_qty');?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="deduct_invoice_no" class="form-label">លេខវិក័យប័ត្រ</label>
+                            <label for="deduct_invoice_no" class="form-label"><?php echo t('item_invoice');?></label>
                             <input type="text" class="form-control" id="deduct_invoice_no" name="invoice_no" >
                         </div>
                         <div class="col-md-6">
-                            <label for="deduct_date" class="form-label">កាលបរិច្ឆេទ</label>
+                            <label for="deduct_date" class="form-label"><?php echo t('item_date');?></label>
                             <input type="date" class="form-control" id="deduct_date" name="date" required>
                         </div>
                     </div>
                     
                     <!-- Location selection -->
                     <div class="mb-3">
-                        <label for="deduct_location_id" class="form-label">ទីតាំង</label>
+                        <label for="deduct_location_id" class="form-label"><?php echo t('location_column');?></label>
                         <select class="form-select" id="deduct_location_id" name="location_id" required>
-                            <option value="">ជ្រើសរើសទីតាំង</option>
+                            <option value=""><?php echo t('item_locations');?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                             <?php endforeach; ?>
@@ -2042,37 +2321,37 @@ table th{
                         <div class="deduct-qty-item-row mb-3 border p-3">
                             <div class="row">
                                 <div class="col-md-8 mb-3">
-                                        <label class="form-label">ឈ្មោះទំនិញ</label>
+                                        <label class="form-label"><?php echo t('item_name');?></label>
                                         <div class="dropdown item-dropdown">
                                             <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                ជ្រើសរើសទំនិញ
+                                            <?php echo t('select_item');?>
                                             </button>
                                             <input type="hidden" name="item_id[]" class="item-id-input" value="">
                                             <ul class="dropdown-menu custom-dropdown-menu p-2">
                                                 <li>
                                                     <div class="px-2 mb-2">
-                                                        <input type="text" class="form-control form-control-sm search-item-input" placeholder="ស្វែងរកទំនិញ...">
+                                                        <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item');?>...">
                                                     </div>
                                                 </li>
                                                 <li><hr class="dropdown-divider"></li>
                                                 <div class="dropdown-item-container">
-                                                    <div class="px-2 py-1 text-muted">សូមជ្រើសរើសទីតាំងជាមុនសិន</div>
+                                                    <div class="px-2 py-1 text-muted"><?php echo t('warning_location1');?></div>
                                                 </div>
                                             </ul>
                                         </div>
                                     </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">បរិមាណ</label>
+                                    <label class="form-label"><?php echo t('item_qty');?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">ទំហំ</label>
+                                    <label class="form-label"><?php echo t('item_size');?></label>
                                     <input type="text" class="form-control" name="size[]"readonly>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">ផ្សេងៗ</label>
+                                    <label class="form-label"><?php echo t('item_remark');?></label>
                                     <input type="text" class="form-control" name="remark[]">
                                 </div>
                             </div>
@@ -2080,12 +2359,12 @@ table th{
                     </div>
                     
                     <button type="button" id="deduct-qty-more-row" class="btn btn-secondary btn-sm mb-3">
-                        <i class="bi bi-plus-circle"></i> បន្ថែមជួរថ្មី
+                        <i class="bi bi-plus-circle"></i> <?php echo t('add_transfer_row');?>
                     </button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">បិទ</button>
-                    <button type="submit" name="deduct_qty" class="btn btn-danger">ដកចេញ</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
+                    <button type="submit" name="deduct_qty" class="btn btn-danger"><?php echo t('deduct');?></button>
                 </div>
             </form>
         </div>
@@ -2097,7 +2376,7 @@ table th{
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> មានបញ្ហា
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('duplicate_itm1');?>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -2105,12 +2384,12 @@ table th{
                 <div class="mb-3">
                     <i class="bi bi-exclamation-octagon-fill text-danger" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3">ទំនិញមានឈ្មោះដូចគ្នានៅទីតាំងនេះរួចហើយ!</h4>
-                <p>សូមពិនិត្យឈ្មោះទំនិញ និងទីតាំងម្តងទៀត។</p>
+                <h4 class="text-danger mb-3"><?php echo t('duplicate_itm2');?></h4>
+                <p><?php echo t('duplicate_itm3');?></p>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
-                    <i class="bi bi-check-circle"></i> យល់ព្រម
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree');?>
                 </button>
             </div>
         </div>
@@ -2122,7 +2401,7 @@ table th{
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> ការជូនដំណឹង
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('warning');?>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -2130,12 +2409,12 @@ table th{
                 <div class="mb-3">
                     <i class="bi bi-geo-alt-fill text-warning" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-dark mb-3">សូមជ្រើសរើសទីតាំងជាមុនសិន!</h4>
-                <p>អ្នកត្រូវតែជ្រើសរើសទីតាំងមុនពេលបន្ត។</p>
+                <h4 class="text-dark mb-3"><?php echo t('warning_location1');?></h4>
+                <p><?php echo t('warn_loc');?></p>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
-                    <i class="bi bi-check-circle"></i> យល់ព្រម
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree');?>
                 </button>
             </div>
         </div>
@@ -2147,7 +2426,7 @@ table th{
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> ការបញ្ជាក់
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('del_pic1');?>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -2155,15 +2434,15 @@ table th{
                 <div class="mb-3">
                     <i class="bi bi-trash-fill text-danger" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3">លុបរូបភាពនេះ?</h4>
-                <p>អ្នកនឹងមិនអាចយកវាត្រឡប់មកវិញបានទេ។</p>
+                <h4 class="text-danger mb-3"><?php echo t('del_pic2');?></h4>
+                <p><?php echo t('del_pic3');?></p>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> បោះបង់
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close');?>
                 </button>
                 <button type="button" id="confirmImageDeleteBtn" class="btn btn-danger">
-                    <i class="bi bi-trash"></i> លុប
+                    <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
                 </button>
             </div>
         </div>
@@ -2175,7 +2454,7 @@ table th{
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> ការបញ្ជាក់
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('warning');?>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -2183,15 +2462,15 @@ table th{
                 <div class="mb-3">
                     <i class="bi bi-images text-warning" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-dark mb-3">ជំនួសរូបភាពចាស់?</h4>
-                <p>រូបភាពចាស់នឹងត្រូវបានលុបជាអចិន្ត្រៃយ៍។ តើអ្នកពិតជាចង់បន្តមែនទេ?</p>
+                <h4 class="text-dark mb-3"><?php echo t('rep_pic1');?></h4>
+                <p><?php echo t('rep_pic2');?></p>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> បោះបង់
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close');?>
                 </button>
                 <button type="button" id="confirmReplaceBtn" class="btn btn-warning">
-                    <i class="bi bi-check-circle"></i> យល់ព្រម
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree');?>
                 </button>
             </div>
         </div>
@@ -2202,7 +2481,7 @@ table th{
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">រូបភាពទំនិញ</h5>
+                <h5 class="modal-title"><?php echo t('item_photo');?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
@@ -2237,7 +2516,7 @@ function populateItemDropdown(dropdownElement, locationId) {
     itemContainer.innerHTML = '';
     
     if (!locationId) {
-        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted">សូមជ្រើសរើសទីតាំងជាមុនសិន</div>';
+        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted"><?php echo t('warning_location1');?></div>';
         return;
     }
     
@@ -2294,7 +2573,7 @@ function populateItemDropdown(dropdownElement, locationId) {
             });
             
             if (!hasVisibleItems) {
-                itemContainer.innerHTML = '<div class="px-2 py-1 text-muted">រកមិនឃើញទំនិញ</div>';
+                itemContainer.innerHTML = '<div class="px-2 py-1 text-muted"><?php echo t('no_item');?></div>';
             }
         };
         
@@ -2307,7 +2586,7 @@ function populateItemDropdown(dropdownElement, locationId) {
             renderItems(this.value);
         });
     } else {
-        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted">មិនមានទំនិញនៅទីតាំងនេះ</div>';
+        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted"><?php echo t('no_item_location');?></div>';
     }
 }
 // Auto-hide success messages after 5 seconds
@@ -2382,12 +2661,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const itemLocation = this.getAttribute('data-location');
             
             // Set the delete URL
-            deleteUrl = `item-control-staff.php?delete=${itemId}`;
+            deleteUrl = `remaining.php?delete=${itemId}`;
             
             // Update modal content
             document.getElementById('deleteItemInfo').innerHTML = `
-                <strong>ឈ្មោះទំនិញ:</strong> ${itemName}<br>
-                <strong>ទីតាំង:</strong> ${itemLocation}
+                <strong><?php echo t('item_name');?>:</strong> ${itemName}<br>
+                <strong><?php echo t('location_column');?>:</strong> ${itemLocation}
             `;
             
             // Show the modal
@@ -2490,10 +2769,10 @@ document.getElementById('add-more-row').addEventListener('click', function() {
     newRow.className = 'item-row mb-3 border p-3';
     newRow.innerHTML = `
         <div class="row">
-            <div class="col-md-6">
-                <label class="form-label">ទីតាំង</label>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('location_column');?></label>
                 <select class="form-select" name="location_id[]" required>
-                    <option value="">ជ្រើសរើសទីតាំង</option>
+                    <option value=""><?php echo t('item_locations');?></option>
                     <?php foreach ($locations as $location): ?>
                         <option value="<?php echo $location['id']; ?>" ${locationId == <?php echo $location['id']; ?> ? 'selected' : ''}>
                             <?php echo $location['name']; ?>
@@ -2501,43 +2780,53 @@ document.getElementById('add-more-row').addEventListener('click', function() {
                     <?php endforeach; ?>
                 </select>
             </div>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('item_code');?></label>
+                <input type="text" class="form-control" name="item_code[]">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('category');?></label>
+                <select class="form-select" name="category_id[]">
+                    <option value=""><?php echo t('select_category');?></option>
+                    <?php foreach ($categories as $category): ?>
+                        <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+        <div class="row">
             <div class="col-md-6">
-                <label class="form-label">ឈ្មោះទំនិញ</label>
+                <label class="form-label"><?php echo t('item_name');?></label>
                 <input type="text" class="form-control" name="name[]" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label"><?php echo t('item_qty');?></label>
+                <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
             </div>
         </div>
         <div class="row">
             <div class="col-md-4">
-                <label class="form-label">បរិមាណ</label>
-                <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">ស្តុកទាប</label>
+                <label class="form-label"><?php echo t('low_stock_title');?></label>
                 <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10">
             </div>
             <div class="col-md-4">
-                <label class="form-label">ទំហំ</label>
+                <label class="form-label"><?php echo t('item_size');?></label>
                 <input type="text" class="form-control" name="size[]">
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-10 mb-3">
-                <label class="form-label">ផ្សេងៗ</label>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('item_remark');?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
-            
         </div>
         <div class="row">
-
-        <div class="col-md-2 mb-3">
-                <label class="form-label">រូបភាព</label>
+            <div class="col-md-12 mb-3">
+                <label class="form-label"><?php echo t('item_photo');?></label>
                 <input type="file" class="form-control item-images-input" name="images[${rowCount}][]" multiple accept="image/*">
                 <div class="image-preview-container mt-2 row g-1" id="image-preview-${rowCount}"></div>
             </div>
-
-            </div>
+        </div>
         <button type="button" class="btn btn-danger btn-sm remove-row">
-            <i class="bi bi-trash"></i> លុបជួរ
+            <i class="bi bi-trash"></i> <?php echo t('del_row');?>
         </button>
     `;
     
@@ -2604,7 +2893,7 @@ document.querySelectorAll('.deduct-item-select').forEach(select => {
 });
 // Function to update item select dropdown
 function updateItemSelect(selectElement, locationId) {
-    selectElement.innerHTML = '<option value="">ជ្រើសរើសទំនិញ</option>';
+    selectElement.innerHTML = '<option value=""><?php echo t('select_item');?></option>';
     
     if (locationId) {
         const items = <?php echo json_encode($items_by_location); ?>;
@@ -2634,7 +2923,7 @@ document.getElementById('deduct_location_id').addEventListener('change', functio
 
 // Function to update deduct item select dropdown
 function updateDeductItemSelect(selectElement, locationId) {
-    selectElement.innerHTML = '<option value="">ជ្រើសរើសទំនិញ</option>';
+    selectElement.innerHTML = '<option value=""><?php echo t('select_item');?></option>';
     
     if (locationId) {
         const items = <?php echo json_encode($items_by_location); ?>;
@@ -2670,16 +2959,16 @@ document.getElementById('deduct-qty-more-row').addEventListener('click', functio
     newRow.innerHTML = `
         <div class="row">
             <div class="col-md-8 mb-3">
-                <label class="form-label">ឈ្មោះទំនិញ</label>
+                <label class="form-label"><?php echo t('item_name');?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        ជ្រើសរើសទំនិញ
+                    <?php echo t('select_item');?>
                     </button>
                     <input type="hidden" name="item_id[]" class="item-id-input" value="">
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
                         <li>
                             <div class="px-2 mb-2">
-                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="ស្វែងរកទំនិញ...">
+                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item');?>...">
                             </div>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -2690,22 +2979,22 @@ document.getElementById('deduct-qty-more-row').addEventListener('click', functio
                 </div>
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">បរិមាណ</label>
+                <label class="form-label"><?php echo t('item_qty');?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
             </div>
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label class="form-label">ទំហំ</label>
+                <label class="form-label"><?php echo t('item_size');?></label>
                 <input type="text" class="form-control" name="size[]"readonly>
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label">ផ្សេងៗ</label>
+                <label class="form-label"><?php echo t('item_remark');?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
         </div>
         <button type="button" class="btn btn-danger btn-sm remove-row">
-            <i class="bi bi-trash"></i> លុបជួរ
+            <i class="bi bi-trash"></i> <?php echo t('del_row');?>
         </button>
     `;
     
@@ -2799,7 +3088,7 @@ document.getElementById('add_location_id').addEventListener('change', function()
 
 // Function to update item select dropdown
 function updateItemSelect(selectElement, locationId) {
-    selectElement.innerHTML = '<option value="">ជ្រើសរើសទំនិញ</option>';
+    selectElement.innerHTML = '<option value=""><?php echo t('select_item');?></option>';
     
     if (locationId) {
         const items = <?php echo json_encode($items_by_location); ?>;
@@ -2836,16 +3125,16 @@ if (!locationId) {
     newRow.innerHTML = `
         <div class="row">
             <div class="col-md-8 mb-3">
-                <label class="form-label">ឈ្មោះទំនិញ</label>
+                <label class="form-label"><?php echo t('item_name');?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        ជ្រើសរើសទំនិញ
+                    <?php echo t('select_item');?>
                     </button>
                     <input type="hidden" name="item_id[]" class="item-id-input" value="">
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
                         <li>
                             <div class="px-2 mb-2">
-                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="ស្វែងរកទំនិញ...">
+                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item');?>...">
                             </div>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -2856,22 +3145,22 @@ if (!locationId) {
                 </div>
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">បរិមាណ</label>
+                <label class="form-label"><?php echo t('item_qty');?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
             </div>
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label class="form-label">ទំហំ</label>
+                <label class="form-label"><?php echo t('item_size');?></label>
                 <input type="text" class="form-control" name="size[]"readonly>
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label">ផ្សេងៗ</label>
+                <label class="form-label"><?php echo t('item_remark');?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
         </div>
         <button type="button" class="btn btn-danger btn-sm remove-row">
-            <i class="bi bi-trash"></i> លុបជួរ
+            <i class="bi bi-trash"></i> <?php echo t('del_row');?>
         </button>
     `;
     
@@ -2890,7 +3179,6 @@ if (!locationId) {
     });
 });
 
-// Handle edit item button click - fixed version
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.edit-item').forEach(button => {
         button.addEventListener('click', function() {
@@ -2902,9 +3190,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const size = this.getAttribute('data-size');
             const location_id = this.getAttribute('data-location_id');
             const remark = this.getAttribute('data-remark');
+            const item_code = this.getAttribute('data-item_code');
+            const category_id = this.getAttribute('data-category_id');
             
             // Set basic form values
             document.getElementById('edit_id').value = id;
+            document.getElementById('edit_item_code').value = item_code || '';
+            document.getElementById('edit_category_id').value = category_id || '';
             document.getElementById('edit_invoice_no').value = invoice_no;
             document.getElementById('edit_date').value = date;
             document.getElementById('edit_name').value = name;
@@ -3109,7 +3401,7 @@ document.getElementById('add_location_id').addEventListener('change', function()
     const locationId = this.value;
     const itemSelect = document.getElementById('add_item_id');
     
-    itemSelect.innerHTML = '<option value="">ជ្រើសរើសទំនិញ</option>';
+    itemSelect.innerHTML = '<option value=""><?php echo t('select_item');?></option>';
     
     if (locationId) {
         const items = <?php echo json_encode($items_by_location); ?>;
@@ -3130,7 +3422,7 @@ document.getElementById('deduct_location_id').addEventListener('change', functio
     const locationId = this.value;
     const itemSelect = document.getElementById('deduct_item_id');
     
-    itemSelect.innerHTML = '<option value="">ជ្រើសរើសទំនិញ</option>';
+    itemSelect.innerHTML = '<option value=""><?php echo t('select_item');?></option>';
     
     if (locationId) {
         const items = <?php echo json_encode($items_by_location); ?>;
@@ -3200,6 +3492,8 @@ document.querySelectorAll('.view-item').forEach(button => {
             .then(data => {
                 // Update basic info - access the 'item' property
                 const item = data.item;
+                document.getElementById('view_item_code').textContent = item.item_code || 'N/A';
+                document.getElementById('view_category').textContent = item.category_name || 'N/A';
                 document.getElementById('view_invoice_no').textContent = item.invoice_no || 'N/A';
                 document.getElementById('view_date').textContent = item.date || 'N/A';
                 document.getElementById('view_name').textContent = item.name || 'N/A';
@@ -3230,7 +3524,7 @@ document.querySelectorAll('.view-item').forEach(button => {
                         imagesContainer.appendChild(col);
                     });
                 } else {
-                    imagesContainer.innerHTML = '<div class="col-12 text-muted">មិនមានរូបភាព</div>';
+                    imagesContainer.innerHTML = '<div class="col-12 text-muted"><?php echo t('no_photo');?></div>';
                 }
                 
                 // Show modal
@@ -3249,7 +3543,7 @@ function setupSearchableDropdown(dropdownId) {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'form-control mb-2';
-    searchInput.placeholder = 'ស្វែងរក...';
+    searchInput.placeholder = '<?php echo t('search');?>...';
     
     dropdown.parentNode.insertBefore(searchInput, dropdown);
     
@@ -3288,8 +3582,8 @@ document.addEventListener('input', function(e) {
                     
                     // Update the message with specific quantities
                     message.innerHTML = `
-                        អ្នកមិនអាចដកចេញលើសពី <strong>${max}</strong> (បរិមាណស្តុកបច្ចុប្បន្ន)<br>
-                        អ្នកបានបញ្ចូល: <strong>${value}</strong>
+                        <?php echo t('qty_issue4');?> <strong>${max}</strong> ( <?php echo t('qty_issue5');?>)<br>
+                         <?php echo t('qty_issue6');?>: <strong>${value}</strong>
                     `;
                     
                     modal.show();
@@ -3327,5 +3621,5 @@ setupSearchableDropdown('deduct_item_id');
 </script>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

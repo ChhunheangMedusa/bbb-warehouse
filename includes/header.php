@@ -315,9 +315,7 @@ $hasAvatar = ($userPicture !== null);
     <div class="main-content d-flex flex-column min-vh-100">
         <nav class="navbar navbar-expand navbar-light bg-white shadow-sm">
             <div class="container-fluid">
-                <button id="sidebarToggle" class="btn btn-sm btn-outline-secondary me-2 d-md-none">
-                    <i class="bi bi-list"></i>
-                </button>
+              
                 <div class="navbar-collapse justify-content-end">
                     <ul class="navbar-nav">
                         <li class="nav-item dropdown me-2">
@@ -371,8 +369,5 @@ $hasAvatar = ($userPicture !== null);
 ob_end_flush();
 ?>
 <script>
-document.getElementById('sidebarToggle').addEventListener('click', function() {
-    document.querySelector('.sidebar').classList.toggle('collapsed');
-    document.querySelector('.main-content').classList.toggle('expanded');
-});
+
 </script>

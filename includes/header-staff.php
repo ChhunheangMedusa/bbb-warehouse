@@ -49,7 +49,11 @@ $hasAvatar = ($userPicture !== null);
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
 </head>
 <style>
-     .avatar-img {
+    body {
+        overflow-x: hidden;
+    }
+    
+    .avatar-img {
         width: 30px;
         height: 30px;
         object-fit: cover;
@@ -74,15 +78,27 @@ $hasAvatar = ($userPicture !== null);
         display: block;
     }
     
+    /* Fixed sidebar styles */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        overflow-y: auto;
+    }
+    
+    .main-content {
+        margin-left: 250px; /* Adjust this based on your sidebar width */
+        width: calc(100% - 250px);
+    }
+    
     /* Mobile styles */
     @media (max-width: 768px) {
         .sidebar {
             width: 0;
             overflow: hidden;
             transition: width 0.3s ease;
-            position: fixed;
-            z-index: 1000;
-            height: 100vh;
         }
         
         .sidebar.collapsed {
@@ -91,11 +107,13 @@ $hasAvatar = ($userPicture !== null);
         
         .main-content {
             margin-left: 0;
+            width: 100%;
             transition: margin-left 0.3s ease;
         }
         
         .main-content.expanded {
             margin-left: 250px;
+            width: calc(100% - 250px);
         }
         
         .navbar {
@@ -143,89 +161,172 @@ $hasAvatar = ($userPicture !== null);
             font-size: 0.9rem;
         }
     }
+    
+    /* Sidebar dropdown styles */
+    .sidebar .nav-link[data-bs-toggle="collapse"] {
+        position: relative;
+        padding-right: 2rem;
+    }
+
+    .sidebar .nav-link[data-bs-toggle="collapse"] .bi-chevron-down {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: transform 0.2s ease;
+    }
+
+    .sidebar .nav-link[data-bs-toggle="collapse"].collapsed .bi-chevron-down {
+        transform: translateY(-50%) rotate(-90deg);
+    }
+
+    .sidebar .nav-link.collapsed {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .sidebar .collapse ul {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 0.25rem;
+        margin: 0.25rem 0;
+    }
+
+    .sidebar .nav-item .nav-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Ensure sidebar content doesn't overflow */
+    .sidebar-nav {
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+    }
+    
+    /* Custom scrollbar for sidebar */
+    .sidebar-nav::-webkit-scrollbar {
+        width: 5px;
+    }
+    
+    .sidebar-nav::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .sidebar-nav::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 5px;
+    }
+    
+    .sidebar-nav::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
 </style>
 <body class="d-flex">
     <!-- Sidebar Navigation -->
     <div class="sidebar bg-gradient-primary">
         <div class="sidebar-brand text-center py-4">
-        <img src="assets/images/white_logo.png" alt="Logo" class="sidebar-logo">
-            <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title');?></h4>
+            <img src="../assets/images/white_logo.png" alt="Logo" class="sidebar-logo">
+            <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard-staff.php' ? 'active' : ''; ?>" href="dashboard-staff.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard');?>
+                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Staff/dashboard-staff.php' ? 'active' : ''; ?>" href="../Staff/dashboard-staff.php">
+                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard'); ?>
                     </a>
+                </li>
+               
+              
+               
+                
+                <li class="nav-item">
+                    <a class="nav-link collapsed" data-bs-toggle="collapse" href="#itemManagementCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-box-seam me-2"></i><?php echo t('item_management'); ?>
+                        <i class="bi bi-chevron-down ms-auto" style="font-size: 0.8rem;"></i>
+                    </a>
+                    <div class="collapse" id="itemManagementCollapse">
+                        <ul class="nav flex-column ps-4">
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/items.php' ? 'active' : ''; ?>" href="../Staff/items.php">
+                                    <i class="bi bi-box-arrow-in-down me-2"></i><?php echo t('item'); ?>
+                                </a>
+                            </li>
+                       
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/repair.php' ? 'active' : ''; ?>" href="../Staff/repair.php">
+                                    <i class="bi bi-tools me-2"></i><?php echo t('repair'); ?>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/stock-transfer.php' ? 'active' : ''; ?>" href="../Staff/stock-transfer.php">
+                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('transfer'); ?>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/remaining.php' ? 'active' : ''; ?>" href="../Staff/remaining.php">
+                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('remaining'); ?>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
               
                 
-                <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'item-control-staff.php' ? 'active' : ''; ?>" href="item-control-staff.php">
-                        <i class="bi bi-box-seam me-2"></i><?php echo t('item_management');?>
-                    </a>
-                </li>
+            
                 
-               
+              
                 <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'stock-transfer-staff.php' ? 'active' : ''; ?>" href="stock-transfer-staff.php">
-                        <i class="bi bi-arrow-left-right me-2"></i><?php echo t('stock_transfer');?>
-                    </a>
-                </li>
-               
-                <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'low-stock-alert-staff.php' ? 'active' : ''; ?>" href="low-stock-alert-staff.php">
-                        <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('low_stock');?>
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/low-stock-alert.php' ? 'active' : ''; ?>" href="../Staff/low-stock-alert.php">
+                        <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('low_stock'); ?>
                     </a>
                 </li>
             </ul>
         </div>
         <div class="sidebar-footer mt-auto p-3 text-center">
-            <a href="logout.php" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-box-arrow-right me-1"></i><?php echo t('logout');?>
+            <a href="../logout.php" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-box-arrow-right me-1"></i><?php echo t('logout'); ?>
             </a>
         </div>
     </div>
 
     <div class="main-content d-flex flex-column min-vh-100">
-    <nav class="navbar navbar-expand navbar-light bg-white shadow-sm">
-    <div class="container-fluid">
-        <div class="navbar-collapse justify-content-end">
-            <ul class="navbar-nav">
-                <li class="nav-item dropdown me-2">
-                    <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-translate me-1"></i>
-                        <?php echo $_SESSION['language'] == 'km' ? 'ភាសាខ្មែរ' : 'English'; ?>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
-                        <li><a class="dropdown-item" href="../change-language.php?lang=km">ភាសាខ្មែរ</a></li>
-                        <li><a class="dropdown-item" href="../change-language.php?lang=en">English</a></li>
+        <nav class="navbar navbar-expand navbar-light bg-white shadow-sm">
+            <div class="container-fluid">
+              
+                <div class="navbar-collapse justify-content-end">
+                    <ul class="navbar-nav">
+                        <li class="nav-item dropdown me-2">
+                            <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-translate me-1"></i>
+                                <?php echo $_SESSION['language'] == 'km' ? 'ភាសាខ្មែរ' : 'English'; ?>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                                <li><a class="dropdown-item" href="../change-language.php?lang=km">ភាសាខ្មែរ</a></li>
+                                <li><a class="dropdown-item" href="../change-language.php?lang=en">English</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <?php if ($hasAvatar): ?>
+                                    <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
+                                <?php else: ?>
+                                    <div class="default-avatar me-2">
+                                        <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="../Staff/profile-staff.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?></a></li>
+                            </ul>
+                        </li>
                     </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php if ($hasAvatar): ?>
-                            <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
-                        <?php else: ?>
-                            <div class="default-avatar me-2">
-                                <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
-                            </div>
-                        <?php endif; ?>
-                        <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="profile-staff.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?></a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-    
-    <!-- Main Content Area -->
-    <div class="container-fluid flex-grow-1 py-3">
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content Area -->
+        <div class="container-fluid flex-grow-1 py-3">
             <?php if (isset($_SESSION['success'])): ?>
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>

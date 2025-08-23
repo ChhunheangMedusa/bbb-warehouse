@@ -1,5 +1,5 @@
 <?php
-require_once 'config/database.php';
+require_once '../config/database.php';
 
 $location_id = isset($_GET['location_id']) ? (int)$_GET['location_id'] : 0;
 

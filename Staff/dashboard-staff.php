@@ -1,7 +1,7 @@
 <?php
 ob_start();
-require_once 'includes/header-staff.php';
-require_once 'translate.php';
+require_once '../includes/header-staff.php';
+require_once  'translate.php'; 
 
 if (!isStaff()) {
   $_SESSION['error'] = "You don't have permission to access this page";
@@ -17,7 +17,6 @@ if (isset($_SESSION['show_welcome']) && $_SESSION['show_welcome']) {
 checkAuth();
 
 
-
 $stmt = $pdo->prepare("SELECT COUNT(*) as new_items FROM addnewitems WHERE DATE(created_at) = CURDATE()");
 $stmt->execute();
 $new_items = $stmt->fetch(PDO::FETCH_ASSOC)['new_items'];
@@ -27,21 +26,56 @@ $stmt = $pdo->prepare("SELECT COUNT(*) as qty_increases FROM addqtyitems WHERE D
 $stmt->execute();
 $qty_increases = $stmt->fetch(PDO::FETCH_ASSOC)['qty_increases'];
 
+
+
 // Total is the sum of both
 $total_items = $new_items + $qty_increases;
 
-
-
-$stmt = $pdo->prepare("SELECT COUNT(*) as total_transfers FROM stock_transfers WHERE DATE(created_at) = CURDATE()");
+// Count of quantity deductions today
+$stmt = $pdo->prepare("SELECT COUNT(*) as qty_deductions FROM deductqtyitems WHERE DATE(deducted_at) = CURDATE()");
 $stmt->execute();
-$total_transfers = $stmt->fetch(PDO::FETCH_ASSOC)['total_transfers'];
+$qty_deductions = $stmt->fetch(PDO::FETCH_ASSOC)['qty_deductions'];
 
-// Count of repairs today (excluding quantity = 0)
-$stmt = $pdo->prepare("SELECT COUNT(*) as total_repairs FROM items i JOIN locations l ON i.location_id = l.id 
-                      WHERE l.type = 'Repair' AND DATE(i.created_at) = CURDATE()
-                      AND i.quantity > 0");
+
+
+
+// Count of new deductions today (if you have a separate table for new deductions)
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_deductions FROM stock_out_history WHERE DATE(action_at) = CURDATE() AND action_type = 'deduct'");
 $stmt->execute();
-$total_repairs = $stmt->fetch(PDO::FETCH_ASSOC)['total_repairs'];
+$new_deductions = $stmt->fetch(PDO::FETCH_ASSOC)['new_deductions'];
+
+// Count of new transfer today (if you have a separate table for new deductions)
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_transfer FROM transfer_history WHERE DATE(action_at) = CURDATE()");
+$stmt->execute();
+$new_transfer = $stmt->fetch(PDO::FETCH_ASSOC)['new_transfer'];
+
+
+// Count of new repair today (if you have a separate table for new deductions)
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_repair FROM repair_items WHERE DATE(action_at) = CURDATE() AND action_type = 'send_for_repair'");
+$stmt->execute();
+$new_repair = $stmt->fetch(PDO::FETCH_ASSOC)['new_repair'];
+
+// Count of new repairs today from repair_history table
+$stmt = $pdo->prepare("SELECT COUNT(*) as new_repair_history FROM repair_history 
+                      WHERE DATE(history_action_at) = CURDATE() 
+                      AND action_type = 'send_for_repair'");
+$stmt->execute();
+$new_repair_history = $stmt->fetch(PDO::FETCH_ASSOC)['new_repair_history'];
+
+// Add to your existing total if needed, or use it separately
+$total_new_repair = $new_repair;
+$total_new_repair_history = $new_repair_history;
+
+$total_new_transfer=$new_transfer;
+
+
+
+
+
+// Total deductions is the sum of both
+$total_items_out = $qty_deductions;
+
+
 
 // Get recent access logs
 $stmt = $pdo->prepare("SELECT al.activity_type, al.activity_detail, al.created_at, u.username 
@@ -173,39 +207,18 @@ body {
   font-family: var(--font-family);
   background-color: var(--light);
   color: var(--dark);
-  overflow: hidden;
-  height: 100vh;
+  overflow-x: hidden;
 }
-.pagination-container {
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-    }
-.stat-card {
-        cursor: pointer;
-        transition: transform 0.2s;
-        
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        
-    }
-    
-    .modal-lg-custom {
-        max-width: 90%;
-    }
-    
-    .table-modal {
-        max-height: 70vh;
-        overflow-y: auto;
-    }
+
 /* Sidebar Styles */
 .sidebar {
-  width: 220px;
-  min-width:220px;
+  width: 14rem;
   min-height: 100vh;
-  background: #005064;
+  background: linear-gradient(
+    180deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
   color: var(--white);
   transition: all 0.3s;
   box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
@@ -227,15 +240,12 @@ body {
 }
 
 .sidebar .nav-link {
-    white-space: nowrap;       /* Prevent text wrapping */
-    overflow: hidden;          /* Hide overflow */
-    text-overflow: ellipsis;   /* Show ... if text is too long */
-    padding: 0.75rem 1rem;     /* Adjust padding as needed */
-    margin: 0.25rem 0;         /* Reduce margin */
-    font-size: 0.875rem;       /* Slightly smaller font */
-    display: flex;             /* Use flexbox for alignment */
-    align-items: center;  
-    color: var(--white);     /* Center items vertically */
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0.75rem 1.5rem;
+  margin: 0.25rem 1rem;
+  border-radius: 0.35rem;
+  font-weight: 500;
+  transition: all 0.3s;
 }
 
 .sidebar .nav-link:hover {
@@ -252,8 +262,6 @@ body {
 .sidebar .nav-link i {
   margin-right: 0.5rem;
   font-size: 0.85rem;
-  min-width: 1.25rem;       /* Fixed width for icons */
-  text-align: center;
 }
 
 .sidebar-footer {
@@ -262,64 +270,12 @@ body {
 
 /* Main Content Styles */
 .main-content {
-  width: 100%;
+  width: calc(100% - 14rem);
   min-height: 100vh;
   transition: all 0.3s;
   background-color: #f5f7fb;
 }
-/* Default (desktop) - no scrolling */
-body {
-    overflow: hidden;
-    height: 100vh;
-}
 
-.main-content {
-    overflow: hidden;
-    height: calc(100vh - 4.375rem); /* Adjust for navbar height */
-}
-
-
-/* Mobile devices - allow scrolling */
-@media (max-width: 768px) {
-    body {
-        overflow: auto;
-        height: auto;
-    }
-    
-    .main-content {
-        overflow: visible;
-        height: auto;
-    }
-    
-    .container-fluid {
-        overflow: visible;
-        height: auto;
-    }
-    
-    /* Ensure tables are scrollable horizontally on mobile */
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-}
-@media (max-width: 768px) {
-    /* Stack the two columns vertically */
-    .row > .col-md-6 {
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
-    }
-
-    /* Add margin between stacked cards */
-    .row > .col-md-6:not(:last-child) {
-        margin-bottom: 1.5rem;
-    }
-
-    /* Ensure tables are scrollable horizontally */
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-}
 /* Top Navigation */
 .navbar {
   height: 4.375rem;
@@ -346,10 +302,11 @@ body {
   padding: 1rem 1.35rem;
   font-weight: 600;
   border-radius: 0.35rem 0.35rem 0 0 !important;
-
 }
 
-
+.card-body {
+  padding: 1.5rem;
+}
 
 /* Alert Styles */
 .alert {
@@ -398,9 +355,6 @@ body {
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   border-bottom-width: 1px;
-  white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .table > :not(:first-child) {
@@ -574,178 +528,695 @@ body {
 .form-control-file:hover::before {
   background: #e9ecef;
 }
+
+
+
+    :root {
+  --primary: #4e73df;
+  --primary-dark: #2e59d9;
+  --primary-light: #f8f9fc;
+  --secondary: #858796;
+  --success: #1cc88a;
+  --info: #36b9cc;
+  --warning: #f6c23e;
+  --danger: #e74a3b;
+  --light: #f8f9fa;
+  --dark: #5a5c69;
+  --white: #ffffff;
+  --gray: #b7b9cc;
+  --gray-dark: #7b7d8a;
+  --font-family: "Khmer OS Siemreap", sans-serif;
+}
+
+/* Base Styles */
+body {
+  font-family: var(--font-family);
+  background-color: var(--light);
+  color: var(--dark);
+  overflow-x: hidden;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 220px;
+  min-width:220px;
+  min-height: 100vh;
+  background: #005064;
+  color: var(--white);
+  transition: all 0.3s;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  z-index: 1000;
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo {
+  height: 150px;
+  width: auto;
+}
+
+.sidebar-nav {
+  padding: 0.5rem 0;
+}
+
+.sidebar .nav-link {
+    white-space: nowrap;       /* Prevent text wrapping */
+    overflow: hidden;          /* Hide overflow */
+    text-overflow: ellipsis;   /* Show ... if text is too long */
+    padding: 0.75rem 1rem;     /* Adjust padding as needed */
+    margin: 0.25rem 0;         /* Reduce margin */
+    font-size: 0.875rem;       /* Slightly smaller font */
+    display: flex;             /* Use flexbox for alignment */
+    align-items: center;  
+    color: var(--white);     /* Center items vertically */
+}
+
+.sidebar .nav-link:hover {
+  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar .nav-link.active {
+  color: var(--primary);
+  background-color: var(--white);
+  font-weight: 600;
+}
+
+.sidebar .nav-link i {
+  margin-right: 0.5rem;
+  font-size: 0.85rem;
+  min-width: 1.25rem;       /* Fixed width for icons */
+  text-align: center;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Main Content Styles */
+.main-content {
+  width: calc(100% - 14rem);
+  min-height: 100vh;
+  transition: all 0.3s;
+  background-color: #f5f7fb;
+}
+
+/* Top Navigation */
+.navbar {
+  height: 4.375rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  background-color: var(--white);
+}
+
+.navbar .dropdown-menu {
+  border: none;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  border-radius: 0.35rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  background-color: var(--white);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.35rem;
+  font-weight: 600;
+  border-radius: 0.35rem 0.35rem 0 0 !important;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Alert Styles */
+.alert {
+  border-radius: 0.35rem;
+  border: none;
+}
+
+/* Button Styles */
+.btn {
+  border-radius: 0.35rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.btn-outline-primary {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Table Styles */
+.table {
+  color: var(--dark);
+  margin-bottom: 0;
+}
+
+.table th {
+  background-color: var(--light);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom-width: 1px;
+}
+
+.table > :not(:first-child) {
+  border-top: none;
+}
+
+/* Form Styles */
+.form-control,
+.form-select {
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d3e2;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+/* Badge Styles */
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+  border-radius: 0.25rem;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-dark);
+}
+
+/* Responsive Styles */
 @media (max-width: 768px) {
-    /* Make stat cards stack vertically */
-    .row.mb-3 {
-        flex-direction: column;
-    }
-    
-    .row.mb-3 .col-md-4 {
+  .sidebar {
+    margin-left: -14rem;
+    position: fixed;
+  }
+
+  .sidebar.show {
+    margin-left: 0;
+  }
+
+  .main-content {
+    width: 100%;
+  }
+
+  .main-content.show {
+    margin-left: 14rem;
+  }
+
+  #sidebarToggle {
+    display: block;
+  }
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Utility Classes */
+.text-khmer {
+  font-family: var(--font-family);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.shadow-sm {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Image Styles */
+.img-thumbnail {
+  padding: 0.25rem;
+  background-color: var(--white);
+  border: 1px solid #d1d3e2;
+  border-radius: 0.35rem;
+  max-width: 100%;
+  height: auto;
+  transition: all 0.2s;
+}
+
+.img-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Styles */
+.modal-content {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Pagination Styles */
+.pagination .page-item .page-link {
+  border-radius: 0.35rem;
+  margin: 0 0.25rem;
+  color: var(--primary);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+/* Custom Toggle Switch */
+.form-switch .form-check-input {
+  width: 2.5em;
+  height: 1.5em;
+  cursor: pointer;
+}
+/* Delete Confirmation Modal Styles */
+#deleteConfirmModal .modal-content {
+    border: 2px solid #dc3545;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
+}
+
+#deleteConfirmModal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#deleteConfirmModal .modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+#deleteConfirmModal .btn-danger {
+
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+#deleteUserInfo {
+    text-align: left;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+}
+
+#unblockConfirmModal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+#unblockUserInfo{
+  text-align:left;
+  background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+}
+/* Custom File Upload */
+.form-control-file::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+.form-control-file::before {
+  content: "ជ្រើសរើសឯកសារ";
+  display: inline-block;
+  background: var(--light);
+  border: 1px solid #d1d3e2;
+  border-radius: 0.35rem;
+  padding: 0.375rem 0.75rem;
+  outline: none;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--dark);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.form-control-file:hover::before {
+  background: #e9ecef;
+}
+/* Mobile-specific styles */
+@media (max-width: 767.98px) {
+    /* Adjust main content width when sidebar is hidden */
+    .main-content {
         width: 100%;
-        margin-bottom: 1rem;
+        margin-left: 0;
     }
     
-    /* Make content columns stack vertically */
-    .row:not(.mb-3) {
-        flex-direction: column;
-    }
-    
-    .row:not(.mb-3) > .col-md-6 {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-    
-    /* Adjust quick action buttons */
-    .card-body .row.text-center {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-    
-    .card-body .col.flex-grow-1 {
-        flex: 0 0 50%;
-        max-width: 50%;
-        padding: 0.5rem;
-    }
-    
-    .card-body .btn-lg {
-        padding: 0.75rem;
-        font-size: 0.9rem;
-    }
-    
-    .card-body .btn-lg i {
-        font-size: 1.5rem;
-        margin-bottom: 0.25rem;
-    }
-    
-    /* Adjust table for mobile */
     .table-responsive {
+        width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
     
-    /* Make list items more compact */
-    .list-group-item {
-        padding: 0.75rem 1rem;
+    /* Optional: Add some padding to table cells for better mobile readability */
+    .table td, .table th {
+        padding: 8px 12px;
+        white-space: nowrap; /* Prevent text wrapping */
     }
     
-    /* Adjust card headers */
-    .card-header h5 {
-        font-size: 1.1rem;
+    /* Optional: Make the table a bit more compact on mobile */
+    .table {
+        font-size: 0.9rem;
+    }
+    /* Make modals full width */
+    .modal-dialog {
+        margin: 0.5rem auto;
+        max-width: 95%;
     }
     
-    /* Make main title smaller */
-    h2.mb-4 {
-        font-size: 1.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    /* Make quick action buttons single column */
-    .card-body .col.flex-grow-1 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-    
-    /* Adjust stat card content */
-    .stat-card .card-body {
+    /* Adjust card padding */
+    .card-body {
         padding: 1rem;
     }
     
-    .stat-card h5 {
-        font-size: 1rem;
-    }
-    
-    .stat-card h2 {
-        font-size: 1.5rem;
-    }
-    
-    .stat-card i {
-        font-size: 2rem !important;
-    }
-    
-    /* Make tables display as cards on very small screens */
-  }
-  @media (max-width: 768px) {
-    /* Make tables display as cards on mobile */
-    .table-responsive table, 
-    .table-responsive thead, 
-    .table-responsive tbody, 
-    .table-responsive th, 
-    .table-responsive td, 
-    .table-responsive tr { 
-        display: block; 
+    /* Make buttons full width */
+    .btn {
+        display: block;
         width: 100%;
+        margin-bottom: 0.5rem;
     }
     
-    /* Hide table headers */
-    .table-responsive thead tr { 
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
+    /* Adjust form controls */
+    .form-control, .form-select {
+        font-size: 16px; /* prevents iOS zoom */
     }
-    
-    .table-responsive tr {
-        margin-bottom: 1rem;
-        border: 1px solid #dee2e6;
-        border-radius: 0.35rem;
-        box-shadow: 0 0.15rem 0.75rem rgba(0, 0, 0, 0.1);
-    }
-    
-    .table-responsive td {
-        /* Behave like a row */
-        border: none;
-        position: relative;
-        padding-left: 50%;
-        white-space: normal;
-        text-align: left;
-        border-bottom: 1px solid #eee;
-    }
-    
-    .table-responsive td:before {
-        /* Now like a table header */
-        position: absolute;
-        top: 0.75rem;
-        left: 0.75rem;
-        width: 45%; 
-        padding-right: 1rem; 
-        white-space: nowrap;
-        font-weight: bold;
-        content: attr(data-label);
-    }
-    
-    /* Remove bottom border from last td */
-    .table-responsive td:last-child {
-        border-bottom: none;
-    }
+}
+#passwordMismatchModal {
+    z-index: 1060 !important; /* Higher than Bootstrap's default 1050 */
 }
 
-@media (max-width: 576px) {
-    /* Make table cells more compact */
-    .table-responsive td {
-        padding-left: 45%;
-        padding-top: 0.5rem;
-        padding-bottom: 0.5rem;
-        font-size: 0.9rem;
+/* Ensure the modal backdrop is also above the transfer modal */
+.modal-backdrop.show:nth-of-type(even) {
+    z-index: 1055 !important;
+}
+#duplicateEmailModal{
+  z-index: 1060 !important; 
+}
+
+#duplicateUsernameModal {
+    z-index: 1070 !important;
+}
+
+/* Animation for duplicate username modal */
+@keyframes pulseWarning {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+#duplicateUsernameModal .modal-content {
+    animation: pulseWarning 1.5s infinite;
+    border: 2px solid #ffc107;
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
+}
+
+/* Filter section styles */
+.filter-section {
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.sort-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+.sort-select {
+    min-width: 120px;
+}
+
+.sort-order-select {
+    min-width: 100px;
+}
+
+@media (max-width: 768px) {
+    .filter-group {
+        min-width: 100%;
     }
-    
-    .table-responsive td:before {
-        font-size: 0.85rem;
-        top: 0.5rem;
+    .sort-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .sort-select, .sort-order-select {
+        min-width: 100%;
     }
 }
+.btn-outline-orange {
+        color: #ce7e00;
+        border-color: #ce7e00;
+        background-color: transparent;
+    }
+    
+    .btn-outline-orange:hover {
+        color: white;
+        background-color: #ce7e00;
+        border-color: #ce7e00;
+    }
+    .btn-outline-purple {
+        color: #674ea7;
+        border-color: #674ea7;
+        background-color: transparent;
+    }
+    
+    .btn-outline-purple:hover {
+        color: white;
+        background-color: #674ea7;
+        border-color: #674ea7;
+    }
+    .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .stat-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .quick-actions-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: left;
+            gap: 1rem;
+        }
+
+        .quick-action-card {
+            flex: 1;
+            min-width: 160px;
+            max-width: 200px;
+        }
+        /* Mobile view - one card per row */
+        @media (max-width: 767.98px) {
+            .quick-actions-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .quick-action-card {
+                width: 100%;
+                max-width: 100%;
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* Desktop view - all in one row */
+        @media (min-width: 768px) {
+            .quick-actions-container {
+                flex-wrap: nowrap;
+                
+            }
+        }
+
+        .btn-outline-orange {
+            color: #ce7e00;
+            border-color: #ce7e00;
+            background-color: transparent;
+        }
+        
+        .btn-outline-orange:hover {
+            color: white;
+            background-color: #ce7e00;
+            border-color: #ce7e00;
+        }
+
+        .btn-outline-purple {
+            color: #674ea7;
+            border-color: #674ea7;
+            background-color: transparent;
+        }
+        
+        .btn-outline-purple:hover {
+            color: white;
+            background-color: #674ea7;
+            border-color: #674ea7;
+        }
+
+        .table-responsive {
+            border-radius: 0.35rem;
+        }
+
+        .low-stock-table td {
+            vertical-align: middle;
+        }
+        .table-cards {
+        display: none;
+    }
+    
+    .table-card {
+        background-color: #fff;
+        border-radius: 0.35rem;
+        box-shadow: 0 0.15rem 0.75rem rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-left: 4px solid transparent;
+    }
+    
+    .table-card.activity-card {
+        border-left-color: #1cc88a;
+    }
+    
+    .table-card.stock-card {
+        border-left-color: #e74a3b;
+    }
+    
+    .card-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-label {
+        font-weight: 600;
+        color: #5a5c69;
+        min-width: 30%;
+    }
+    
+    .card-value {
+        text-align: right;
+        flex-grow: 1;
+    }
+    
+    /* Show cards on mobile, tables on desktop */
+    @media (max-width: 767.98px) {
+        .table-responsive {
+            display: none;
+        }
+        
+        .table-cards {
+            display: block;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .table-cards {
+            display: none;
+        }
+        
+        .table-responsive {
+            display: block;
+        }
+    }
 </style>
 
 <div class="container-fluid">
-    <h2 class="mb-4"><?php echo t('dashboard_title');?></h2>
+<h2 class="mb-4"><?php echo t('dashboard_title'); ?></h2>
     
-    <div class="row mb-3">
-    <div class="col-md-4">
-    <a href="today_items-staff.php" style="text-decoration: none;">
+    <div class="row mb-2">
+    <div class="col-md-3">
+    <a href="today_items.php" style="text-decoration: none;">
         <div class="card bg-primary text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayItemsModal">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title"><?php echo t('new_items_card');?></h5>
+                        <h5 class="card-title"><?php echo t('new_items_card'); ?></h5>
                         <h2 class="mb-0"><?php echo $total_items; ?></h2>
                     </div>
                     <i class="bi bi-box-seam fs-1"></i>
@@ -754,110 +1225,183 @@ body {
         </div>
     </a>
 </div>
-
-        <div class="col-md-4">
-          <a href="today_transfer-staff.php" style="text-decoration:none;">
+<div class="col-md-3">
+    <a href="today_items_out.php" style="text-decoration: none;">
+        <div class="card bg-danger text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayItemsModal">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title"><?php echo t('stock_out'); ?></h5>
+                        <h2 class="mb-0"><?php echo $total_items_out; ?></h2>
+                    </div>
+                    <i class="bi bi-box-seam fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </a>
+</div>
+        <div class="col-md-3">
+          <a href="today_transfer.php" style="text-decoration:none;">
           <div class="card bg-success text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayTransfersModal">
           
        
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h5 class="card-title"><?php echo t('transfers_card');?></h5>
-                            <h2 class="mb-0"><?php echo $total_transfers; ?></h2>
+                            <h5 class="card-title"><?php echo t('transfers_card'); ?></h5>
+                            <h2 class="mb-0"><?php echo $total_new_transfer; ?></h2>
                         </div>
                         <i class="bi bi-arrow-left-right fs-1"></i>
                     </div>
                 </div>
             </div></a>
         </div>
-<div class="col-md-4">
-    <a href="today_repairs-staff.php" style="text-decoration: none;">
-        <div class="card bg-warning text-white stat-card" data-bs-toggle="modal" data-bs-target="#todayRepairsModal">
+        <div class="col-md-3">
+    <a href="today_repairs.php" style="text-decoration: none;">
+        <div class="card bg-warning text-white stat-card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title"><?php echo t('repairs_card');?></h5>
-                        <h2 class="mb-0"><?php echo $total_repairs; ?></h2>
+                        <h5 class="card-title"><?php echo t('repairs_card'); ?></h5>
+                        <h2 class="mb-0"><?php echo $total_new_repair_history; ?></h2>
                     </div>
-                    <i class="bi bi-tools fs-1"></i>
+                    <i class="bi bi-clock-history fs-1"></i>
                 </div>
             </div>
         </div>
     </a>
 </div>
+
 <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0"><?php echo t('quick_actions_title');?></h5>
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><?php echo t('quick_actions_title');?></h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Items Button -->
+                <div class="col-md-4 mb-3">
+                    <a href="item-control.php" class="btn btn-outline-primary btn-lg w-100 py-3">
+                        <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
+                        <?php echo t('items_button');?>
+                    </a>
                 </div>
-                <div class="card-body">
-        <div class="row text-center">
-            <div class="col flex-grow-1 mb-3">
-                <a href="item-control-staff.php" class="btn btn-outline-primary btn-lg w-100 py-3">
-                    <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
-                    <?php echo t('items_button');?>
-                </a>
-            </div>
-           
-            <div class="col flex-grow-1 mb-3">
-                <a href="stock-transfer-staff.php" class="btn btn-outline-success btn-lg w-100 py-3">
-                    <i class="bi bi-arrow-left-right fs-1 d-block mb-2"></i>
-                    <?php echo t('transfers_button');?>
-                </a>
-            </div>
-        
-          
-           
-        
-            <div class="col flex-grow-1 mb-3">
-                <a href="low-stock-alert-staff.php" class="btn btn-outline-danger btn-lg w-100 py-3">
-                    <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
-                    <?php echo t('low_stock_button');?>
-                </a>
+                
+                <!-- Transfers Button -->
+                <div class="col-md-4 mb-3">
+                    <a href="stock-transfer.php" class="btn btn-outline-success btn-lg w-100 py-3">
+                        <i class="bi bi-arrow-left-right fs-1 d-block mb-2"></i>
+                        <?php echo t('transfers_button');?>
+                    </a>
+                </div>
+                
+                <?php if (isAdmin()): ?>
+                <!-- Users Button -->
+                <div class="col-md-4 mb-3">
+                    <a href="user-control.php" class="btn btn-outline-orange btn-lg w-100 py-3">
+                        <i class="bi bi-people fs-1 d-block mb-2"></i>
+                        <?php echo t('users_button');?>
+                    </a>
+                </div>
+                
+                <!-- Locations Button -->
+                <div class="col-md-4 mb-3">
+                    <a href="location-control.php" class="btn btn-outline-purple btn-lg w-100 py-3">
+                        <i class="bi bi-pin-map fs-1 d-block mb-2"></i>
+                        <?php echo t('locations_button');?>
+                    </a>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (isAdmin()): ?>
+                <!-- Logs Button -->
+                <div class="col-md-4 mb-3">
+                    <a href="access-log.php" class="btn btn-outline-dark btn-lg w-100 py-3">
+                        <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
+                        <?php echo t('logs_button');?>
+                    </a>
+                </div>
+                
+                <!-- Reports Button -->
+                <div class="col-md-4 mb-3">
+                    <a href="report.php" class="btn btn-outline-secondary btn-lg w-100 py-3">
+                        <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
+                        <?php echo t('reports_button');?>
+                    </a>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Low Stock Button -->
+                <div class="col-md-4 mb-3">
+                    <a href="low-stock-alert.php" class="btn btn-outline-danger btn-lg w-100 py-3">
+                        <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
+                        <?php echo t('low_stock_button');?>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-        </div>
-    </div>
+</div>
 
     
-
-        <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0"><?php echo t('low_stock_title');?></h5>
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><?php echo t('low_stock_title');?></h5>
+            </div>
+            <div class="card-body">
+                <!-- Desktop Table -->
+                <div class="table-responsive">
+                    <table class="table table-striped low-stock-table">
+                        <thead>
+                            <tr>
+                                <th><?php echo t('item_name_column');?></th>
+                                <th><?php echo t('quantity_column');?></th>
+                                <th><?php echo t('size_column');?></th>
+                                <th><?php echo t('location_column');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($low_stock_items as $item): ?>
+                                <tr>
+                                    <td data-label="<?php echo t('item_name_column');?>"><?php echo $item['name']; ?></td>
+                                    <td data-label="<?php echo t('quantity_column');?>" class="text-danger"><?php echo $item['quantity']; ?></td>
+                                    <td data-label="<?php echo t('size_column');?>"><?php echo !empty($item['size']) ? $item['size'] : 'N/A'; ?></td>
+                                    <td data-label="<?php echo t('location_column');?>"><?php echo $item['location']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body" >
-                    <div class="table-responsive">
-                    <table class="table table-striped">
-    <thead>
-        <tr>
-            <th><?php echo t('item_name_column');?></th>
-            <th><?php echo t('quantity_column');?></th>
-            <th><?php echo t('size_column');?></th>
-            <th><?php echo t('location_column');?></th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($low_stock_items as $item): ?>
-            <tr>
-                <td data-label="ឈ្មោះទំនិញ"><?php echo $item['name']; ?></td>
-                <td data-label="បរិមាណ" class="text-danger"><?php echo $item['quantity']; ?></td>
-                <td data-label="ទំហំ"><?php echo !empty($item['size']) ? $item['size'] : 'N/A'; ?></td>
-                <td data-label="ទីតាំង"><?php echo $item['location']; ?></td>
-            </tr>
-        <?php endforeach; ?>
-    </tbody>
-</table>
-                    </div>
+                
+                <!-- Mobile Cards -->
+                <div class="table-cards">
+                    <?php foreach ($low_stock_items as $item): ?>
+                        <div class="table-card stock-card">
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('item_name_column');?>:</span>
+                                <span class="card-value"><?php echo $item['name']; ?></span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('quantity_column');?>:</span>
+                                <span class="card-value text-danger"><?php echo $item['quantity']; ?></span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('size_column');?>:</span>
+                                <span class="card-value"><?php echo !empty($item['size']) ? $item['size'] : 'N/A'; ?></span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('location_column');?>:</span>
+                                <span class="card-value"><?php echo $item['location']; ?></span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
-    
-    
-    
+    </div>
+</div>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

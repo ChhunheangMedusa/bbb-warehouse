@@ -240,7 +240,7 @@ $translations = [
 'return_to_original' => 'បញ្ជូនទៅកន្លែងដើម',
 'return_repair_item' => 'បញ្ជូនសម្ភារៈជួសជុលទៅវិញ',
 'return_button' => 'បញ្ជូន',
-'repair_history' => 'ប្រវត្តជួសជុលសម្ភារៈ',
+'repair_history' => 'កំណតត្រាជួសជុលសម្ភារៈ',
 'sent_for_repair' => 'បញ្ជូនទៅកន្លែងជួសជុល',
 'returned_from_repair' => 'បញ្ជូនទៅកន្លែងដើម',
 'no_repair_history' => 'គ្មានទិន្នន័យសម្ភារៈជួសជុលត្រូវបានរកឃើញនោះទេ',
@@ -395,11 +395,13 @@ $translations = [
 'preview_report'=>'ពិនិត្យមើល',
 'download_excel'=>'ទាញយក',
 'report_preview'=>'ពិនិត្យមើលរបាយការណ៍',
-'report_generated_on'=>'របាយការណ៍ត្រូវបានបង្កើតនៅ'
+'report_generated_on'=>'របាយការណ៍ត្រូវបានបង្កើតនៅ',
+'history_action'=>'កំណត់ត្រាសកម្មភាព'
     ],
 
 
     'en' => [
+        'history_action'=>'Action Records',
         'report_generated_on'=>'Report generated on',
         'report_preview'=>'Report Preview',
         'download_excel'=>'Download',
