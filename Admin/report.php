@@ -64,16 +64,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Generate report data based on type
         $report_data = generateReportData($pdo, $report_type, $location_id, $start_date, $end_date);
-        
+        $no_record_report=t('no_record_report');
         if (empty($report_data)) {
-            $_SESSION['error'] = "No records found for the selected criteria";
+            $_SESSION['error'] = "$no_record_report";
             header('Location: report.php');
             exit();
         }
         
-        // If preview is requested, show preview page
-      // If preview is requested, show preview page
-// If preview is requested, show preview page
+        // If preview is requested, store data for modal display
+       // In the POST handling section, replace the preview code:
 if (isset($_POST['preview_report'])) {
     // Store report data in session for preview
     $_SESSION['report_data'] = $report_data;
@@ -91,8 +90,8 @@ if (isset($_POST['preview_report'])) {
     
     $_SESSION['report_criteria']['location_name'] = $location_name;
     
-    // Redirect with report type parameter
-    header('Location: pdf.php?preview=true&report_type=' . $report_type);
+    // Redirect to preview page instead of showing modal
+    header('Location: report-preview.php');
     exit();
 }
         
@@ -253,22 +252,26 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
     $filename = "";
     $title = "";
     $header_color = "";
-    
+    $stock_in_report=t('stock_in_report');
+    $stock_out_report=t('stock_out_report');
+    $transfer_report=t('transfer_report');
+    $repair_report=t('repair_report');
+
     if ($report_type === 'stock_in') {
         $filename = "stock_in_report_" . date('Ymd') . ".xls";
-        $title = "របាយការណ៍ទំនិញចូល";
+        $title = "$stock_in_report";
         $header_color = "#4e73df";
     } elseif ($report_type === 'stock_out') {
         $filename = "stock_out_report_" . date('Ymd') . ".xls";
-        $title = "របាយការណ៍ទំនិញចេញ";
+        $title = "$stock_out_report";
         $header_color = "#e74a3b";
     } elseif ($report_type === 'stock_transfer') {
         $filename = "stock_transfer_report_" . date('Ymd') . ".xls";
-        $title = "របាយការណ៍ផ្ទេរទំនិញ";
+        $title = "$transfer_report";
         $header_color = "#1cc88a";
     } elseif ($report_type === 'repair') {
         $filename = "repair_report_" . date('Ymd') . ".xls";
-        $title = "របាយការណ៍ជួសជុលទំនិញ";
+        $title = "$repair_report";
         $header_color = "#f6c23e";
     }
     
@@ -291,7 +294,10 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     if ($report_type === 'stock_transfer' || $report_type === 'repair') {
         $location_name = $location_id ? $report_data[0]['from_location_name'] . ' ទៅ ' . $report_data[0]['to_location_name'] : 'ទីតាំងទាំងអស់';
     }
-    
+    $stock_system=t('stock_system');
+    $location=t('locations_button');
+    $report_froms=t('report_froms');
+    $report_tos=t('report_tos');
     echo '<!DOCTYPE html>
     <html>
     <head>
@@ -315,7 +321,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                 padding: 15px;
                 border-radius: 6px;
                 margin-bottom: 20px;
-                border-left: 4px solid '.$header_color.';
+                border-left: 4px solid '.$header_color.'; 
             }
             table { 
                 border-collapse: collapse; 
@@ -349,70 +355,85 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     <body>
         <div class="report-header">
             <div class="report-title">'.$title.'</div>
-            <div class="report-subtitle">ប្រព័ន្ធគ្រប់គ្រងស្តុកទំនិញ</div>
+            <div class="report-subtitle">'.$stock_system.'</div>
         </div>
         
         <div class="report-info">
-            <p>ចាប់ពី: '.date('d/m/Y', strtotime($start_date)).' ដល់: '.date('d/m/Y', strtotime($end_date)).'</p>
-            <p>ទីតាំង: '.$location_name.'</p>
+            <p>'.$report_froms.': '.date('d/m/Y', strtotime($start_date)).' '.$report_tos.': '.date('d/m/Y', strtotime($end_date)).'</p>
+            <p>'.$location.': '.$location_name.'</p>
         </div>
         
         <table>
             <thead>';
-    
+    $no=t('item_no');
+    $code=t('item_code');
+    $category=t('category');
+    $invoice=t('item_invoice');
+    $date=t('item_date');
+    $name=t('item_name');
+    $qty=t('item_qty');
+    $action=t('action');
+    $unit=t('item_size');
+    $location=t('item_location');
+    $remark=t('item_remark');
+    $action_by=t('item_addby');
+    $from_location=t('from_location');
+    $to_location=t('to_location');
+    $history_action=t('history_action');
     // Table headers based on report type
     if ($report_type === 'stock_in' || $report_type === 'stock_out') {
         echo '<tr>
-                <th>ល.រ</th>
-                <th>លេខកូដទំនិញ</th>
-                <th>ប្រភេទ</th>
-                <th>លេខវិក័យប័ត្រ</th>
-                <th>កាលបរិច្ឆេទ</th>
-                <th>ឈ្មោះទំនិញ</th>
-                <th>បរិមាណ</th>
-                <th>សកម្មភាព</th>
-                <th>ឯកតា</th>
-                <th>ទីតាំង</th>
-                <th>ផ្សេងៗ</th>
-                <th>អ្នកប្រតិបត្តិ</th>
+                <th>'.$no.'</th>
+                <th>'.$code.'</th>
+                <th>'.$category.'</th>
+                <th>'.$invoice.'</th>
+                <th>'.$date.'</th>
+                <th>'.$name.'</th>
+                <th>'.$qty.'</th>
+                <th>'.$action.'</th>
+                <th>'.$unit.'</th>
+                <th>'.$location.'</th>
+                <th>'.$remark.'</th>
+                <th>'.$action_by.'</th>
             </tr>';
     } elseif ($report_type === 'stock_transfer') {
         echo '<tr>
-                <th>ល.រ</th>
-                <th>លេខកូដទំនិញ</th>
-                <th>ប្រភេទ</th>
-                <th>លេខវិក័យប័ត្រ</th>
-                <th>កាលបរិច្ឆេទ</th>
-                <th>ឈ្មោះទំនិញ</th>
-                <th>បរិមាណ</th>
-                <th>ឯកតា</th>
-                <th>ពីទីតាំង</th>
-                <th>ទៅទីតាំង</th>
-                <th>ផ្សេងៗ</th>
-                <th>អ្នកប្រតិបត្តិ</th>
+                <th>'.$no.'</th>
+                <th>'.$code.'</th>
+                <th>'.$category.'</th>
+                <th>'.$invoice.'</th>
+                <th>'.$date.'</th>
+                <th>'.$name.'</th>
+                <th>'.$qty.'</th>
+                <th>'.$unit.'</th>
+                <th>'.$from_location.'</th>
+                <th>'.$to_location.'</th>
+                <th>'.$remark.'</th>
+                <th>'.$action_by.'</th>
             </tr>';
     } elseif ($report_type === 'repair') {
         echo '<tr>
-                <th>ល.រ</th>
-                <th>លេខកូដទំនិញ</th>
-                <th>ប្រភេទ</th>
-                <th>លេខវិក័យប័ត្រ</th>
-                <th>កាលបរិច្ឆេទ</th>
-                <th>ឈ្មោះទំនិញ</th>
-                <th>បរិមាណ</th>
-                <th>សកម្មភាព</th>
-                <th>ឯកតា</th>
-                <th>ពីទីតាំង</th>
-                <th>ទៅទីតាំង</th>
-                <th>ផ្សេងៗ</th>
-                <th>អ្នកប្រតិបត្តិ</th>
-                <th>សកម្មភាពប្រវត្តិ</th>
+                <th>'.$no.'</th>
+                <th>'.$code.'</th>
+                <th>'.$category.'</th>
+                <th>'.$invoice.'</th>
+                <th>'.$date.'</th>
+                <th>'.$name.'</th>
+                <th>'.$qty.'</th>
+                <th>'.$action.'</th>
+                <th>'.$unit.'</th>
+                <th>'.$from_location.'</th>
+                <th>'.$to_location.'</th>
+                <th>'.$remark.'</th>
+                <th>'.$action_by.'</th>
+                <th>'.$history_action.'</th>
             </tr>';
     }
     
     echo '</thead>
         <tbody>';
-    
+    $date_generate=t('date_generate');
+    $stock_system=t('stock_system');
     $total_quantity = 0;
     foreach ($report_data as $index => $item) {
         $total_quantity += ($report_type === 'stock_transfer' || $report_type === 'repair') ? $item['quantity'] : $item['action_quantity'];
@@ -428,31 +449,27 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         
         if ($report_type === 'stock_in' || $report_type === 'stock_out') {
             echo '<td style="border: 1px solid black;text-align:center;">'.$item['action_quantity'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.ucfirst($item['action_type']).'</td>';
-        } else {
-            echo '<td style="border: 1px solid black;text-align:center;">'.$item['quantity'].'</td>';
-            
-            if ($report_type === 'repair') {
-                echo '<td style="border: 1px solid black;text-align:center;">'.($item['action_type'] == 'send_for_repair' ? 'ផ្ញើរជួសជុល' : 'ត្រឡប់មកវិញ').'</td>';
-            } else {
-                echo '<td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>';
-            }
-        }
-        
-        echo '<td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>';
-        
-        if ($report_type === 'stock_in' || $report_type === 'stock_out') {
-            echo '<td style="border: 1px solid black;text-align:center;">'.$item['location_name'].'</td>';
-        } else {
-            echo '<td style="border: 1px solid black;text-align:center;">'.$item['from_location_name'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['to_location_name'].'</td>';
-        }
-        
-        echo '<td style="border: 1px solid black;text-align:center;">'.$item['remark'].'</td>
-              <td style="border: 1px solid black;text-align:center;">'.$item['action_by_name'].'</td>';
-        
-        if ($report_type === 'repair') {
-            echo '<td style="border: 1px solid black;text-align:center;">'.$item['history_action'].'</td>';
+                  <td style="border: 1px solid black;text-align:center;">'.ucfirst($item['action_type']).'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['location_name'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['remark'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['action_by_name'].'</td>';
+        } elseif ($report_type === 'stock_transfer') {
+            echo '<td style="border: 1px solid black;text-align:center;">'.$item['quantity'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['from_location_name'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['to_location_name'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['remark'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['action_by_name'].'</td>';
+        } elseif ($report_type === 'repair') {
+            echo '<td style="border: 1px solid black;text-align:center;">'.$item['quantity'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.($item['action_type'] == 'send_for_repair' ? 'ផ្ញើរជួសជុល' : 'ត្រឡប់មកវិញ').'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['from_location_name'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['to_location_name'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['remark'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['action_by_name'].'</td>
+                  <td style="border: 1px solid black;text-align:center;">'.$item['history_action'].'</td>';
         }
         
         echo '</tr>';
@@ -462,7 +479,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         </table>
         
         <div class="report-footer">
-            ថ្ងៃបង្កើតរបាយការណ៍: '.date('d/m/Y H:i:s').' | ប្រព័ន្ធគ្រប់គ្រងស្តុកទំនិញ
+            '.$date_generate.': '.date('d/m/Y H:i:s').' | '.$stock_system.'
         </div>
     </body>
     </html>';
@@ -513,7 +530,6 @@ function getRowColor($report_type, $is_even) {
     }
 }
 ?>
-
 <style>
     /* Your existing CSS remains unchanged */
     :root {
@@ -656,10 +672,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
+
 
 .btn-primary:hover {
   background-color: var(--primary-dark);
@@ -935,324 +948,71 @@ body {
     
     /* Navbar adjustments */
     .navbar {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-}
-
-/* Additional touch targets for mobile */
-@media (pointer: coarse) {
-    .btn, .page-link, .nav-link {
-        min-width: 44px;
-        min-height: 44px;
         padding: 0.5rem 1rem;
     }
     
-    .form-control, .form-select {
-        min-height: 44px;
-    }
-}
-
-/* Very small devices (portrait phones) */
-@media (max-width: 360px) {
-    .table th, .table td {
-        padding: 0.3rem;
-        font-size: 0.75rem;
+    .navbar-brand {
+        font-size: 1rem;
     }
     
-    .card-body {
-        padding: 1rem;
-    }
-    
+    /* Button adjustments */
     .btn {
         padding: 0.375rem 0.75rem;
         font-size: 0.8rem;
     }
-}
-
-/* Landscape phones */
-@media (max-width: 768px) and (orientation: landscape) {
-    .table-responsive {
-        max-height: 300px;
+    
+    /* Form adjustments */
+    .form-control, .form-select {
+        font-size: 0.8rem;
+        padding: 0.375rem 0.5rem;
     }
     
-    .sidebar {
-        overflow-y: auto;
-    }
-}
-
-/* High-resolution devices */
-@media (min-resolution: 192dpi) {
-    .btn, .form-control, .card {
-        border-width: 0.5px;
-    }
-}
-
-/* Dark mode support (optional) */
-@media (prefers-color-scheme: dark) {
-    .card {
-        
-        color: #000;
+    /* Card body padding */
+    .card-body {
+        padding: 1rem;
     }
     
-    .table {
-        color: #ecf0f1;
+    /* Alert adjustments */
+    .alert {
+        font-size: 0.8rem;
+        padding: 0.75rem;
     }
     
-    .table th {
-        background-color: #34495e;
-    }
-}
-
-/* Print styles */
-@media print {
-    .sidebar, .navbar, .btn {
-        display: none !important;
+    /* Modal adjustments */
+    .modal-content {
+        margin: 0.5rem;
     }
     
-    .main-content {
-        width: 100%;
-        margin-left: 0;
+    .modal-header, .modal-footer {
+        padding: 0.75rem;
     }
     
-    .card {
-        border: 1px solid #000;
-        box-shadow: none;
+    /* Badge adjustments */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
     }
 }
 
-/* Preview Modal Styles */
-.preview-modal {
-  display: none;
-  position: fixed;
-  z-index: 1050;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.preview-modal-content {
-  background-color: #fefefe;
-  margin: 2% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 90%;
-  max-width: 1200px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  animation: modalFadeIn 0.3s;
-}
-
-@keyframes modalFadeIn {
-  from {opacity: 0;}
-  to {opacity: 1;}
-}
-
-.close-btn {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.close-btn:hover,
-.close-btn:focus {
-  color: black;
-  text-decoration: none;
-}
-
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.preview-title {
-  margin: 0;
-  color: #333;
-}
-
-.preview-body {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding: 10px;
-  background: #f9f9f9;
-  border-radius: 4px;
-}
-
-.preview-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
-}
-
-/* Responsive adjustments for preview */
-@media (max-width: 768px) {
-  .preview-modal-content {
-    width: 95%;
-    margin: 5% auto;
-    padding: 15px;
-  }
-  
-  .preview-body {
-    max-height: 60vh;
-  }
-}
-/* Preview Modal Styles */
-.preview-modal {
-  display: none;
-  position: fixed;
-  z-index: 1050;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.preview-modal-content {
-  background-color: #fefefe;
-  margin: 2% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 90%;
-  max-width: 1200px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  animation: modalFadeIn 0.3s;
-}
-
-@keyframes modalFadeIn {
-  from {opacity: 0;}
-  to {opacity: 1;}
-}
-
-.close-btn {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.close-btn:hover,
-.close-btn:focus {
-  color: black;
-  text-decoration: none;
-}
-
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.preview-title {
-  margin: 0;
-  color: #333;
-}
-
-.preview-body {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding: 10px;
-  background: #f9f9f9;
-  border-radius: 4px;
-}
-
-.preview-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
-}
-.pdf-table-container {
-  width: 100%;
-  overflow-x: auto;
-  margin-bottom: 12px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.pdf-table {
-  width: 100%;
-  border-collapse: collapse;
-  /* Changed from fixed to auto for better content fitting */
-  table-layout: auto;
-}
-
-.pdf-table th {
-  background: #2c3e50;
-  color: white;
-  padding: 8px 6px;
-  text-align: center;
-  border: 1px solid #dee2e6;
-  font-weight: 600;
-  font-size: 11px;
-  white-space: normal; /* Changed from nowrap to normal */
-  overflow: visible;
-  text-overflow: clip; /* Changed from ellipsis to clip */
-  /* Removed min-width to allow natural sizing */
-}
-
-.pdf-table td {
-  padding: 6px 4px;
-  border: 1px solid #dee2e6;
-  text-align: center;
-  vertical-align: middle;
-  font-size: 11px;
-  word-wrap: break-word;
-  overflow: visible;
-  text-overflow: clip;
-  /* Removed min-width to allow natural sizing */
-}
-
-/* Ensure content fits properly */
-.pdf-table th,
-.pdf-table td {
-  max-width: 120px; /* Reasonable maximum width */
-}
-
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  .pdf-table {
-    table-layout: auto;
-    min-width: 100%; /* Ensure it uses available space */
-  }
-  
-  .pdf-table th,
-  .pdf-table td {
-    max-width: none; /* Remove max-width on mobile */
-    white-space: nowrap; /* Allow wrapping on mobile */
-  }
-}
 </style>
 
+<body>
+<button id="sidebarToggle" class="btn btn-primary d-md-none rounded-circle mr-3 no-print" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+    <i class="bi bi-list"></i>
+</button>
+            
 <div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h2 class="h3 mb-0 text-gray-800"><?php echo t('reports_button');?></h2>
+    </div>
+
     <?php if (isset($_SESSION['error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <?= $_SESSION['error']; unset($_SESSION['error']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
-    
+
     <?php if (isset($_SESSION['success'])): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <?= $_SESSION['success']; unset($_SESSION['success']); ?>
@@ -1260,401 +1020,125 @@ body {
         </div>
     <?php endif; ?>
 
-    <?php if (isset($_GET['preview']) && $_GET['preview'] === 'true' && isset($_SESSION['report_data'])): ?>
-        <!-- Report Preview Section -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h5 class="m-0 font-weight-bold text-primary"><?= t('report_preview') ?></h5>
-                <div>
-                    <button onclick="window.history.back()" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> <?= t('back') ?>
-                    </button>
-                    <a href="report.php?download=true" class="btn btn-success">
-                        <i class="fas fa-download"></i> <?= t('download') ?>
-                    </a>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="pdf-preview">
-                    <div class="pdf-header">
-                        <?php
-                        $title = "";
-                        $header_color = "";
-                        
-                        if ($_SESSION['report_type'] === 'stock_in') {
-                            $title = "របាយការណ៍ទំនិញចូល";
-                            $header_color = "#4e73df";
-                        } elseif ($_SESSION['report_type'] === 'stock_out') {
-                            $title = "របាយការណ៍ទំនិញចេញ";
-                            $header_color = "#e74a3b";
-                        } elseif ($_SESSION['report_type'] === 'stock_transfer') {
-                            $title = "របាយការណ៍ផ្ទេរទំនិញ";
-                            $header_color = "#1cc88a";
-                        } elseif ($_SESSION['report_type'] === 'repair') {
-                            $title = "របាយការណ៍ជួសជុលទំនិញ";
-                            $header_color = "#f6c23e";
-                        }
-                        
-                        $criteria = $_SESSION['report_criteria'];
-                        $location_name = $criteria['location_id'] ? $_SESSION['report_data'][0]['location_name'] : 'ទីតាំងទាំងអស់';
-                        
-                        if ($_SESSION['report_type'] === 'stock_transfer' || $_SESSION['report_type'] === 'repair') {
-                            $location_name = $criteria['location_id'] ? 
-                                $_SESSION['report_data'][0]['from_location_name'] . ' ទៅ ' . $_SESSION['report_data'][0]['to_location_name'] : 
-                                'ទីតាំងទាំងអស់';
-                        }
-                        ?>
-                        
-                        <h1 class="pdf-title"><?= $title ?></h1>
-                        <p class="pdf-subtitle">ប្រព័ន្ធគ្រប់គ្រងស្តុកទំនិញ</p>
-                    </div>
-                    
-                    <div class="pdf-info">
-                        <p><strong>ចាប់ពី:</strong> <?= date('d/m/Y', strtotime($criteria['start_date'])) ?></p>
-                        <p><strong>ដល់:</strong> <?= date('d/m/Y', strtotime($criteria['end_date'])) ?></p>
-                        <p><strong>ទីតាំង:</strong> <?= $location_name ?></p>
-                    </div>
-                    
-                    <table class="pdf-table">
-                        <thead>
-                            <?php if ($_SESSION['report_type'] === 'stock_in' || $_SESSION['report_type'] === 'stock_out'): ?>
-                                <tr>
-                                    <th>ល.រ</th>
-                                    <th>លេខកូដទំនិញ</th>
-                                    <th>ប្រភេទ</th>
-                                    <th>លេខវិក័យប័ត្រ</th>
-                                    <th>កាលបរិច្ឆេទ</th>
-                                    <th>ឈ្មោះទំនិញ</th>
-                                    <th>បរិមាណ</th>
-                                    <th>សកម្មភាព</th>
-                                    <th>ឯកតា</th>
-                                    <th>ទីតាំង</th>
-                                    <th>ផ្សេងៗ</th>
-                                    <th>អ្នកប្រតិបត្តិ</th>
-                                </tr>
-                            <?php elseif ($_SESSION['report_type'] === 'stock_transfer'): ?>
-                                <tr>
-                                    <th>ល.រ</th>
-                                    <th>លេខកូដទំនិញ</th>
-                                    <th>ប្រភេទ</th>
-                                    <th>លេខវិក័យប័ត្រ</th>
-                                    <th>កាលបរិច្ឆេទ</th>
-                                    <th>ឈ្មោះទំនិញ</th>
-                                    <th>បរិមាណ</th>
-                                    <th>ឯកតា</th>
-                                    <th>ពីទីតាំង</th>
-                                    <th>ទៅទីតាំង</th>
-                                    <th>ផ្សេងៗ</th>
-                                    <th>អ្នកប្រតិបត្តិ</th>
-                                </tr>
-                            <?php elseif ($_SESSION['report_type'] === 'repair'): ?>
-                                <tr>
-                                    <th>ល.រ</th>
-                                    <th>លេខកូដទំនិញ</th>
-                                    <th>ប្រភេទ</th>
-                                    <th>លេខវិក័យប័ត្រ</th>
-                                    <th>កាលបរិច្ឆេទ</th>
-                                    <th>ឈ្មោះទំនិញ</th>
-                                    <th>បរិមាណ</th>
-                                    <th>សកម្មភាព</th>
-                                    <th>ឯកតា</th>
-                                    <th>ពីទីតាំង</th>
-                                    <th>ទៅទីតាំង</th>
-                                    <th>ផ្សេងៗ</th>
-                                    <th>អ្នកប្រតិបត្តិ</th>
-                                    <th>សកម្មភាពប្រវត្តិ</th>
-                                </tr>
-                            <?php endif; ?>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $total_quantity = 0;
-                            foreach ($_SESSION['report_data'] as $index => $item):
-                                $total_quantity += ($_SESSION['report_type'] === 'stock_transfer' || $_SESSION['report_type'] === 'repair') ? 
-                                    $item['quantity'] : $item['action_quantity'];
-                            ?>
-                                <tr>
-                                    <td style="text-align:center;"><?= $index + 1 ?></td>
-                                    <td style="text-align:center;"><?= $item['item_code'] ?></td>
-                                    <td style="text-align:center;"><?= $item['category_name'] ?></td>
-                                    <td style="text-align:center;"><?= $item['invoice_no'] ?></td>
-                                    <td style="text-align:center;"><?= date('d/m/Y', strtotime($item['date'])) ?></td>
-                                    <td style="text-align:center;">
-                                        <?= $_SESSION['report_type'] === 'repair' ? $item['item_name'] : $item['name'] ?>
-                                    </td>
-                                    
-                                    <?php if ($_SESSION['report_type'] === 'stock_in' || $_SESSION['report_type'] === 'stock_out'): ?>
-                                        <td style="text-align:center;"><?= $item['action_quantity'] ?></td>
-                                        <td style="text-align:center;"><?= ucfirst($item['action_type']) ?></td>
-                                    <?php else: ?>
-                                        <td style="text-align:center;"><?= $item['quantity'] ?></td>
-                                        
-                                        <?php if ($_SESSION['report_type'] === 'repair'): ?>
-                                            <td style="text-align:center;">
-                                                <?= $item['action_type'] == 'send_for_repair' ? 'ផ្ញើរជួសជុល' : 'ត្រឡប់មកវិញ' ?>
-                                            </td>
-                                        <?php else: ?>
-                                            <td style="text-align:center;"><?= $item['size'] ?></td>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                    
-                                    <td style="text-align:center;"><?= $item['size'] ?></td>
-                                    
-                                    <?php if ($_SESSION['report_type'] === 'stock_in' || $_SESSION['report_type'] === 'stock_out'): ?>
-                                        <td style="text-align:center;"><?= $item['location_name'] ?></td>
-                                    <?php else: ?>
-                                        <td style="text-align:center;"><?= $item['from_location_name'] ?></td>
-                                        <td style="text-align:center;"><?= $item['to_location_name'] ?></td>
-                                    <?php endif; ?>
-                                    
-                                    <td style="text-align:center;"><?= $item['remark'] ?></td>
-                                    <td style="text-align:center;"><?= $item['action_by_name'] ?></td>
-                                    
-                                    <?php if ($_SESSION['report_type'] === 'repair'): ?>
-                                        <td style="text-align:center;"><?= $item['history_action'] ?></td>
-                                    <?php endif; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    
-                    <div class="pdf-footer">
-                        ថ្ងៃបង្កើតរបាយការណ៍: <?= date('d/m/Y H:i:s') ?> | ប្រព័ន្ធគ្រប់គ្រងស្តុកទំនិញ
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="card shadow mb-4">
         
-    <?php else: ?>
-        <!-- Report Generation Form -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h5 class="m-0 font-weight-bold text-primary"><?= t('generate_report') ?></h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" id="reportForm">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="report_type" class="form-label"><?= t('report_type') ?></label>
-                            <select class="form-select" id="report_type" name="report_type" required>
-                                <option value=""><?= t('select_report_type') ?></option>
-                                <option value="stock_in"><?= t('stock_in_report') ?></option>
-                                <option value="stock_out"><?= t('stock_out_report') ?></option>
-                                <option value="stock_transfer"><?= t('stock_transfer_report') ?></option>
-                                <option value="repair"><?= t('repair_report') ?></option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="location_id" class="form-label"><?= t('location') ?></label>
-                            <select class="form-select" id="location_id" name="location_id">
-                                <option value=""><?= t('all_locations') ?></option>
-                                <?php foreach ($all_locations as $location): ?>
-                                    <option value="<?= $location['id'] ?>"><?= $location['name'] ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+        <div class="card-body">
+            <form method="POST" id="reportForm">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="report_type" class="form-label"><?php echo t('report_type');?></label>
+                        <select class="form-select" id="report_type" name="report_type" required>
+                            <option value="stock_in"><?php echo t('todays_stock_in');?></option>
+                            <option value="stock_out"><?php echo t('todays_stock_out');?></option>
+                            <option value="stock_transfer"><?php echo t('todays_transfers');?></option>
+                            <option value="repair"><?php echo t('todays_repair_records');?></option>
+                        </select>
                     </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="period" class="form-label"><?= t('time_period') ?></label>
-                            <select class="form-select" id="period" name="period" required>
-                                <option value="monthly"><?= t('this_month') ?></option>
-                                <option value="yearly"><?= t('this_year') ?></option>
-                                <option value="custom"><?= t('custom_range') ?></option>
-                            </select>
-                        </div>
-                        <div class="col-md-6" id="custom_date_range" style="display: none;">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label for="start_date" class="form-label"><?= t('start_date') ?></label>
-                                    <input type="date" class="form-control" id="start_date" name="start_date">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="end_date" class="form-label"><?= t('end_date') ?></label>
-                                    <input type="date" class="form-control" id="end_date" name="end_date">
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-md-6">
+                        <label for="location_id" class="form-label"><?php echo t('location_column');?></label>
+                        <select class="form-select" id="location_id" name="location_id">
+                            <option value=""><?php echo t('report_all_location');?></option>
+                            <?php foreach ($all_locations as $location): ?>
+                                <option value="<?= $location['id'] ?>"><?= $location['name'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    
-                    <div class="d-flex gap-2">
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="period" class="form-label"><?php echo t('report_time');?></label>
+                        <select class="form-select" id="period" name="period" required>
+                            <option value="monthly" selected><?php echo t('report_month');?></option>
+                            <option value="yearly"><?php echo t('report_year');?></option>
+                            <option value="custom"><?php echo t('report_range');?></option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 custom-date" style="display: none;">
+                        <label for="start_date" class="form-label"><?php echo t('report_from');?></label>
+                        <input type="date" class="form-control" id="start_date" name="start_date">
+                    </div>
+                    <div class="col-md-3 custom-date" style="display: none;">
+                        <label for="end_date" class="form-label"><?php echo t('report_to');?></label>
+                        <input type="date" class="form-control" id="end_date" name="end_date">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
                         <button type="submit" name="preview_report" class="btn btn-primary">
-                            <i class="fas fa-eye"></i> <?= t('preview') ?>
+                            <i class="fas fa-eye me-2"></i><?php echo t('preview');?>
                         </button>
                         <button type="submit" name="generate_report" class="btn btn-success">
-                            <i class="fas fa-download"></i> <?= t('download') ?>
+                            <i class="fas fa-download me-2"></i><?php echo t('download_excel');?>
                         </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
-    <?php endif; ?>
+    </div>
 </div>
 
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-    // Enhance mobile table scrolling
-    function enhanceMobileTableScrolling() {
-        const tableContainers = document.querySelectorAll('.pdf-table-container');
+        // Handle period selection
+        const periodSelect = document.getElementById('period');
+        const customDateFields = document.querySelectorAll('.custom-date');
         
-        tableContainers.forEach(container => {
-            // Add scroll indicators for mobile
-            if (window.innerWidth <= 768) {
-                // Remove existing indicators
-                const existingIndicators = container.querySelectorAll('.scroll-indicator-right, .scroll-indicator-left');
-                existingIndicators.forEach(indicator => indicator.remove());
-                
-                // Add right scroll indicator
-                const rightIndicator = document.createElement('div');
-                rightIndicator.className = 'scroll-indicator-right';
-                rightIndicator.style.cssText = `
-                    position: absolute;
-                    top: 0;
-                    right: 0;
-                    width: 20px;
-                    height: 100%;
-                    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.1) 100%);
-                    pointer-events: none;
-                    z-index: 5;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                `;
-                container.appendChild(rightIndicator);
-                
-                // Add left scroll indicator (hidden initially)
-                const leftIndicator = document.createElement('div');
-                leftIndicator.className = 'scroll-indicator-left';
-                leftIndicator.style.cssText = `
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 20px;
-                    height: 100%;
-                    background: linear-gradient(270deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.1) 100%);
-                    pointer-events: none;
-                    z-index: 5;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                `;
-                container.appendChild(leftIndicator);
-                
-                // Update indicators on scroll
-                container.addEventListener('scroll', function() {
-                    const scrollLeft = this.scrollLeft;
-                    const scrollWidth = this.scrollWidth;
-                    const clientWidth = this.clientWidth;
-                    
-                    // Show/hide indicators based on scroll position
-                    rightIndicator.style.opacity = (scrollLeft + clientWidth < scrollWidth - 10) ? '1' : '0';
-                    leftIndicator.style.opacity = (scrollLeft > 10) ? '1' : '0';
-                });
-                
-                // Trigger initial check
-                container.dispatchEvent(new Event('scroll'));
-            }
-        });
-    }
-    
-    // Run on load and resize
-    enhanceMobileTableScrolling();
-    window.addEventListener('resize', enhanceMobileTableScrolling);
-    
-    // Add momentum scrolling for iOS
-    document.querySelectorAll('.pdf-table-container').forEach(container => {
-        container.style.webkitOverflowScrolling = 'touch';
-    });
-});
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle period selection
-    const periodSelect = document.getElementById('period');
-    const customDateRange = document.getElementById('custom_date_range');
-    
-    if (periodSelect && customDateRange) {
         periodSelect.addEventListener('change', function() {
             if (this.value === 'custom') {
-                customDateRange.style.display = 'block';
+                customDateFields.forEach(field => field.style.display = 'block');
             } else {
-                customDateRange.style.display = 'none';
+                customDateFields.forEach(field => field.style.display = 'none');
             }
         });
-    }
-    
-    // Form validation
-    const reportForm = document.getElementById('reportForm');
-    if (reportForm) {
-        reportForm.addEventListener('submit', function(e) {
-            const period = document.getElementById('period').value;
-            const startDate = document.getElementById('start_date');
-            const endDate = document.getElementById('end_date');
-            
-            if (period === 'custom' && (!startDate.value || !endDate.value)) {
-                e.preventDefault();
-                alert('<?= t('please_select_both_start_and_end_dates') ?>');
-                return false;
-            }
-            
-            if (period === 'custom' && startDate.value && endDate.value) {
-                const start = new Date(startDate.value);
-                const end = new Date(endDate.value);
+        
+        // Handle form validation for custom dates
+        document.getElementById('reportForm').addEventListener('submit', function(e) {
+            if (periodSelect.value === 'custom') {
+                const startDate = document.getElementById('start_date').value;
+                const endDate = document.getElementById('end_date').value;
                 
-                if (start > end) {
+                if (!startDate || !endDate) {
                     e.preventDefault();
-                    alert('<?= t('start_date_cannot_be_after_end_date') ?>');
-                    return false;
+                    alert('សូមជ្រើសរើសថ្ងៃចាប់ផ្ដើម និងថ្ងៃបញ្ចប់សម្រាប់រយៈពេលផ្ទាល់ខ្លួន');
                 }
             }
         });
-    }
-    
-    // Handle report type change to filter locations
-    const reportTypeSelect = document.getElementById('report_type');
-    const locationSelect = document.getElementById('location_id');
-    const repairLocationIds = <?= json_encode($repair_location_ids) ?>;
-    const nonRepairLocationIds = <?= json_encode($non_repair_location_ids) ?>;
-    
-    if (reportTypeSelect && locationSelect) {
-        reportTypeSelect.addEventListener('change', function() {
-            const reportType = this.value;
-            const currentLocationValue = locationSelect.value;
-            
-            // Enable all options first
-            Array.from(locationSelect.options).forEach(option => {
-                if (option.value !== '') {
-                    option.disabled = false;
-                    option.style.display = '';
-                }
+        
+     
+        
+        // Sidebar toggle functionality for mobile
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (sidebarToggle && sidebar && mainContent) {
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('show');
+                mainContent.classList.toggle('show');
             });
-            
-            // Filter based on report type
-            if (reportType === 'repair') {
-                // Only show repair locations
-                Array.from(locationSelect.options).forEach(option => {
-                    if (option.value !== '' && !repairLocationIds.includes(parseInt(option.value))) {
-                        option.disabled = true;
-                        option.style.display = 'none';
-                    }
-                });
-            } else if (reportType === 'stock_transfer') {
-                // Only show non-repair locations
-                Array.from(locationSelect.options).forEach(option => {
-                    if (option.value !== '' && !nonRepairLocationIds.includes(parseInt(option.value))) {
-                        option.disabled = true;
-                        option.style.display = 'none';
-                    }
-                });
-            }
-            
-            // Reset selection if current selection is no longer valid
-            if (currentLocationValue && locationSelect.options[locationSelect.selectedIndex].disabled) {
-                locationSelect.value = '';
+        }
+        
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth < 768 && sidebar && mainContent) {
+                const isClickInsideSidebar = sidebar.contains(event.target);
+                const isClickOnToggle = sidebarToggle.contains(event.target);
+                
+                if (!isClickInsideSidebar && !isClickOnToggle && sidebar.classList.contains('show')) {
+                    sidebar.classList.remove('show');
+                    mainContent.classList.remove('show');
+                }
             }
         });
-    }
-});
+    });
 </script>
+</body>
 
 <?php
-require_once '../includes/footer.php';
 ob_end_flush();
 ?>
