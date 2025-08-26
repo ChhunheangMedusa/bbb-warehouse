@@ -1622,12 +1622,6 @@ table th{
                                     <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>>
                                         <?php echo t('name_z_to_a'); ?>
                                     </option>
-                                    <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
-                                        <?php echo t('location_a_to_z'); ?>
-                                    </option>
-                                    <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
-                                        <?php echo t('location_z_to_a'); ?>
-                                    </option>
                                     <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
                                         <?php echo t('date_oldest_first'); ?>
                                     </option>
@@ -1639,18 +1633,6 @@ table th{
                                     </option>
                                     <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>>
                                         <?php echo t('category_za'); ?>
-                                    </option>
-                                    <option value="action_by_asc" <?php echo $sort_option == 'action_by_asc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_by_a_to_z'); ?>
-                                    </option>
-                                    <option value="action_by_desc" <?php echo $sort_option == 'action_by_desc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_by_z_to_a'); ?>
-                                    </option>
-                                    <option value="action_asc" <?php echo $sort_option == 'action_asc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_a_to_z'); ?>
-                                    </option>
-                                    <option value="action_desc" <?php echo $sort_option == 'action_desc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_z_to_a'); ?>
                                     </option>
                                 </select>
                             </div>
@@ -1969,12 +1951,6 @@ table th{
                                     <option value="name_desc" <?php echo $history_sort_option == 'name_desc' ? 'selected' : ''; ?>>
                                         <?php echo t('name_z_to_a'); ?>
                                     </option>
-                                    <option value="location_asc" <?php echo $history_sort_option == 'location_asc' ? 'selected' : ''; ?>>
-                                        <?php echo t('location_a_to_z'); ?>
-                                    </option>
-                                    <option value="location_desc" <?php echo $history_sort_option == 'location_desc' ? 'selected' : ''; ?>>
-                                        <?php echo t('location_z_to_a'); ?>
-                                    </option>
                                     <option value="date_asc" <?php echo $history_sort_option == 'date_asc' ? 'selected' : ''; ?>>
                                         <?php echo t('date_oldest_first'); ?>
                                     </option>
@@ -1986,24 +1962,6 @@ table th{
                                     </option>
                                     <option value="category_desc" <?php echo $history_sort_option == 'category_desc' ? 'selected' : ''; ?>>
                                         <?php echo t('category_za'); ?>
-                                    </option>
-                                    <option value="action_by_asc" <?php echo $history_sort_option == 'action_by_asc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_by_a_to_z'); ?>
-                                    </option>
-                                    <option value="action_by_desc" <?php echo $history_sort_option == 'action_by_desc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_by_z_to_a'); ?>
-                                    </option>
-                                    <option value="action_asc" <?php echo $history_sort_option == 'action_asc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_a_to_z'); ?>
-                                    </option>
-                                    <option value="action_desc" <?php echo $history_sort_option == 'action_desc' ? 'selected' : ''; ?>>
-                                        <?php echo t('action_z_to_a'); ?>
-                                    </option>
-                                    <option value="history_action_asc" <?php echo $history_sort_option == 'history_action_asc' ? 'selected' : ''; ?>>
-                                        <?php echo t('history_action_a_to_z'); ?>
-                                    </option>
-                                    <option value="history_action_desc" <?php echo $history_sort_option == 'history_action_desc' ? 'selected' : ''; ?>>
-                                        <?php echo t('history_action_z_to_a'); ?>
                                     </option>
                                 </select>
                             </div>

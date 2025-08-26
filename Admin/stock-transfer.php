@@ -1034,24 +1034,7 @@ body {
                                 <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
                                     <?php echo t('date_newest_first'); ?>
                                 </option>
-                                <option value="quantity_asc" <?php echo $sort_option == 'quantity_asc' ? 'selected' : ''; ?>>
-                                    <?php echo t('quantity_low_to_high'); ?>
-                                </option>
-                                <option value="quantity_desc" <?php echo $sort_option == 'quantity_desc' ? 'selected' : ''; ?>>
-                                    <?php echo t('quantity_high_to_low'); ?>
-                                </option>
-                                <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
-                                    <?php echo t('location_a_to_z'); ?>
-                                </option>
-                                <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
-                                    <?php echo t('location_z_to_a'); ?>
-                                </option>
-                                <option value="action_by_asc" <?php echo $sort_option == 'action_by_asc' ? 'selected' : ''; ?>>
-                                    <?php echo t('action_by_a_to_z'); ?>
-                                </option>
-                                <option value="action_by_desc" <?php echo $sort_option == 'action_by_desc' ? 'selected' : ''; ?>>
-                                    <?php echo t('action_by_z_to_a'); ?>
-                                </option>
+
                             </select>
                         </div>
                     </div>

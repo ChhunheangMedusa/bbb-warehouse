@@ -17,11 +17,11 @@ checkAuth();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_category'])) {
         $name = sanitizeInput($_POST['name']);
-        $description = sanitizeInput($_POST['description']);
+      
         
         try {
-            $stmt = $pdo->prepare("INSERT INTO categories (name, description) VALUES (?, ?)");
-            $stmt->execute([$name, $description]);
+            $stmt = $pdo->prepare("INSERT INTO categories (name) VALUES (?)");
+            $stmt->execute([$name]);
             
             $_SESSION['success'] = t('category_added');
             logActivity($_SESSION['user_id'], 'Add Category', "Added new category: $name");
@@ -41,23 +41,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['edit_category'])) {
         $id = (int)$_POST['id'];
         $name = sanitizeInput($_POST['name']);
-        $description = sanitizeInput($_POST['description']);
-        $stmt = $pdo->prepare("SELECT name, description FROM categories WHERE id = ?");
+       
+        $stmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
         $stmt->execute([$id]);
         $old_category = $stmt->fetch(PDO::FETCH_ASSOC);
         try {
-            $stmt = $pdo->prepare("UPDATE categories SET name = ?, description = ? WHERE id = ?");
-            $stmt->execute([$name, $description, $id]);
+            $stmt = $pdo->prepare("UPDATE categories SET name = ? WHERE id = ?");
+            $stmt->execute([$name, $id]);
            
 
             $changes = [];
             if ($old_category['name'] != $name) $changes[] = "Updated name ({$old_category['name']}) : {$old_category['name']} →  $name";
             
 
-            if ($old_category['description'] != $description) 
-            $old_dec = $old_category['description'] ?: 'N/A';
-             $new_dec = $description ?: 'N/A';
-             $changes[] = "Updated description ($name) : $old_dec → $new_dec ";
+          
        
             
             if (!empty($changes)) {
@@ -116,8 +113,6 @@ $sort_mappings = [
     'name_desc' => ['field' => 'name', 'direction' => 'DESC'],
     'id_asc' => ['field' => 'id', 'direction' => 'ASC'],
     'id_desc' => ['field' => 'id', 'direction' => 'DESC'],
-    'description_asc' => ['field' => 'description', 'direction' => 'ASC'],
-    'description_desc' => ['field' => 'description', 'direction' => 'DESC'],
   'date_asc' => ['field' => 'created_at', 'direction' => 'ASC'],
   'date_desc' => ['field' => 'created_at', 'direction' => 'DESC'],
 ];
@@ -136,7 +131,7 @@ $search_condition = '';
 $search_params = [];
 
 if (!empty($search_term)) {
-    $search_condition = "WHERE name LIKE :search OR description LIKE :search";
+    $search_condition = "WHERE name LIKE :search";
     $search_params[':search'] = "%$search_term%";
 }
 
@@ -779,12 +774,7 @@ body {
                         <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>>
                             <?php echo t('name_z_to_a'); ?>
                         </option>
-                        <option value="description_asc" <?php echo $sort_option == 'description_asc' ? 'selected' : ''; ?>>
-                            <?php echo t('description_asc'); ?>
-                        </option>
-                        <option value="description_desc" <?php echo $sort_option == 'description_desc' ? 'selected' : ''; ?>>
-                            <?php echo t('description_desc'); ?>
-                        </option>
+                      
                         <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
                             <?php echo t('date_oldest_first'); ?>
                         </option>
@@ -839,7 +829,7 @@ body {
                             <tr>
                                 <th><?php echo t('id'); ?></th>
                                 <th><?php echo t('name'); ?></th>
-                                <th><?php echo t('description'); ?></th>
+                                
                                 <th><?php echo t('action'); ?></th>
                             </tr>
                         </thead>
@@ -847,13 +837,18 @@ body {
                             <?php foreach ($categories as $index => $category): ?>
                                 <tr>
                                     <td><?php echo $category['id']; ?></td>
-                                    <td><?php echo $category['name']; ?></td>
-                                    <td><?php echo $category['description'] ?: 'N/A'; ?></td>
+                                    <td>
+    <a href="category_items.php?category_id=<?php echo $category['id']; ?>" 
+       class="text-dark text-decoration-none">
+        <?php echo $category['name']; ?>
+    </a>
+</td>
+                                 
                                     <td>
                                         <button class="btn btn-sm btn-warning edit-category" 
                                                 data-id="<?php echo $category['id']; ?>"
                                                 data-name="<?php echo $category['name']; ?>"
-                                                data-description="<?php echo $category['description']; ?>">
+                                                >
                                             <i class="bi bi-pencil"></i> <?php echo t('update_button'); ?>
                                         </button>
                                         <button class="btn btn-sm btn-danger delete-category"
@@ -954,10 +949,7 @@ body {
                         <label class="form-label"><?php echo t('name'); ?></label>
                         <input type="text" class="form-control" name="name" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label"><?php echo t('description'); ?></label>
-                        <textarea class="form-control" name="description" rows="3"></textarea>
-                    </div>
+                   
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
@@ -983,10 +975,7 @@ body {
                         <label class="form-label"><?php echo t('name'); ?></label>
                         <input type="text" class="form-control" name="name" id="edit_category_name" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label"><?php echo t('description'); ?></label>
-                        <textarea class="form-control" name="description" id="edit_category_description" rows="3"></textarea>
-                    </div>
+                   
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
@@ -1060,7 +1049,6 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             document.getElementById('edit_category_id').value = this.getAttribute('data-id');
             document.getElementById('edit_category_name').value = this.getAttribute('data-name');
-            document.getElementById('edit_category_description').value = this.getAttribute('data-description') || '';
             
             const editModal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
             editModal.show();

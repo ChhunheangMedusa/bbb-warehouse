@@ -1634,18 +1634,7 @@ table th{
                             <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>>
                                 <?php echo t('category_za'); ?>
                             </option>
-                            <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('location_a_to_z'); ?>
-                            </option>
-                            <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
-                                <?php echo t('location_z_to_a'); ?>
-                            </option>
-                            <option value="quantity_asc" <?php echo $sort_option == 'quantity_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('quantity_low_to_high'); ?>
-                            </option>
-                            <option value="quantity_desc" <?php echo $sort_option == 'quantity_desc' ? 'selected' : ''; ?>>
-                                <?php echo t('quantity_high_to_low'); ?>
-                            </option>
+                            
                         </select>
                     </div>
                 </div>

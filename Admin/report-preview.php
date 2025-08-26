@@ -102,12 +102,38 @@ if (isset($_POST['download'])) {
             border-left: 4px solid var(--primary);
         }
 
+        .table-card {
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .table-card-header {
+            background-color: var(--light);
+            padding: 15px 20px;
+            border-bottom: 1px solid #e3e6f0;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .table-card-body {
+            padding: 0;
+        }
+
         .table th {
             background-color: var(--light);
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.75rem;
             letter-spacing: 0.05em;
+            padding: 12px 15px;
+        }
+
+        .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
         }
 
         .action-buttons {
@@ -151,110 +177,126 @@ if (isset($_POST['download'])) {
                     <p><strong><?php echo t('location_column'); ?>:</strong> <?php echo $location_name; ?></p>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <?php 
-                                $no = t('item_no');
-                                $code = t('item_code');
-                                $category = t('category');
-                                $invoice = t('item_invoice');
-                                $date = t('item_date');
-                                $name = t('item_name');
-                                $qty = t('item_qty');
-                                $action = t('action');
-                                $unit = t('item_size');
-                                $location = t('item_location');
-                                $remark = t('item_remark');
-                                $action_by = t('item_addby');
-                                $from_location = t('from_location');
-                                $to_location = t('to_location');
-                                $history_action = t('history_action');
-                                
-                                if ($report_type === 'stock_in' || $report_type === 'stock_out'): ?>
-                                    <th><?= $no ?></th>
-                                    <th><?= $code ?></th>
-                                    <th><?= $category ?></th>
-                                    <th><?= $invoice ?></th>
-                                    <th><?= $date ?></th>
-                                    <th><?= $name ?></th>
-                                    <th><?= $qty ?></th>
-                                    <th><?= $action ?></th>
-                                    <th><?= $unit ?></th>
-                                    <th><?= $location ?></th>
-                                    <th><?= $remark ?></th>
-                                    <th><?= $action_by ?></th>
-                                <?php elseif ($report_type === 'stock_transfer'): ?>
-                                    <th><?= $no ?></th>
-                                    <th><?= $code ?></th>
-                                    <th><?= $category ?></th>
-                                    <th><?= $invoice ?></th>
-                                    <th><?= $date ?></th>
-                                    <th><?= $name ?></th>
-                                    <th><?= $qty ?></th>
-                                    <th><?= $unit ?></th>
-                                    <th><?= $from_location ?></th>
-                                    <th><?= $to_location ?></th>
-                                    <th><?= $remark ?></th>
-                                    <th><?= $action_by ?></th>
-                                <?php elseif ($report_type === 'repair'): ?>
-                                    <th><?= $no ?></th>
-                                    <th><?= $code ?></th>
-                                    <th><?= $category ?></th>
-                                    <th><?= $invoice ?></th>
-                                    <th><?= $date ?></th>
-                                    <th><?= $name ?></th>
-                                    <th><?= $qty ?></th>
-                                    <th><?= $action ?></th>
-                                    <th><?= $unit ?></th>
-                                    <th><?= $from_location ?></th>
-                                    <th><?= $to_location ?></th>
-                                    <th><?= $remark ?></th>
-                                    <th><?= $action_by ?></th>
-                                    <th><?= $history_action ?></th>
-                                <?php endif; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($report_data as $index => $item): ?>
-                                <tr>
-                                    <td><?= $index + 1 ?></td>
-                                    <td><?= $item['item_code'] ?></td>
-                                    <td><?= $item['category_name'] ?></td>
-                                    <td><?= $item['invoice_no'] ?></td>
-                                    <td><?= date('d/m/Y', strtotime($item['date'])) ?></td>
-                                    <td><?= ($report_type === 'repair') ? $item['item_name'] : $item['name'] ?></td>
-                                    
-                                    <?php if ($report_type === 'stock_in' || $report_type === 'stock_out'): ?>
-                                        <td><?= $item['action_quantity'] ?></td>
-                                        <td><?= ucfirst($item['action_type']) ?></td>
-                                        <td><?= $item['size'] ?></td>
-                                        <td><?= $item['location_name'] ?></td>
-                                        <td><?= $item['remark'] ?></td>
-                                        <td><?= $item['action_by_name'] ?></td>
-                                    <?php elseif ($report_type === 'stock_transfer'): ?>
-                                        <td><?= $item['quantity'] ?></td>
-                                        <td><?= $item['size'] ?></td>
-                                        <td><?= $item['from_location_name'] ?></td>
-                                        <td><?= $item['to_location_name'] ?></td>
-                                        <td><?= $item['remark'] ?></td>
-                                        <td><?= $item['action_by_name'] ?></td>
-                                    <?php elseif ($report_type === 'repair'): ?>
-                                        <td><?= $item['quantity'] ?></td>
-                                        <td><?= ($item['action_type'] == 'send_for_repair') ? 'ផ្ញើរជួសជុល' : 'ត្រឡប់មកវិញ' ?></td>
-                                        <td><?= $item['size'] ?></td>
-                                        <td><?= $item['from_location_name'] ?></td>
-                                        <td><?= $item['to_location_name'] ?></td>
-                                        <td><?= $item['remark'] ?></td>
-                                        <td><?= $item['action_by_name'] ?></td>
-                                        <td><?= $item['history_action'] ?></td>
-                                    <?php endif; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                <!-- White background card for the table -->
+                <div class="table-card">
+                    <div class="table-card-header">
+                        <?php 
+                        switch($report_type) {
+                            case 'stock_in': echo t('todays_stock_in'); break;
+                            case 'stock_out': echo t('todays_stock_out'); break;
+                            case 'stock_transfer': echo t('todays_transfers'); break;
+                            case 'repair': echo t('todays_repair_records'); break;
+                        }
+                        ?> 
+                    </div>
+                    <div class="table-card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <?php 
+                                        $no = t('item_no');
+                                        $code = t('item_code');
+                                        $category = t('category');
+                                        $invoice = t('item_invoice');
+                                        $date = t('item_date');
+                                        $name = t('item_name');
+                                        $qty = t('item_qty');
+                                        $action = t('action');
+                                        $unit = t('item_size');
+                                        $location = t('item_location');
+                                        $remark = t('item_remark');
+                                        $action_by = t('item_addby');
+                                        $from_location = t('from_location');
+                                        $to_location = t('to_location');
+                                        $history_action = t('history_action');
+                                        
+                                        if ($report_type === 'stock_in' || $report_type === 'stock_out'): ?>
+                                            <th><?= $no ?></th>
+                                            <th><?= $code ?></th>
+                                            <th><?= $category ?></th>
+                                            <th><?= $invoice ?></th>
+                                            <th><?= $date ?></th>
+                                            <th><?= $name ?></th>
+                                            <th><?= $qty ?></th>
+                                            <th><?= $action ?></th>
+                                            <th><?= $unit ?></th>
+                                            <th><?= $location ?></th>
+                                            <th><?= $remark ?></th>
+                                            <th><?= $action_by ?></th>
+                                        <?php elseif ($report_type === 'stock_transfer'): ?>
+                                            <th><?= $no ?></th>
+                                            <th><?= $code ?></th>
+                                            <th><?= $category ?></th>
+                                            <th><?= $invoice ?></th>
+                                            <th><?= $date ?></th>
+                                            <th><?= $name ?></th>
+                                            <th><?= $qty ?></th>
+                                            <th><?= $unit ?></th>
+                                            <th><?= $from_location ?></th>
+                                            <th><?= $to_location ?></th>
+                                            <th><?= $remark ?></th>
+                                            <th><?= $action_by ?></th>
+                                        <?php elseif ($report_type === 'repair'): ?>
+                                            <th><?= $no ?></th>
+                                            <th><?= $code ?></th>
+                                            <th><?= $category ?></th>
+                                            <th><?= $invoice ?></th>
+                                            <th><?= $date ?></th>
+                                            <th><?= $name ?></th>
+                                            <th><?= $qty ?></th>
+                                            <th><?= $action ?></th>
+                                            <th><?= $unit ?></th>
+                                            <th><?= $from_location ?></th>
+                                            <th><?= $to_location ?></th>
+                                            <th><?= $remark ?></th>
+                                            <th><?= $action_by ?></th>
+                                            <th><?= $history_action ?></th>
+                                        <?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($report_data as $index => $item): ?>
+                                        <tr>
+                                            <td><?= $index + 1 ?></td>
+                                            <td><?= $item['item_code'] ?></td>
+                                            <td><?= $item['category_name'] ?></td>
+                                            <td><?= $item['invoice_no'] ?></td>
+                                            <td><?= date('d/m/Y', strtotime($item['date'])) ?></td>
+                                            <td><?= ($report_type === 'repair') ? $item['item_name'] : $item['name'] ?></td>
+                                            
+                                            <?php if ($report_type === 'stock_in' || $report_type === 'stock_out'): ?>
+                                                <td><?= $item['action_quantity'] ?></td>
+                                                <td><?= ucfirst($item['action_type']) ?></td>
+                                                <td><?= $item['size'] ?></td>
+                                                <td><?= $item['location_name'] ?></td>
+                                                <td><?= $item['remark'] ?></td>
+                                                <td><?= $item['action_by_name'] ?></td>
+                                            <?php elseif ($report_type === 'stock_transfer'): ?>
+                                                <td><?= $item['quantity'] ?></td>
+                                                <td><?= $item['size'] ?></td>
+                                                <td><?= $item['from_location_name'] ?></td>
+                                                <td><?= $item['to_location_name'] ?></td>
+                                                <td><?= $item['remark'] ?></td>
+                                                <td><?= $item['action_by_name'] ?></td>
+                                            <?php elseif ($report_type === 'repair'): ?>
+                                                <td><?= $item['quantity'] ?></td>
+                                                <td><?= ($item['action_type'] == 'send_for_repair') ? 'ផ្ញើរជួសជុល' : 'ត្រឡប់មកវិញ' ?></td>
+                                                <td><?= $item['size'] ?></td>
+                                                <td><?= $item['from_location_name'] ?></td>
+                                                <td><?= $item['to_location_name'] ?></td>
+                                                <td><?= $item['remark'] ?></td>
+                                                <td><?= $item['action_by_name'] ?></td>
+                                                <td><?= $item['history_action'] ?></td>
+                                            <?php endif; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
+                <!-- End of white background card -->
             </div>
         </div>
     </div>
