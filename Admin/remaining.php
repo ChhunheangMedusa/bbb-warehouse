@@ -16,6 +16,10 @@ checkAuth();
 
 // Only admin can access item control
 
+// Handle reset request
+if (isset($_GET['reset'])) {
+    redirect('remaining.php');
+}
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -106,7 +110,17 @@ $_SESSION['user_id']
             $dupli3=t('item_succ1');
             $dupli4=t('item_succ2');
             $_SESSION['success'] = "$dupli3";
-            redirect('remaining.php');
+            
+            // Preserve filters after adding item
+            $filter_params = [];
+            if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+            if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+            if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+            if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+            if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+            if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            
+            redirect('remaining.php?' . http_build_query($filter_params));
         } catch (PDOException $e) {
             $pdo->rollBack();
             
@@ -173,7 +187,17 @@ $_SESSION['user_id']
             $add_qty2=t('add_qty2');
             
             $_SESSION['success'] = "$add_qty1";
-            redirect('remaining.php');
+            
+            // Preserve filters after adding quantity
+            $filter_params = [];
+            if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+            if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+            if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+            if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+            if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+            if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            
+            redirect('remaining.php?' . http_build_query($filter_params));
         } catch (PDOException $e) {
             $pdo->rollBack();
             $_SESSION['error'] = "$add_qty2";
@@ -225,7 +249,17 @@ $_SESSION['user_id']
             $deduct_qty2=t('deduct_qty2');
             $deduct_qty3=t('deduct_qty3');
             $_SESSION['success'] = "$deduct_qty2";
-            redirect('remaining.php');
+            
+            // Preserve filters after deducting quantity
+            $filter_params = [];
+            if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+            if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+            if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+            if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+            if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+            if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            
+            redirect('remaining.php?' . http_build_query($filter_params));
         } catch (PDOException $e) {
             $pdo->rollBack();
             $_SESSION['error'] = "$deduct_qty3";
@@ -281,7 +315,17 @@ $category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['error'] = "Image upload failed: " . $e->getMessage();
-            redirect('remaining.php');
+            
+            // Preserve filters after failed edit
+            $filter_params = [];
+            if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+            if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+            if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+            if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+            if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+            if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            
+            redirect('remaining.php?' . http_build_query($filter_params));
         }
     }
             // Get new location name for comparison
@@ -362,11 +406,31 @@ if ($old_item['category_id'] != $category_id) {
             $_SESSION['success'] = "$update_item1";
             logActivity($_SESSION['user_id'], 'Edit Item', $log_message);
             
-            redirect('remaining.php');
+            // Preserve filters after editing item
+            $filter_params = [];
+            if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+            if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+            if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+            if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+            if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+            if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            
+            redirect('remaining.php?' . http_build_query($filter_params));
             
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['error'] = "$update_item2: " . $e->getMessage();
+            
+            // Preserve filters after failed edit
+            $filter_params = [];
+            if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+            if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+            if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+            if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+            if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+            if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            
+            redirect('remaining.php?' . http_build_query($filter_params));
         }
     }
     }
@@ -420,7 +484,16 @@ if (isset($_GET['delete'])) {
         $_SESSION['error'] = "$delete_item3";
     }
     
-    redirect('remaining.php');
+    // Preserve filters after deletion
+    $filter_params = [];
+    if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+    if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+    if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+    if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+    if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+    if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+    
+    redirect('remaining.php?' . http_build_query($filter_params));
 }
 // Get filter parameters
 $year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
@@ -1643,9 +1716,9 @@ table th{
                     <button type="submit" class="btn btn-primary">
                     <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                     </button>
-                    <a href="remaining.php" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
-                    </a>
+                    <a href="remaining.php?reset=1" class="btn btn-outline-secondary">
+    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+</a>
                 </div>
                 
                 <input type="hidden" name="page" value="1">

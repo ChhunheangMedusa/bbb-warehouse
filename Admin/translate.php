@@ -422,10 +422,20 @@ $translations = [
 'unavailable' => 'Unavailable',
 'no_items_in_category' => 'No items found in this category',
 'no_items_found_for_search' => 'No items found for search',
+'price_low_high'=>'តម្លៃ (ទាប-ខ្ពស់)',
+'price_high_low'=>'តម្លៃ (ខ្ពស់-ទាប)',
+'price'=>'តម្លៃ',
+'sub_total'=>'តម្លៃសរុប',
+'store_inventory'=>'តារាងតម្លៃសម្ភារៈ',
     ],
 
 
     'en' => [
+        'store_inventory'=>'Price List',
+        'sub_total'=>'Total',
+        'price'=>'Price',
+'price_low_high'=>'Price (Low-High)',
+'price_high_low'=>'Price (High-Low)',
         // Add these to your translation array
 'back_to_categories' => 'Back to Categories',
 'items_in_category' => 'Items in Category',

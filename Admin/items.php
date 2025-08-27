@@ -73,30 +73,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Loop through each item
             foreach ($_POST['name'] as $index => $name) {
                 $item_code = sanitizeInput($_POST['item_code'][$index]);
-$category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
+                $category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
                 $location_id = (int)$_POST['location_id'][$index];
                 $name = sanitizeInput($name);
                 $quantity = (float)$_POST['quantity'][$index];
                 $alert_quantity = (int)$_POST['alert_quantity'][$index];
                 $size = sanitizeInput($_POST['size'][$index]);
                 $remark = sanitizeInput($_POST['remark'][$index]);
+                $price = (float)$_POST['price'][$index]; // ADD THIS LINE
+                
                 $dupli=t('duplicate_itm2');
                 $stmt = $pdo->prepare("SELECT id FROM items WHERE name = ? AND location_id = ?");
-            $stmt->execute([$name, $location_id]);
-            if ($stmt->fetch()) {
-                echo '<script>
-                    document.addEventListener("DOMContentLoaded", function() {
-                        var duplicateModal = new bootstrap.Modal(document.getElementById("duplicateItemModal"));
-                        duplicateModal.show();
-                    });
-                </script>';
-                throw new Exception("$dupli");
-            }
+                $stmt->execute([$name, $location_id]);
+                
+                if ($stmt->fetch()) {
+                    echo '<script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            var duplicateModal = new bootstrap.Modal(document.getElementById("duplicateItemModal"));
+                            duplicateModal.show();
+                        });
+                    </script>';
+                    throw new Exception("$dupli");
+                }
+                
                 // Insert the item into the database
                 $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
+                $stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
                 $item_id = $pdo->lastInsertId();
+                
+                // Also insert into store_items table - FIXED
+                $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $quantity, $price, $alert_quantity, $size, $location_id, $remark]);
                    // Also insert into addnewitems table
             $stmt = $pdo->prepare("INSERT INTO addnewitems 
             (item_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, added_by) 
@@ -168,7 +177,7 @@ $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
         }
-    }elseif (isset($_POST['add_qty'])) {
+    } elseif (isset($_POST['add_qty'])) {
         // Add quantity to items
         $invoice_no = sanitizeInput($_POST['invoice_no']);
         $date = sanitizeInput($_POST['date']);
@@ -181,6 +190,7 @@ $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $
             foreach ($_POST['item_id'] as $index => $item_id) {
                 $item_id = (int)$item_id;
                 $quantity = (float)$_POST['quantity'][$index];
+                $price = (float)$_POST['price'][$index]; // ADD THIS LINE
                 $size = sanitizeInput($_POST['size'][$index] ?? '');
                 $remark = sanitizeInput($_POST['remark'][$index] ?? '');
                 
@@ -195,27 +205,35 @@ $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $
                 $new_qty = $old_qty + $quantity;
                 $stmt = $pdo->prepare("UPDATE items SET quantity = ?,invoice_no = ?, date = ?, remark=? WHERE id = ?");
                 $stmt->execute([$new_qty,$invoice_no,$date,$remark, $item_id]);
-                 // Insert into addqtyitems table
-            $stmt = $pdo->prepare("INSERT INTO addqtyitems 
-            (item_id, invoice_no, date, added_quantity, size, remark, added_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([
-$item_id,
-$invoice_no,
-$date,
-$quantity,
-$size,
-$remark,
-$_SESSION['user_id']
-]);
-// After updating the item quantity, add to history:
-$stmt = $pdo->prepare("INSERT INTO stock_in_history 
-    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
-    SELECT 
-        id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'add', ?, ?
-    FROM items 
-    WHERE id = ?");
-$stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
+                
+                // Insert into addqtyitems table
+                $stmt = $pdo->prepare("INSERT INTO addqtyitems 
+                (item_id, invoice_no, date, added_quantity, size, remark, added_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $item_id,
+                    $invoice_no,
+                    $date,
+                    $quantity,
+                    $size,
+                    $remark,
+                    $_SESSION['user_id']
+                ]);
+                
+                // After updating the item quantity, add to history:
+                $stmt = $pdo->prepare("INSERT INTO stock_in_history 
+                    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+                    SELECT 
+                        id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'add', ?, ?
+                    FROM items 
+                    WHERE id = ?");
+                $stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
+                
+                // FIXED: Insert into store_items with price
+                $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
+                SELECT id, item_code, category_id, ?, ?, name, ?, ?, alert_quantity, size, location_id, remark 
+                FROM items WHERE id = ?");
+                $stmt->execute([$invoice_no, $date, $quantity, $price, $item_id]);
                 // Get location name for log
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
                 $stmt->execute([$location_id]);
@@ -2260,14 +2278,18 @@ table th{
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <input type="text" class="form-control" name="name[]" required>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
                                 </div>
+                                <div class="col-md-4">
+        <label class="form-label"><?php echo t('price'); ?></label>
+        <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+    </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-4">
@@ -2344,7 +2366,7 @@ table th{
                         <!-- First item row -->
                         <div class="add-qty-item-row mb-3 border p-3">
                             <div class="row">
-                                <div class="col-md-8 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -2368,6 +2390,10 @@ table th{
                                     <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
                                 </div>
+                                <div class="col-md-4 mb-3">
+        <label class="form-label"><?php echo t('price'); ?></label>
+        <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+    </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -2806,7 +2832,7 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
     newRow.className = 'add-qty-item-row mb-3 border p-3';
     newRow.innerHTML = `
         <div class="row">
-            <div class="col-md-8 mb-3">
+            <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -2829,6 +2855,10 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
             <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
+            </div>
+             <div class="col-md-4 mb-3">
+                <label class="form-label"><?php echo t('price'); ?></label>
+                <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
             </div>
         </div>
         <div class="row">
@@ -2969,13 +2999,17 @@ document.getElementById('add-more-row').addEventListener('click', function() {
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <input type="text" class="form-control" name="name[]" required>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('price'); ?></label>
+                <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
             </div>
         </div>
         <div class="row">

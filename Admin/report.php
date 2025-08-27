@@ -287,17 +287,41 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
     generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color);
 }
 
-// Function to generate Excel content
+// Function to generate Excel content - UPDATED VERSION
 function generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color) {
-    $location_name = $location_id ? $report_data[0]['location_name'] : 'ទីតាំងទាំងអស់';
+    // Get location name
+    $location_name = $location_id ? $report_data[0]['location_name'] : t('all_locations');
     
     if ($report_type === 'stock_transfer' || $report_type === 'repair') {
-        $location_name = $location_id ? $report_data[0]['from_location_name'] . ' ទៅ ' . $report_data[0]['to_location_name'] : 'ទីតាំងទាំងអស់';
+        $location_name = $location_id ? $report_data[0]['from_location_name'] . ' ' . t('to') . ' ' . $report_data[0]['to_location_name'] : t('all_locations');
     }
-    $stock_system=t('stock_system');
-    $location=t('locations_button');
-    $report_froms=t('report_froms');
-    $report_tos=t('report_tos');
+    
+    // Translations
+    $report_title = t('reports');
+    $site_location = t('site_location');
+    $period_label = t('period');
+    $no = t('item_no');
+    $date = t('date');
+    $item_code = t('item_code');
+    $category = t('category');
+    $invoice_no = t('invoice_no');
+    $description = t('description');
+    $unit = t('unit');
+    $quantity = t('quantity');
+    $beginning_period = t('beginning_period');
+    $add = t('add');
+    $used = t('used');
+    $broken = t('broken');
+    $ending_period = t('ending_period');
+    $location_col = t('location_column');
+    $remarks = t('remarks');
+    $prepared_by = t('prepared_by');
+    $checked_by = t('checked_by');
+    $approved_by = t('approved_by');
+    $name = t('name');
+    $date_label = t('date');
+    $total_label = t('total');
+    
     echo '<!DOCTYPE html>
     <html>
     <head>
@@ -306,181 +330,172 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         <title>'.$title.'</title>
         <style>
             body { font-family: "Khmer OS Siemreap", sans-serif; }
-            .report-header { 
-                background: linear-gradient(135deg, '.$header_color.' 0%, '.darkenColor($header_color, 20).' 100%);
-                color: white;
-                padding: 20px;
-                border-radius: 8px 8px 0 0;
-                margin-bottom: 20px;
-                text-align: center;
+            .report-title { 
+                font-size: 18px; 
+                font-weight: bold; 
+                margin-bottom: 5px;
+                text-align: left;
             }
-            .report-title { font-size: 24px; font-weight: bold; margin-bottom: 5px;color:black; }
-            .report-subtitle { font-size: 16px; opacity: 0.9; color:black; }
             .report-info { 
-                background-color: #f8f9fc;
-                padding: 15px;
-                border-radius: 6px;
-                margin-bottom: 20px;
-                border-left: 4px solid '.$header_color.'; 
+                margin-bottom: 10px;
+            }
+            .info-line {
+                margin-bottom: 3px;
             }
             table { 
                 border-collapse: collapse; 
                 width: 100%;
-                border: 1px solid black;
             }
             th { 
-                background-color: '.getHeaderBgColor($report_type).';
-                color: '.getHeaderTextColor($report_type).';
-                padding: 12px 8px;
-                text-align: left;
-                font-weight: 600;
-                text-transform: uppercase;
+                background-color: #d9d9d9;
+                padding: 5px;
+                text-align: center;
+                font-weight: bold;
+                border: 1px solid #000;
                 font-size: 12px;
-                border: 1px solid black;
             }
             td { 
-                padding: 10px 8px;
-                border: 1px solid black;
+                padding: 4px;
+                border: 1px solid #000;
                 vertical-align: middle;
+                font-size: 11px;
             }
-            .report-footer {
-                margin-top: 20px;
+            .text-center { text-align: center; }
+            .text-left { text-align: left; }
+            .text-right { text-align: right; }
+            .bold { font-weight: bold; }
+            .no-border { border: none; }
+            .signature-cell {
+                text-align: center;
                 padding: 10px;
-                text-align: right;
-                font-size: 12px;
-                color: #6c757d;
+                vertical-align: top;
+                height: 100px;
+            }
+            .signature-line {
+                margin-top: 40px;
+                border-top: 1px solid #000;
+                width: 80%;
+                display: inline-block;
             }
         </style>
     </head>
     <body>
-        <div class="report-header">
-            <div class="report-title">'.$title.'</div>
-            <div class="report-subtitle">'.$stock_system.'</div>
-        </div>
+        <div class="report-title">'.$report_title.'</div>
         
         <div class="report-info">
-            <p>'.$report_froms.': '.date('d/m/Y', strtotime($start_date)).' '.$report_tos.': '.date('d/m/Y', strtotime($end_date)).'</p>
-            <p>'.$location.': '.$location_name.'</p>
+            <div class="info-line"><span class="bold">'.$site_location.':</span> '.$location_name.'</div>
+            <div class="info-line"><span class="bold">'.$period_label.':</span> '.date('d/m/Y', strtotime($start_date)).' - '.date('d/m/Y', strtotime($end_date)).'</div>
         </div>
         
         <table>
-            <thead>';
-    $no=t('item_no');
-    $code=t('item_code');
-    $category=t('category');
-    $invoice=t('item_invoice');
-    $date=t('item_date');
-    $name=t('item_name');
-    $qty=t('item_qty');
-    $action=t('action');
-    $unit=t('item_size');
-    $location=t('item_location');
-    $remark=t('item_remark');
-    $action_by=t('item_addby');
-    $from_location=t('from_location');
-    $to_location=t('to_location');
-    $history_action=t('history_action');
-    // Table headers based on report type
-    if ($report_type === 'stock_in' || $report_type === 'stock_out') {
+            <thead>
+                <tr>
+                    <th rowspan="2">'.$no.'</th>
+                    <th rowspan="2">'.$date.'</th>
+                    <th rowspan="2">'.$item_code.'</th>
+                    <th rowspan="2">'.$category.'</th>
+                    <th rowspan="2">'.$invoice_no.'</th>
+                    <th rowspan="2">'.$description.'</th>
+                    <th rowspan="2">'.$unit.'</th>
+                    <th colspan="5">'.$quantity.'</th>
+                    <th rowspan="2">'.$location_col.'</th>
+                    <th rowspan="2">'.$remarks.'</th>
+                </tr>
+                <tr>
+                    <th>('.$beginning_period.')</th>
+                    <th>('.$add.')</th>
+                    <th>('.$used.')</th>
+                    <th>('.$broken.')</th>
+                    <th>('.$ending_period.')</th>
+                </tr>
+            </thead>
+            <tbody>';
+    
+    // Initialize quantities
+    $total_beginning = 0;
+    $total_add = 0;
+    $total_used = 0;
+    $total_broken = 0;
+    $total_ending = 0;
+    
+    foreach ($report_data as $index => $item) {
+        // Calculate quantities based on report type
+        $beginning = 0; // You'll need to implement logic to calculate beginning period quantity
+        $add = ($report_type === 'stock_in') ? $item['action_quantity'] : 0;
+        $used = ($report_type === 'stock_out') ? $item['action_quantity'] : 0;
+        $broken = 0; // You'll need to implement logic to track broken items
+        $ending = $beginning + $add - $used - $broken;
+        
+        // Update totals
+        $total_beginning += $beginning;
+        $total_add += $add;
+        $total_used += $used;
+        $total_broken += $broken;
+        $total_ending += $ending;
+        
         echo '<tr>
-                <th>'.$no.'</th>
-                <th>'.$code.'</th>
-                <th>'.$category.'</th>
-                <th>'.$invoice.'</th>
-                <th>'.$date.'</th>
-                <th>'.$name.'</th>
-                <th>'.$qty.'</th>
-                <th>'.$action.'</th>
-                <th>'.$unit.'</th>
-                <th>'.$location.'</th>
-                <th>'.$remark.'</th>
-                <th>'.$action_by.'</th>
-            </tr>';
-    } elseif ($report_type === 'stock_transfer') {
-        echo '<tr>
-                <th>'.$no.'</th>
-                <th>'.$code.'</th>
-                <th>'.$category.'</th>
-                <th>'.$invoice.'</th>
-                <th>'.$date.'</th>
-                <th>'.$name.'</th>
-                <th>'.$qty.'</th>
-                <th>'.$unit.'</th>
-                <th>'.$from_location.'</th>
-                <th>'.$to_location.'</th>
-                <th>'.$remark.'</th>
-                <th>'.$action_by.'</th>
-            </tr>';
-    } elseif ($report_type === 'repair') {
-        echo '<tr>
-                <th>'.$no.'</th>
-                <th>'.$code.'</th>
-                <th>'.$category.'</th>
-                <th>'.$invoice.'</th>
-                <th>'.$date.'</th>
-                <th>'.$name.'</th>
-                <th>'.$qty.'</th>
-                <th>'.$action.'</th>
-                <th>'.$unit.'</th>
-                <th>'.$from_location.'</th>
-                <th>'.$to_location.'</th>
-                <th>'.$remark.'</th>
-                <th>'.$action_by.'</th>
-                <th>'.$history_action.'</th>
+                <td class="text-center">'.($index + 1).'</td>
+                <td class="text-center">'.date('d/m/Y', strtotime($item['date'])).'</td>
+                <td class="text-center">'.$item['item_code'].'</td>
+                <td class="text-center">'.$item['category_name'].'</td>
+                <td class="text-center">'.$item['invoice_no'].'</td>
+                <td class="text-left">'.($report_type === 'repair' ? $item['item_name'] : $item['name']).'</td>
+                <td class="text-center">'.$item['size'].'</td>
+                <td class="text-center">'.$beginning.'</td>
+                <td class="text-center">'.$add.'</td>
+                <td class="text-center">'.$used.'</td>
+                <td class="text-center">'.$broken.'</td>
+                <td class="text-center">'.$ending.'</td>
+                <td class="text-center">';
+        
+        if ($report_type === 'stock_in' || $report_type === 'stock_out') {
+            echo $item['location_name'];
+        } elseif ($report_type === 'stock_transfer' || $report_type === 'repair') {
+            echo $item['from_location_name'] . ' → ' . $item['to_location_name'];
+        }
+        
+        echo '</td>
+                <td class="text-left">'.$item['remark'].'</td>
             </tr>';
     }
     
-    echo '</thead>
-        <tbody>';
-    $date_generate=t('date_generate');
-    $stock_system=t('stock_system');
-    $total_quantity = 0;
-    foreach ($report_data as $index => $item) {
-        $total_quantity += ($report_type === 'stock_transfer' || $report_type === 'repair') ? $item['quantity'] : $item['action_quantity'];
-        $row_color = ($index % 2 === 0) ? getRowColor($report_type, true) : getRowColor($report_type, false);
-        
-        echo '<tr style="background-color: ' . $row_color . ';">
-                <td style="border: 1px solid black;text-align:center;">'.($index + 1).'</td>
-                <td style="border: 1px solid black;text-align:center;">'.$item['item_code'].'</td>
-                <td style="border: 1px solid black;text-align:center;">'.$item['category_name'].'</td>
-                <td style="mso-number-format:\@; border: 1px solid black; text-align: center;">'.$item['invoice_no'].'</td>
-                <td style="border: 1px solid black;text-align:center;">'.date('d/m/Y', strtotime($item['date'])).'</td>
-                <td style="border: 1px solid black;text-align:center;">'.($report_type === 'repair' ? $item['item_name'] : $item['name']).'</td>';
-        
-        if ($report_type === 'stock_in' || $report_type === 'stock_out') {
-            echo '<td style="border: 1px solid black;text-align:center;">'.$item['action_quantity'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.ucfirst($item['action_type']).'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['location_name'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['remark'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['action_by_name'].'</td>';
-        } elseif ($report_type === 'stock_transfer') {
-            echo '<td style="border: 1px solid black;text-align:center;">'.$item['quantity'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['from_location_name'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['to_location_name'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['remark'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['action_by_name'].'</td>';
-        } elseif ($report_type === 'repair') {
-            echo '<td style="border: 1px solid black;text-align:center;">'.$item['quantity'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.($item['action_type'] == 'send_for_repair' ? 'ផ្ញើរជួសជុល' : 'ត្រឡប់មកវិញ').'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['size'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['from_location_name'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['to_location_name'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['remark'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['action_by_name'].'</td>
-                  <td style="border: 1px solid black;text-align:center;">'.$item['history_action'].'</td>';
-        }
-        
-        echo '</tr>';
-    }
+    // Add totals row
+    echo '<tr class="bold">
+            <td colspan="7" class="text-right">'.$total_label.':</td>
+            <td class="text-center">'.$total_beginning.'</td>
+            <td class="text-center">'.$total_add.'</td>
+            <td class="text-center">'.$total_used.'</td>
+            <td class="text-center">'.$total_broken.'</td>
+            <td class="text-center">'.$total_ending.'</td>
+            <td colspan="2"></td>
+        </tr>';
+    
+    // Add signature rows with the requested column placement
+    echo '<tr>
+            <td class="signature-cell" colspan="1">
+                <div> Prepared by:</div>
+                <div class="signature-line"></div>
+                <div style="margin-top: 5px;">Name: _____________________</div>
+                <div style="margin-top: 5px;">Date: _____________________</div>
+            </td>
+            <td colspan="6"></td>
+            <td class="signature-cell" colspan="1">
+                <div>Checked By:</div>
+                <div class="signature-line"></div>
+                <div style="margin-top: 5px;">Name: _____________________</div>
+                <div style="margin-top: 5px;">Date: _____________________</div>
+            </td>
+            <td colspan="4"></td>
+            <td class="signature-cell" colspan="2">
+                <div>Approved By:</div>
+                <div class="signature-line"></div>
+                <div style="margin-top: 5px;">Name: _____________________</div>
+                <div style="margin-top: 5px;">Date: _____________________</div>
+            </td>
+        </tr>';
     
     echo '</tbody>
         </table>
-        
-        <div class="report-footer">
-            '.$date_generate.': '.date('d/m/Y H:i:s').' | '.$stock_system.'
-        </div>
     </body>
     </html>';
 }
