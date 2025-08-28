@@ -24,9 +24,13 @@ $translations = [
         'transfer'=>'ទំនិញផ្ទេរចេញ',
         'item'=>'ទំនិញ',
         'category_management'=>'គ្រប់គ្រងប្រភេទសម្ភារៈ',
-        'remaining'=>'សម្ភារៈនៅសល់'
+        'remaining'=>'សម្ភារៈនៅសល់',
+        'store_inventory'=>'តារាងតម្លៃសម្ភារៈ',
+        'broken_items'=>'សម្ភារៈខូច',
     ],
     'en' => [
+        'broken_items'=>'Broken Item',
+        'store_inventory'=>'Price List',
         'remaining'=>'Remaining',
         'category_management'=>'Category Management',
         'dashboard' => 'Dashboard',

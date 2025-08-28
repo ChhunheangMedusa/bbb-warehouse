@@ -118,14 +118,38 @@ if (isset($_GET['download']) && $_GET['download'] === 'true' && isset($_SESSION[
     }
 }
 
-// Function to generate report data
+// Function to generate report data - UPDATED TO GET ADD QUANTITIES FROM stock_in_history
 function generateReportData($pdo, $report_type, $location_id, $start_date, $end_date) {
     if ($report_type === 'stock_in') {
         $query = "SELECT 
                     si.*, 
                     l.name as location_name,
                     u.username as action_by_name,
-                    c.name as category_name
+                    c.name as category_name,
+                    -- Calculate beginning quantity (quantity before the report period)
+                    (SELECT COALESCE(SUM(sih2.action_quantity), 0) 
+                     FROM stock_in_history sih2 
+                     WHERE sih2.item_id = si.item_id 
+                     AND sih2.date < :start_date) as beginning_quantity,
+                    -- Get add quantity from stock_in_history
+                    si.action_quantity as add_quantity,
+                    -- Calculate used quantity from stock_out_history
+                    (SELECT COALESCE(SUM(soh.action_quantity), 0) 
+                     FROM stock_out_history soh 
+                     WHERE soh.item_id = si.item_id 
+                     AND soh.date BETWEEN :start_date AND :end_date) as used_quantity,
+                    -- Calculate broken quantity (you'll need to implement this based on your system)
+                    0 as broken_quantity,
+                    -- Calculate ending quantity
+                    ((SELECT COALESCE(SUM(sih2.action_quantity), 0) 
+                      FROM stock_in_history sih2 
+                      WHERE sih2.item_id = si.item_id 
+                      AND sih2.date < :start_date) 
+                     + si.action_quantity
+                     - (SELECT COALESCE(SUM(soh.action_quantity), 0) 
+                        FROM stock_out_history soh 
+                        WHERE soh.item_id = si.item_id 
+                        AND soh.date BETWEEN :start_date AND :end_date)) as ending_quantity
                   FROM 
                     stock_in_history si
                   JOIN 
@@ -136,7 +160,10 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
                     categories c ON si.category_id = c.id
                   WHERE 
                     si.date BETWEEN :start_date AND :end_date";
-        $params = [':start_date' => $start_date, ':end_date' => $end_date];
+        $params = [
+            ':start_date' => $start_date, 
+            ':end_date' => $end_date
+        ];
         
         if ($location_id) {
             $query .= " AND si.location_id = :location_id";
@@ -144,100 +171,6 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
         }
         
         $query .= " ORDER BY si.date, si.name";
-        
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-    } elseif ($report_type === 'stock_out') {
-        $query = "SELECT 
-                    so.*, 
-                    l.name as location_name,
-                    u.username as action_by_name,
-                    c.name as category_name
-                  FROM 
-                    stock_out_history so
-                  JOIN 
-                    locations l ON so.location_id = l.id
-                  JOIN
-                    users u ON so.action_by = u.id
-                  LEFT JOIN
-                    categories c ON so.category_id = c.id
-                  WHERE 
-                    so.date BETWEEN :start_date AND :end_date";
-        $params = [':start_date' => $start_date, ':end_date' => $end_date];
-        
-        if ($location_id) {
-            $query .= " AND so.location_id = :location_id";
-            $params[':location_id'] = $location_id;
-        }
-        
-        $query .= " ORDER BY so.date, so.name";
-        
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-    } elseif ($report_type === 'stock_transfer') {
-        $query = "SELECT 
-                    t.*, 
-                    fl.name as from_location_name,
-                    tl.name as to_location_name,
-                    u.username as action_by_name,
-                    c.name as category_name
-                FROM 
-                    transfer_history t
-                LEFT JOIN 
-                    categories c ON t.category_id = c.id
-                JOIN 
-                    locations fl ON t.from_location_id = fl.id
-                JOIN 
-                    locations tl ON t.to_location_id = tl.id
-                JOIN
-                    users u ON t.action_by = u.id
-                WHERE 
-                    t.date BETWEEN :start_date AND :end_date";
-        $params = [':start_date' => $start_date, ':end_date' => $end_date];
-        
-        if ($location_id) {
-            $query .= " AND (t.from_location_id = :location_id OR t.to_location_id = :location_id)";
-            $params[':location_id'] = $location_id;
-        }
-        
-        $query .= " ORDER BY t.date, t.name";
-        
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-    } elseif ($report_type === 'repair') {
-        $query = "SELECT 
-                    rh.*, 
-                    fl.name as from_location_name,
-                    tl.name as to_location_name,
-                    u.username as action_by_name,
-                    c.name as category_name
-                FROM 
-                    repair_history rh
-                LEFT JOIN 
-                    categories c ON rh.category_id = c.id
-                JOIN 
-                    locations fl ON rh.from_location_id = fl.id
-                JOIN 
-                    locations tl ON rh.to_location_id = tl.id
-                JOIN
-                    users u ON rh.action_by = u.id
-                WHERE 
-                    rh.date BETWEEN :start_date AND :end_date
-                    AND rh.action_type = 'send_for_repair'";
-        $params = [':start_date' => $start_date, ':end_date' => $end_date];
-        
-        if ($location_id) {
-            $query .= " AND (rh.from_location_id = :location_id OR rh.to_location_id = :location_id)";
-            $params[':location_id'] = $location_id;
-        }
-        
-        $query .= " ORDER BY rh.date, rh.item_name";
         
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
@@ -253,26 +186,11 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
     $title = "";
     $header_color = "";
     $stock_in_report=t('stock_in_report');
-    $stock_out_report=t('stock_out_report');
-    $transfer_report=t('transfer_report');
-    $repair_report=t('repair_report');
 
     if ($report_type === 'stock_in') {
         $filename = "stock_in_report_" . date('Ymd') . ".xls";
         $title = "$stock_in_report";
         $header_color = "#4e73df";
-    } elseif ($report_type === 'stock_out') {
-        $filename = "stock_out_report_" . date('Ymd') . ".xls";
-        $title = "$stock_out_report";
-        $header_color = "#e74a3b";
-    } elseif ($report_type === 'stock_transfer') {
-        $filename = "stock_transfer_report_" . date('Ymd') . ".xls";
-        $title = "$transfer_report";
-        $header_color = "#1cc88a";
-    } elseif ($report_type === 'repair') {
-        $filename = "repair_report_" . date('Ymd') . ".xls";
-        $title = "$repair_report";
-        $header_color = "#f6c23e";
     }
     
     // Set headers for Excel download
@@ -290,18 +208,14 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
 // Function to generate Excel content - UPDATED VERSION
 function generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color) {
     // Get location name
-    $location_name = $location_id ? $report_data[0]['location_name'] : t('all_locations');
-    
-    if ($report_type === 'stock_transfer' || $report_type === 'repair') {
-        $location_name = $location_id ? $report_data[0]['from_location_name'] . ' ' . t('to') . ' ' . $report_data[0]['to_location_name'] : t('all_locations');
-    }
+    $location_name = $location_id ? $report_data[0]['location_name'] : t('report_all_location');
     
     // Translations
     $report_title = t('reports');
     $site_location = t('site_location');
     $period_label = t('period');
     $no = t('item_no');
-    $date = t('date');
+    $date = t('item_date');
     $item_code = t('item_code');
     $category = t('category');
     $invoice_no = t('invoice_no');
@@ -380,33 +294,33 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         </style>
     </head>
     <body>
-        <div class="report-title">'.$report_title.'</div>
+        <div class="report-title" style="text-align:center;">Reports</div>
         
         <div class="report-info">
-            <div class="info-line"><span class="bold">'.$site_location.':</span> '.$location_name.'</div>
-            <div class="info-line"><span class="bold">'.$period_label.':</span> '.date('d/m/Y', strtotime($start_date)).' - '.date('d/m/Y', strtotime($end_date)).'</div>
+            <div class="info-line"><span class="bold">Site Location:</span> '.$location_name.'</div>
+            <div class="info-line"><span class="bold">Period:</span> '.date('d/m/Y', strtotime($start_date)).' - '.date('d/m/Y', strtotime($end_date)).'</div>
         </div>
         
         <table>
             <thead>
                 <tr>
-                    <th rowspan="2">'.$no.'</th>
-                    <th rowspan="2">'.$date.'</th>
-                    <th rowspan="2">'.$item_code.'</th>
-                    <th rowspan="2">'.$category.'</th>
-                    <th rowspan="2">'.$invoice_no.'</th>
-                    <th rowspan="2">'.$description.'</th>
-                    <th rowspan="2">'.$unit.'</th>
-                    <th colspan="5">'.$quantity.'</th>
-                    <th rowspan="2">'.$location_col.'</th>
-                    <th rowspan="2">'.$remarks.'</th>
+                    <th rowspan="2">No</th>
+                    <th rowspan="2">Date</th>
+                    <th rowspan="2">Item Code</th>
+                    <th rowspan="2">Category</th>
+                    <th rowspan="2">Invoice No</th>
+                    <th rowspan="2">Description</th>
+                    <th rowspan="2">Unit</th>
+                    <th colspan="5">Quantity</th>
+                    <th rowspan="2">Location</th>
+                    <th rowspan="2">Remarks</th>
                 </tr>
                 <tr>
-                    <th>('.$beginning_period.')</th>
-                    <th>('.$add.')</th>
-                    <th>('.$used.')</th>
-                    <th>('.$broken.')</th>
-                    <th>('.$ending_period.')</th>
+                    <th>(Beginning Period)</th>
+                    <th>(Add)</th>
+                    <th>(Used)</th>
+                    <th>(Broken)</th>
+                    <th>(Ending Period)</th>
                 </tr>
             </thead>
             <tbody>';
@@ -419,12 +333,12 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     $total_ending = 0;
     
     foreach ($report_data as $index => $item) {
-        // Calculate quantities based on report type
-        $beginning = 0; // You'll need to implement logic to calculate beginning period quantity
-        $add = ($report_type === 'stock_in') ? $item['action_quantity'] : 0;
-        $used = ($report_type === 'stock_out') ? $item['action_quantity'] : 0;
-        $broken = 0; // You'll need to implement logic to track broken items
-        $ending = $beginning + $add - $used - $broken;
+        // Get quantities from the query results
+        $beginning = $item['beginning_quantity'];
+        $add = $item['add_quantity'];
+        $used = $item['used_quantity'];
+        $broken = $item['broken_quantity'];
+        $ending = $item['ending_quantity'];
         
         // Update totals
         $total_beginning += $beginning;
@@ -439,22 +353,14 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                 <td class="text-center">'.$item['item_code'].'</td>
                 <td class="text-center">'.$item['category_name'].'</td>
                 <td class="text-center">'.$item['invoice_no'].'</td>
-                <td class="text-left">'.($report_type === 'repair' ? $item['item_name'] : $item['name']).'</td>
+                <td class="text-left">'.$item['name'].'</td>
                 <td class="text-center">'.$item['size'].'</td>
                 <td class="text-center">'.$beginning.'</td>
                 <td class="text-center">'.$add.'</td>
                 <td class="text-center">'.$used.'</td>
                 <td class="text-center">'.$broken.'</td>
                 <td class="text-center">'.$ending.'</td>
-                <td class="text-center">';
-        
-        if ($report_type === 'stock_in' || $report_type === 'stock_out') {
-            echo $item['location_name'];
-        } elseif ($report_type === 'stock_transfer' || $report_type === 'repair') {
-            echo $item['from_location_name'] . ' → ' . $item['to_location_name'];
-        }
-        
-        echo '</td>
+                <td class="text-center">'.$item['location_name'].'</td>
                 <td class="text-left">'.$item['remark'].'</td>
             </tr>';
     }
@@ -518,9 +424,6 @@ function darkenColor($color, $percent) {
 function getHeaderBgColor($report_type) {
     switch ($report_type) {
         case 'stock_in': return '#f6c23e'; // Yellow
-        case 'stock_out': return '#36b9cc'; // Cyan
-        case 'stock_transfer': return '#36b9cc'; // Cyan
-        case 'repair': return '#36b9cc'; // Cyan
         default: return '#36b9cc';
     }
 }
@@ -528,9 +431,6 @@ function getHeaderBgColor($report_type) {
 function getHeaderTextColor($report_type) {
     switch ($report_type) {
         case 'stock_in': return '#2c3e50'; // Dark blue
-        case 'stock_out': return 'white';
-        case 'stock_transfer': return 'white';
-        case 'repair': return 'white';
         default: return 'white';
     }
 }
@@ -538,13 +438,12 @@ function getHeaderTextColor($report_type) {
 function getRowColor($report_type, $is_even) {
     switch ($report_type) {
         case 'stock_in': return $is_even ? '#b1dcc8' : '#FAFAFA';
-        case 'stock_out': return $is_even ? '#b1dcc8' : '#FAFAFA';
-        case 'stock_transfer': return $is_even ? '#e8f4f0' : '#FAFAFA';
-        case 'repair': return $is_even ? '#fef8e6' : '#FAFAFA';
         default: return $is_even ? '#f8f9fc' : '#FAFAFA';
     }
 }
 ?>
+
+
 <style>
     /* Your existing CSS remains unchanged */
     :root {
@@ -1044,9 +943,7 @@ body {
                         <label for="report_type" class="form-label"><?php echo t('report_type');?></label>
                         <select class="form-select" id="report_type" name="report_type" required>
                             <option value="stock_in"><?php echo t('todays_stock_in');?></option>
-                            <option value="stock_out"><?php echo t('todays_stock_out');?></option>
-                            <option value="stock_transfer"><?php echo t('todays_transfers');?></option>
-                            <option value="repair"><?php echo t('todays_repair_records');?></option>
+                          
                         </select>
                     </div>
                     <div class="col-md-6">

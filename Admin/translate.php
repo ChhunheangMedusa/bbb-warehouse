@@ -427,10 +427,18 @@ $translations = [
 'price'=>'តម្លៃ',
 'sub_total'=>'តម្លៃសរុប',
 'store_inventory'=>'តារាងតម្លៃសម្ភារៈ',
+'reports'=>'របាយការណ៍',
+'broken_items_history'=>'សម្ភារៈខូច',
+'no_broken_items'=>'មិនមានសម្ភារៈខូចត្រូវបានរកឃើញនោះទេ',
+'available_qty'=>'បរិមាណនៅសល់'
     ],
 
 
     'en' => [
+        'available_qty'=>'Available Qty',
+        'no_broken_items'=>'No broken items found',
+        'broken_items_history'=>'Broken Items',
+        'reports'=>'Report',
         'store_inventory'=>'Price List',
         'sub_total'=>'Total',
         'price'=>'Price',
@@ -859,6 +867,7 @@ $translations = [
 'delete_warning'=>'This action is irreversible',
     ]
   ];
+
   if (!function_exists('t')) {
     function t($key) {
         global $translations;

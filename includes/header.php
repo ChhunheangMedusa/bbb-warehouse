@@ -248,9 +248,14 @@ $hasAvatar = ($userPicture !== null);
                     </a>
                     <div class="collapse" id="itemManagementCollapse">
                         <ul class="nav flex-column ps-4">
+                        <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/store.php' ? 'active' : ''; ?>" href="../Admin/store.php">
+                                    <i class="bi bi-currency-dollar me-2"></i><?php echo t('store_inventory'); ?>
+                                </a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/items.php' ? 'active' : ''; ?>" href="../Admin/items.php">
-                                    <i class="bi bi-box-arrow-in-down me-2"></i><?php echo t('item'); ?>
+                                    <i class="bi bi-box-seam me-2"></i><?php echo t('item'); ?>
                                 </a>
                             </li>
                        
@@ -262,6 +267,11 @@ $hasAvatar = ($userPicture !== null);
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/stock-transfer.php' ? 'active' : ''; ?>" href="../Admin/stock-transfer.php">
                                     <i class="bi bi-arrow-left-right me-2"></i><?php echo t('transfer'); ?>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/broken-items.php' ? 'active' : ''; ?>" href="../Admin/broken-items.php">
+                                    <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('broken_items'); ?>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -280,7 +290,7 @@ $hasAvatar = ($userPicture !== null);
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/category.php' ? 'active' : ''; ?>" href="../Admin/category.php">
-                        <i class="bi bi-pin-map me-2"></i><?php echo t('category_management'); ?>
+                        <i class="bi bi-card-list me-2"></i><?php echo t('category_management'); ?>
                     </a>
                 </li>
        
