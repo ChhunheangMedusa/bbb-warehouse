@@ -73,30 +73,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Loop through each item
             foreach ($_POST['name'] as $index => $name) {
                 $item_code = sanitizeInput($_POST['item_code'][$index]);
-$category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
+                $category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
                 $location_id = (int)$_POST['location_id'][$index];
                 $name = sanitizeInput($name);
                 $quantity = (float)$_POST['quantity'][$index];
                 $alert_quantity = (int)$_POST['alert_quantity'][$index];
                 $size = sanitizeInput($_POST['size'][$index]);
                 $remark = sanitizeInput($_POST['remark'][$index]);
+                $price = (float)$_POST['price'][$index]; // ADD THIS LINE
+                
                 $dupli=t('duplicate_itm2');
                 $stmt = $pdo->prepare("SELECT id FROM items WHERE name = ? AND location_id = ?");
-            $stmt->execute([$name, $location_id]);
-            if ($stmt->fetch()) {
-                echo '<script>
-                    document.addEventListener("DOMContentLoaded", function() {
-                        var duplicateModal = new bootstrap.Modal(document.getElementById("duplicateItemModal"));
-                        duplicateModal.show();
-                    });
-                </script>';
-                throw new Exception("$dupli");
-            }
+                $stmt->execute([$name, $location_id]);
+                
+                if ($stmt->fetch()) {
+                    echo '<script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            var duplicateModal = new bootstrap.Modal(document.getElementById("duplicateItemModal"));
+                            duplicateModal.show();
+                        });
+                    </script>';
+                    throw new Exception("$dupli");
+                }
+                
                 // Insert the item into the database
                 $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
+                $stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
                 $item_id = $pdo->lastInsertId();
+                
+                // Also insert into store_items table - FIXED
+                $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $quantity, $price, $alert_quantity, $size, $location_id, $remark]);
                    // Also insert into addnewitems table
             $stmt = $pdo->prepare("INSERT INTO addnewitems 
             (item_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, added_by) 
@@ -168,7 +177,7 @@ $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
         }
-    }elseif (isset($_POST['add_qty'])) {
+    } elseif (isset($_POST['add_qty'])) {
         // Add quantity to items
         $invoice_no = sanitizeInput($_POST['invoice_no']);
         $date = sanitizeInput($_POST['date']);
@@ -181,6 +190,7 @@ $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $
             foreach ($_POST['item_id'] as $index => $item_id) {
                 $item_id = (int)$item_id;
                 $quantity = (float)$_POST['quantity'][$index];
+                $price = (float)$_POST['price'][$index]; // ADD THIS LINE
                 $size = sanitizeInput($_POST['size'][$index] ?? '');
                 $remark = sanitizeInput($_POST['remark'][$index] ?? '');
                 
@@ -195,27 +205,35 @@ $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $
                 $new_qty = $old_qty + $quantity;
                 $stmt = $pdo->prepare("UPDATE items SET quantity = ?,invoice_no = ?, date = ?, remark=? WHERE id = ?");
                 $stmt->execute([$new_qty,$invoice_no,$date,$remark, $item_id]);
-                 // Insert into addqtyitems table
-            $stmt = $pdo->prepare("INSERT INTO addqtyitems 
-            (item_id, invoice_no, date, added_quantity, size, remark, added_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([
-$item_id,
-$invoice_no,
-$date,
-$quantity,
-$size,
-$remark,
-$_SESSION['user_id']
-]);
-// After updating the item quantity, add to history:
-$stmt = $pdo->prepare("INSERT INTO stock_in_history 
-    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
-    SELECT 
-        id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'add', ?, ?
-    FROM items 
-    WHERE id = ?");
-$stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
+                
+                // Insert into addqtyitems table
+                $stmt = $pdo->prepare("INSERT INTO addqtyitems 
+                (item_id, invoice_no, date, added_quantity, size, remark, added_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $item_id,
+                    $invoice_no,
+                    $date,
+                    $quantity,
+                    $size,
+                    $remark,
+                    $_SESSION['user_id']
+                ]);
+                
+                // After updating the item quantity, add to history:
+                $stmt = $pdo->prepare("INSERT INTO stock_in_history 
+                    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+                    SELECT 
+                        id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'add', ?, ?
+                    FROM items 
+                    WHERE id = ?");
+                $stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
+                
+                // FIXED: Insert into store_items with price
+                $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
+                SELECT id, item_code, category_id, ?, ?, name, ?, ?, alert_quantity, size, location_id, remark 
+                FROM items WHERE id = ?");
+                $stmt->execute([$invoice_no, $date, $quantity, $price, $item_id]);
                 // Get location name for log
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
                 $stmt->execute([$location_id]);
@@ -315,9 +333,22 @@ $stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
    
     }
     
+// Add entries per page options
+$in_limit_options = [10, 25, 50, 100];
+$in_per_page = isset($_GET['in_per_page']) ? (int)$_GET['in_per_page'] : 10;
+if (!in_array($in_per_page, $in_limit_options)) {
+    $in_per_page = 10;
+}
+
+$out_limit_options = [10, 25, 50, 100];
+$out_per_page = isset($_GET['out_per_page']) ? (int)$_GET['out_per_page'] : 10;
+if (!in_array($out_per_page, $out_limit_options)) {
+    $out_per_page = 10;
+}
+
 // Get pagination parameters for stock in history
 $in_page = isset($_GET['in_page']) ? (int)$_GET['in_page'] : 1;
-$in_limit = 10;
+$in_limit = $in_per_page;
 $in_offset = ($in_page - 1) * $in_limit;
 // Get filters for stock in
 $in_year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
@@ -463,7 +494,7 @@ $in_history = $in_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get pagination parameters for stock out history
 $out_page = isset($_GET['out_page']) ? (int)$_GET['out_page'] : 1;
-$out_limit = 10;
+$out_limit = $out_per_page;
 $out_offset = ($out_page - 1) * $out_limit;
 
 // Build query for stock out history
@@ -1580,6 +1611,71 @@ table th{
         width: 100%;
     }
 }
+/* Show entries styling - Right aligned */
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    justify-content: flex-end; /* Changed from default to push to right */
+    margin-left: auto; /* Push to the right side */
+    width: fit-content; /* Only take needed width */
+}
+
+.entries-per-page label {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+    font-weight: 500;
+    color: #5a5c69;
+}
+
+.entries-per-page select {
+    width: auto;
+    min-width: 70px;
+    margin: 0 0.5rem;
+}
+
+/* For the specific show entries section in your code */
+.row.mb-3 .col-md-6 {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Align content to the right */
+}
+
+.row.mb-3 .col-md-6 > .d-flex {
+    background-color: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: 0.35rem;
+    border: 1px solid #e3e6f0;
+    margin-left: auto; /* Push to the right */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .entries-per-page {
+        flex-wrap: wrap;
+        justify-content: center; /* Center on mobile */
+        text-align: center;
+        margin-left: 0; /* Reset margin on mobile */
+        width: 100%; /* Full width on mobile */
+    }
+    
+    .entries-per-page label,
+    .entries-per-page select,
+    .entries-per-page span {
+        margin: 0.25rem;
+    }
+    
+    .row.mb-3 .col-md-6 {
+        justify-content: center; /* Center on mobile */
+    }
+    
+    .row.mb-3 .col-md-6 > .d-flex {
+        margin-left: 0; /* Reset margin on mobile */
+    }
+}
 </style>
 
 <div class="container-fluid">
@@ -1604,6 +1700,21 @@ table th{
       <!-- Stock In History Tab -->
       <div class="tab-pane fade <?php echo $active_tab === 'in' ? 'show active' : ''; ?>" id="in-tab-pane" role="tabpanel" aria-labelledby="in-tab" tabindex="0">
           <!-- Filter Card -->
+          <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="in_per_page_select">
+                <?php foreach ($in_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $in_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
           <div class="card mb-4">
               <div class="card-header bg-primary text-white">
                   <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
@@ -1663,12 +1774,8 @@ table th{
                                       <option value="date_asc" <?php echo $in_sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
                                       <option value="name_asc" <?php echo $in_sort_option === 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
                                       <option value="name_desc" <?php echo $in_sort_option === 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
-                                      <option value="location_asc" <?php echo $in_sort_option === 'location_asc' ? 'selected' : ''; ?>><?php echo t('location_a_to_z'); ?></option>
-                                      <option value="location_desc" <?php echo $in_sort_option === 'location_desc' ? 'selected' : ''; ?>><?php echo t('location_z_to_a'); ?></option>
                                       <option value="category_asc" <?php echo $in_sort_option === 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
                                       <option value="category_desc" <?php echo $in_sort_option === 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
-                                      <option value="action_asc" <?php echo $in_sort_option === 'action_asc' ? 'selected' : ''; ?>><?php echo t('action_a_to_z'); ?></option>
-                                      <option value="action_desc" <?php echo $in_sort_option === 'action_desc' ? 'selected' : ''; ?>><?php echo t('action_z_to_a'); ?></option>
                                   </select>
                               </div>
                              
@@ -1856,10 +1963,27 @@ table th{
         <!-- Stock Out History Tab -->
       <div class="tab-pane fade <?php echo $active_tab === 'out' ? 'show active' : ''; ?>" id="out-tab-pane" role="tabpanel" aria-labelledby="out-tab" tabindex="0">
           <!-- Filter Card for Stock Out -->
+          <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="out_per_page_select">
+                <?php foreach ($out_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $out_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
           <div class="card mb-4">
               <div class="card-header bg-primary text-white">
                   <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
               </div>
+
+  
               <div class="card-body">
                   <div class="row mb-3">
                       <div class="col-md-12">
@@ -1915,8 +2039,6 @@ table th{
                                       <option value="date_asc" <?php echo $out_sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
                                       <option value="name_asc" <?php echo $out_sort_option === 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
                                       <option value="name_desc" <?php echo $out_sort_option === 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
-                                      <option value="location_asc" <?php echo $out_sort_option === 'location_asc' ? 'selected' : ''; ?>><?php echo t('location_a_to_z'); ?></option>
-                                      <option value="location_desc" <?php echo $out_sort_option === 'location_desc' ? 'selected' : ''; ?>><?php echo t('location_z_to_a'); ?></option>
                                       <option value="category_asc" <?php echo $out_sort_option === 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
                                       <option value="category_desc" <?php echo $out_sort_option === 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
                                   </select>
@@ -2156,14 +2278,18 @@ table th{
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <input type="text" class="form-control" name="name[]" required>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
                                 </div>
+                                <div class="col-md-4">
+        <label class="form-label"><?php echo t('price'); ?></label>
+        <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+    </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-4">
@@ -2240,7 +2366,7 @@ table th{
                         <!-- First item row -->
                         <div class="add-qty-item-row mb-3 border p-3">
                             <div class="row">
-                                <div class="col-md-8 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -2264,6 +2390,10 @@ table th{
                                     <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
                                 </div>
+                                <div class="col-md-4 mb-3">
+        <label class="form-label"><?php echo t('price'); ?></label>
+        <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+    </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -2484,6 +2614,30 @@ table th{
 <script>
     // Add this to your existing JavaScript
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle entries per page change for stock in
+    const inPerPageSelect = document.getElementById('in_per_page_select');
+    if (inPerPageSelect) {
+        inPerPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('in_per_page', this.value);
+            url.searchParams.set('in_page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        });
+    }
+
+    // Handle entries per page change for stock out
+    const outPerPageSelect = document.getElementById('out_per_page_select');
+    if (outPerPageSelect) {
+        outPerPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('out_per_page', this.value);
+            url.searchParams.set('out_page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        });
+    }
+});
+    // Add this to your existing JavaScript
+document.addEventListener('DOMContentLoaded', function() {
     // Handle tab clicks to preserve pagination
     document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
         tab.addEventListener('click', function(e) {
@@ -2678,7 +2832,7 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
     newRow.className = 'add-qty-item-row mb-3 border p-3';
     newRow.innerHTML = `
         <div class="row">
-            <div class="col-md-8 mb-3">
+            <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -2701,6 +2855,10 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
             <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
+            </div>
+             <div class="col-md-4 mb-3">
+                <label class="form-label"><?php echo t('price'); ?></label>
+                <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
             </div>
         </div>
         <div class="row">
@@ -2841,13 +2999,17 @@ document.getElementById('add-more-row').addEventListener('click', function() {
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <input type="text" class="form-control" name="name[]" required>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><?php echo t('price'); ?></label>
+                <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
             </div>
         </div>
         <div class="row">

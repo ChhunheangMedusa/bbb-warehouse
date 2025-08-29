@@ -1,73 +1,190 @@
 <?php
-ob_start();
-
-// Includes in correct order
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth.php';
-require_once '../includes/header.php';
+require_once '../includes/header-staff.php';
 require_once 'translate.php';
 
-if (!isAdmin()) {
-    $_SESSION['error'] = "You don't have permission to access this page";
-    header('Location: dashboard-staff.php');
-    exit();
+if (!isStaff()) {
+  $_SESSION['error'] = "You don't have permission to access this page";
+  header('Location: dashboard.php');
+  exit();
 }
-checkAuth();
 
-// Get today's date
-$today = date('Y-m-d');
+// Get filter parameters
+$name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
+$category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
+$location_filter = isset($_GET['location']) ? sanitizeInput($_GET['location']) : '';
+$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'name_asc';
 
-// Query to get today's repair records
-$query = "SELECT 
-    rh.id,
-    rh.item_code, 
-    rh.category_id,
-    c.name as category_name,
-    rh.invoice_no,
-    rh.date,
-    rh.item_name,
-    rh.quantity,
-    rh.action_type,
-    rh.size,
-    rh.from_location_id,
-    fl.name as from_location_name,
-    rh.to_location_id,
-    tl.name as to_location_name,
-    rh.remark,
-    rh.action_by,
-    u.username as action_by_name,
-    rh.history_action_at as action_at,
-    (SELECT id FROM item_images WHERE item_id = (SELECT id FROM items WHERE name = rh.item_name LIMIT 1) ORDER BY id DESC LIMIT 1) as image_id
+// Pagination parameters
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$per_page = 10;
+$offset = ($page - 1) * $per_page;
+
+// Sort mapping
+$sort_mapping = [
+    'name_asc' => ['field' => 'si.name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'si.name', 'direction' => 'DESC'],
+    'quantity_asc' => ['field' => 'si.quantity', 'direction' => 'ASC'],
+    'quantity_desc' => ['field' => 'si.quantity', 'direction' => 'DESC'],
+    'price_asc' => ['field' => 'si.price', 'direction' => 'ASC'],
+    'price_desc' => ['field' => 'si.price', 'direction' => 'DESC'],
+    'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
+    'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
+    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC']
+];
+
+// Default to name_asc if invalid option
+if (!array_key_exists($sort_option, $sort_mapping)) {
+    $sort_option = 'name_asc';
+}
+
+$sort_by = $sort_mapping[$sort_option]['field'];
+$sort_order = $sort_mapping[$sort_option]['direction'];
+
+// Build query for counting total items
+$count_query = "SELECT COUNT(*) as total
 FROM 
-    repair_history rh
+    store_items si
 LEFT JOIN 
-    categories c ON rh.category_id = c.id
+    categories c ON si.category_id = c.id
 JOIN 
-    locations fl ON rh.from_location_id = fl.id
-JOIN 
-    locations tl ON rh.to_location_id = tl.id
-JOIN
-    users u ON rh.action_by = u.id
-WHERE DATE(rh.history_action_at) = :today 
-AND rh.action_type = 'send_for_repair'
-ORDER BY rh.history_action_at DESC";
+    locations l ON si.location_id = l.id
+WHERE 1=1";
 
+$params = [];
+
+// Add filters to count query
+if ($name_filter) {
+    $count_query .= " AND si.name LIKE :name";
+    $params[':name'] = "%$name_filter%";
+}
+
+if ($category_filter) {
+    $count_query .= " AND si.category_id = :category_id";
+    $params[':category_id'] = $category_filter;
+}
+
+if ($location_filter) {
+    $count_query .= " AND si.location_id = :location_id";
+    $params[':location_id'] = $location_filter;
+}
+
+if ($search_query) {
+    $count_query .= " AND (si.name LIKE :search OR si.item_code LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
+    $params[':search'] = "%$search_query%";
+}
+
+// Execute count query
+$stmt = $pdo->prepare($count_query);
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
+$stmt->execute();
+$total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_items / $per_page);
+
+// Ensure page is within valid range
+if ($page < 1) $page = 1;
+if ($page > $total_pages && $total_pages > 0) $page = $total_pages;
+
+// Build main query
+// Change the query to use store_items instead of items
+$query = "SELECT 
+    si.id,
+    si.item_code,
+    si.category_id,
+    c.name as category_name,
+    si.invoice_no,
+    si.date,
+    si.name,
+    si.quantity,
+    si.price,
+    si.alert_quantity,
+    si.size,
+    si.location_id,
+    l.name as location_name,
+    si.remark,
+    (SELECT id FROM item_images WHERE item_id = si.item_id ORDER BY id DESC LIMIT 1) as image_id
+FROM 
+    store_items si
+LEFT JOIN 
+    categories c ON si.category_id = c.id
+JOIN 
+    locations l ON si.location_id = l.id
+WHERE 1=1";
+
+// Add filters to main query
+if ($name_filter) {
+    $query .= " AND si.name LIKE :name";
+    // Parameter already bound above
+}
+
+if ($category_filter) {
+    $query .= " AND si.category_id = :category_id";
+    // Parameter already bound above
+}
+
+if ($location_filter) {
+    $query .= " AND si.location_id = :location_id";
+    // Parameter already bound above
+}
+
+if ($search_query) {
+    $query .= " AND (si.name LIKE :search OR si.item_code LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
+    // Parameter already bound above
+}
+
+$limit_options = [10, 25, 50, 100];
+$per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
+if (!in_array($per_page, $limit_options)) {
+    $per_page = 10;
+}
+
+// Update the pagination calculation
+$offset = ($page - 1) * $per_page;
+$total_pages = ceil($total_items / $per_page);
+
+// Order by
+$query .= " ORDER BY $sort_by $sort_order LIMIT :limit OFFSET :offset";
+
+// Add pagination parameters
+$params[':limit'] = $per_page;
+$params[':offset'] = $offset;
+
+// Get all locations for filter dropdown
+$stmt = $pdo->query("SELECT * FROM locations WHERE type !='repair' ORDER BY name");
+$locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get all categories
+$stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
+$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Execute main query
 $stmt = $pdo->prepare($query);
-$stmt->execute([':today' => $today]);
-$repair_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($params as $key => $value) {
+    if ($key === ':limit' || $key === ':offset') {
+        $stmt->bindValue($key, $value, PDO::PARAM_INT);
+    } else {
+        $stmt->bindValue($key, $value);
+    }
+}
+$stmt->execute();
+$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$items_per_page = 10;
-$total_items = count($repair_items);
-$total_pages = ceil($total_items / $items_per_page);
-$current_page = isset($_GET['page']) ? max(1, min($total_pages, intval($_GET['page']))) : 1;
-$start_index = ($current_page - 1) * $items_per_page;
-$paginated_items = array_slice($repair_items, $start_index, $items_per_page);
+// Helper function to safely output values
+function safeOutput($value, $default = '') {
+    if ($value === null) {
+        return $default;
+    }
+    return htmlspecialchars($value);
+}
 ?>
-
 <style>
-    /* Reuse the same styles from repair.php */
-    :root {
+     :root {
   --primary: #4e73df;
   --primary-dark: #2e59d9;
   --primary-light: #f8f9fc;
@@ -206,15 +323,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -553,15 +662,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
 
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
 
 .btn-outline-primary {
   color: var(--primary);
@@ -1034,31 +1135,149 @@ table th{
         width: 100%;
     }
 }
-</style>
+/* Show entries styling - Right aligned */
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    justify-content: flex-end; /* Changed from default to push to right */
+    margin-left: auto; /* Push to the right side */
+    width: fit-content; /* Only take needed width */
+}
 
+.entries-per-page label {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+    font-weight: 500;
+    color: #5a5c69;
+}
+
+.entries-per-page select {
+    width: auto;
+    min-width: 70px;
+    margin: 0 0.5rem;
+}
+
+/* For the specific show entries section in your code */
+.row.mb-3 .col-md-6 {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Align content to the right */
+}
+
+.row.mb-3 .col-md-6 > .d-flex {
+    background-color: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: 0.35rem;
+    border: 1px solid #e3e6f0;
+    margin-left: auto; /* Push to the right */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .entries-per-page {
+        flex-wrap: wrap;
+        justify-content: center; /* Center on mobile */
+        text-align: center;
+        margin-left: 0; /* Reset margin on mobile */
+        width: 100%; /* Full width on mobile */
+    }
+    
+    .entries-per-page label,
+    .entries-per-page select,
+    .entries-per-page span {
+        margin: 0.25rem;
+    }
+    
+    .row.mb-3 .col-md-6 {
+        justify-content: center; /* Center on mobile */
+    }
+    
+    .row.mb-3 .col-md-6 > .d-flex {
+        margin-left: 0; /* Reset margin on mobile */
+    }
+}
+</style>
 <div class="container-fluid">
-    <h2 class="mb-4"><?php echo t('todays_repair_records'); ?></h2>
-    
-    <!-- Display success/error messages -->
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
-    <?php endif; ?>
-    <?php if (isset($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
-    <?php endif; ?>
-    
+    <h2 class="mb-4"><?php echo t('store_inventory'); ?></h2>
+    <!-- Show entries per page selection -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
+    <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><?php echo t('todays_repairs'); ?> </h5>
-            <div>
-                <a href="dashboard.php" class="btn btn-light btn-sm">
-                    <i class="bi bi-arrow-left"></i> <?php echo t('back_to_items'); ?>
-                </a>
-            </div>
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped">
+            <form method="GET" class="row g-2">
+                <input type="hidden" name="page" value="1">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo safeOutput($search_query); ?>">
+                </div>
+                <div class="col-md-2">
+                    <select name="location" class="form-select">
+                        <option value=""><?php echo t('report_all_location'); ?></option>
+                        <?php foreach ($locations as $location): ?>
+                            <option value="<?php echo safeOutput($location['id']); ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                <?php echo safeOutput($location['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="category" class="form-select">
+                        <option value=""><?php echo t('all_categories'); ?></option>
+                        <?php foreach ($categories as $category): ?>
+                            <option value="<?php echo safeOutput($category['id']); ?>" <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                <?php echo safeOutput($category['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="sort_option" class="form-select">
+                        <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
+                        <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
+                        <option value="price_asc" <?php echo $sort_option == 'price_asc' ? 'selected' : ''; ?>><?php echo t('price_low_high'); ?></option>
+                        <option value="price_desc" <?php echo $sort_option == 'price_desc' ? 'selected' : ''; ?>><?php echo t('price_high_low'); ?></option>
+                        <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
+                        <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary"><?php echo t('search'); ?></button>
+                    <a href="store.php" class="btn btn-secondary"><?php echo t('reset'); ?></a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Store Inventory Table -->
+    <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><?php echo t('store_inventory'); ?></h5>
+            <span class="badge bg-light text-dark"><?php echo t('total_items'); ?>: <?php echo $total_items; ?></span>
+        </div>
+        <div class="card-body">
+            <?php if ($items): ?>
+                <div class="table-responsive">
+                <table class="table table-striped table-bordered">
                     <thead>
                         <tr>
                             <th><?php echo t('item_no'); ?></th>
@@ -1068,137 +1287,121 @@ table th{
                             <th><?php echo t('item_date'); ?></th>
                             <th><?php echo t('item_name'); ?></th>
                             <th><?php echo t('item_qty'); ?></th>
-                            <th><?php echo t('action'); ?></th>
+                            <th><?php echo t('price'); ?></th>
+                            <th><?php echo t('sub_total'); ?></th> <!-- NEW COLUMN -->
                             <th><?php echo t('unit'); ?></th>
-                            <th><?php echo t('from_location'); ?></th>
-                            <th><?php echo t('to_location'); ?></th>
+                            <th><?php echo t('location'); ?></th>
                             <th><?php echo t('item_remark'); ?></th>
                             <th><?php echo t('item_photo'); ?></th>
-                            <th><?php echo t('action_by'); ?></th>
-                            <th><?php echo t('action_at'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (empty($paginated_items)): ?>
+                        <?php foreach ($items as $index => $item): 
+                            // Calculate subtotal
+                            $quantity = (float)$item['quantity'];
+                            $price = (float)$item['price'];
+                            $subtotal = $quantity * $price;
+                        ?>
                             <tr>
-                                <td colspan="15" class="text-center"><?php echo t('no_repair_items_today'); ?></td>
+                                <td><?php echo $offset + $index + 1; ?></td>
+                                <td><?php echo safeOutput($item['item_code']); ?></td>
+                                <td><?php echo safeOutput($item['category_name']); ?></td>
+                                <td><?php echo safeOutput($item['invoice_no']); ?></td>
+                                <td><?php echo $item['date'] ? date('d/m/Y', strtotime($item['date'])) : ''; ?></td>
+                                <td><?php echo safeOutput($item['name']); ?></td>
+                                <td><?php echo safeOutput($item['quantity']); ?></td>
+                                <td><?php echo '$' . ($item['price'] ? number_format($item['price'], 2) : '0.00'); ?></td>
+                                <td><?php echo '$' . number_format($subtotal, 2); ?></td> <!-- NEW COLUMN DATA -->
+                                <td><?php echo safeOutput($item['size']); ?></td>
+                                <td><?php echo safeOutput($item['location_name']); ?></td>
+                                <td><?php echo safeOutput($item['remark']); ?></td>
+                                <td>
+                                    <?php if ($item['image_id']): ?>
+                                        <img src="display_image.php?id=<?php echo safeOutput($item['image_id']); ?>" 
+                                             class="img-thumbnail" width="50"
+                                             data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
+                                             data-item-id="<?php echo safeOutput($item['id']); ?>">
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
-                        <?php else: ?>
-                            <?php foreach ($paginated_items as $index => $item): ?>
-                                <tr>
-                                <td><?php echo $start_index + $index + 1; ?></td>
-                                    <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
-                                    <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
-                                    <td><?php echo $item['invoice_no']; ?></td>
-                                    <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                    <td><?php echo $item['item_name']; ?></td>
-                                    <td><?php echo $item['quantity']; ?></td>
-                                    <td>
-                                        <span class="repair-badge badge-<?php echo str_replace('_', '-', $item['action_type']); ?>">
-                                            <?php 
-                                            if ($item['action_type'] == 'send_for_repair') {
-                                                echo t('send_for_repair');
-                                            } elseif ($item['action_type'] == 'return_from_repair') {
-                                                echo t('return_from_repair');
-                                            } else {
-                                                echo t('repair_complete');
-                                            }
-                                            ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo $item['size']; ?></td>
-                                    <td><?php echo $item['from_location_name']; ?></td>
-                                    <td><?php echo $item['to_location_name']; ?></td>
-                                    <td><?php echo $item['remark']; ?></td>
-                                    <td>
-                                        <?php if ($item['image_id']): ?>
-                                            <img src="display_image.php?id=<?php echo $item['image_id']; ?>" 
-                                                 class="img-thumbnail" width="50"
-                                                 data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
-                                                 data-item-id="<?php echo $item['id']; ?>">
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?php echo $item['action_by_name']; ?></td>
-                                    <td><?php echo date('d/m/Y H:i', strtotime($item['action_at'])); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
-                <nav aria-label="Page navigation" class="mt-3">
-                <ul class="pagination justify-content-center">
-                    <?php if ($current_page > 1): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
-                                <span aria-hidden="true">&laquo;&laquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
-                    <?php else: ?>
-                        <li class="page-item disabled">
-                            <span class="page-link">&laquo;&laquo;</span>
-                        </li>
-                        <li class="page-item disabled">
-                            <span class="page-link">&laquo;</span>
-                        </li>
-                    <?php endif; ?>
+                </div>
+                
+               <!-- Pagination -->
+<?php if ($total_pages > 1): ?>
+<nav aria-label="Page navigation" class="mt-3">
+    <ul class="pagination justify-content-center">
+        <!-- First page link -->
+        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+            </a>
+        </li>
+        
+        <!-- Previous page link -->
+        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
 
-                    <?php 
-                    // Show page numbers
-                    $start_page = max(1, $current_page - 2);
-                    $end_page = min($total_pages, $current_page + 2);
-                    
-                    if ($start_page > 1) {
-                        echo '<li class="page-item"><span class="page-link">...</span></li>';
-                    }
-                    
-                    for ($i = $start_page; $i <= $end_page; $i++): ?>
-                        <li class="page-item <?php echo $i == $current_page ? 'active' : ''; ?>">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                        </li>
-                    <?php endfor;
-                    
-                    if ($end_page < $total_pages) {
-                        echo '<li class="page-item"><span class="page-link">...</span></li>';
-                    }
-                    ?>
+        <!-- Page number links -->
+        <?php 
+        // Show page numbers with ellipsis for many pages
+        $start_page = max(1, $page - 2);
+        $end_page = min($total_pages, $page + 2);
+        
+        if ($start_page > 1) {
+            echo '<li class="page-item"><span class="page-link">...</span></li>';
+        }
+        
+        for ($i = $start_page; $i <= $end_page; $i++): ?>
+            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>">
+                    <?php echo $i; ?>
+                </a>
+            </li>
+        <?php endfor;
+        
+        if ($end_page < $total_pages) {
+            echo '<li class="page-item"><span class="page-link">...</span></li>';
+        }
+        ?>
 
-                    <?php if ($current_page < $total_pages): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
-                                <span aria-hidden="true">&raquo;&raquo;</span>
-                            </a>
-                        </li>
-                    <?php else: ?>
-                        <li class="page-item disabled">
-                            <span class="page-link">&raquo;</span>
-                        </li>
-                        <li class="page-item disabled">
-                            <span class="page-link">&raquo;&raquo;</span>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </nav>
-            <div class="text-center text-muted">
-                <?php echo t('page');?> <?php echo $current_page; ?> <?php echo t('page_of');?> <?php echo $total_pages; ?> 
-            </div>
-            </div>
+        <!-- Next page link -->
+        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        
+        <!-- Last page link -->
+        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<!-- Page number display -->
+<div class="text-center text-muted">
+    <?php echo t('page'); ?> <?php echo $page; ?> <?php echo t('page_of'); ?> <?php echo $total_pages; ?> 
+</div>
+<?php endif; ?>
+                
+            <?php else: ?>
+                <div class="alert alert-info"><?php echo t('no_items_found'); ?></div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- Image Gallery Modal -->
+<!-- Image Gallery Modal (same as in items.php) -->
 <div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -1223,8 +1426,16 @@ table th{
     </div>
 </div>
 
+<?php require_once '../includes/footer.php'; ?>
+
 <script>
-// Image gallery functionality
+    document.getElementById('per_page_select').addEventListener('change', function() {
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', this.value);
+    url.searchParams.set('page', '1'); // Reset to first page
+    window.location.href = url.toString();
+});
+// Image gallery functionality (same as in items.php)
 document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
     img.addEventListener('click', function() {
         const itemId = this.getAttribute('data-item-id');
@@ -1263,7 +1474,3 @@ document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img =
     });
 });
 </script>
-
-<?php
-require_once '../includes/footer.php';
-?>

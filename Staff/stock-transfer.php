@@ -78,18 +78,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
             } else {
                 // Insert new item in destination
                 $stmt = $pdo->prepare("INSERT INTO items 
-                    (item_code, category_id,date, name, quantity, size, location_id, remark, alert_quantity) 
-                    VALUES (?,?, ?, ?, ?, ?, ?, ?, 10)");
-                $stmt->execute([
-                    $item['item_code'],
-                    $item['category_id'],
-                    $date,
-                    $item_name,
-                    $quantity,
-                    $item['size'],
-                    $to_location_id,
-                    $remark
-                ]);
+                (item_code, category_id,date,invoice_no, name, quantity, size, location_id, remark, alert_quantity) 
+                VALUES (?,?, ?, ?, ?,?, ?, ?, ?, 10)");
+            $stmt->execute([
+                $item['item_code'],
+                $item['category_id'],
+                $date,  // This is the third parameter
+                $invoice_no,
+                $item_name,
+                $quantity,
+                $item['size'],
+                $to_location_id,
+                $remark
+            ]);
             }
             
             // Record in transfer history - FIXED DATE FORMAT
@@ -1034,24 +1035,7 @@ body {
                                 <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
                                     <?php echo t('date_newest_first'); ?>
                                 </option>
-                                <option value="quantity_asc" <?php echo $sort_option == 'quantity_asc' ? 'selected' : ''; ?>>
-                                    <?php echo t('quantity_low_to_high'); ?>
-                                </option>
-                                <option value="quantity_desc" <?php echo $sort_option == 'quantity_desc' ? 'selected' : ''; ?>>
-                                    <?php echo t('quantity_high_to_low'); ?>
-                                </option>
-                                <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
-                                    <?php echo t('location_a_to_z'); ?>
-                                </option>
-                                <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
-                                    <?php echo t('location_z_to_a'); ?>
-                                </option>
-                                <option value="action_by_asc" <?php echo $sort_option == 'action_by_asc' ? 'selected' : ''; ?>>
-                                    <?php echo t('action_by_a_to_z'); ?>
-                                </option>
-                                <option value="action_by_desc" <?php echo $sort_option == 'action_by_desc' ? 'selected' : ''; ?>>
-                                    <?php echo t('action_by_z_to_a'); ?>
-                                </option>
+
                             </select>
                         </div>
                     </div>

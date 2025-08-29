@@ -16,7 +16,7 @@ if (isset($_SESSION['show_welcome']) && $_SESSION['show_welcome']) {
 }
 checkAuth();
 
-
+// Count of new items today
 $stmt = $pdo->prepare("SELECT COUNT(*) as new_items FROM addnewitems WHERE DATE(created_at) = CURDATE()");
 $stmt->execute();
 $new_items = $stmt->fetch(PDO::FETCH_ASSOC)['new_items'];
@@ -26,18 +26,18 @@ $stmt = $pdo->prepare("SELECT COUNT(*) as qty_increases FROM addqtyitems WHERE D
 $stmt->execute();
 $qty_increases = $stmt->fetch(PDO::FETCH_ASSOC)['qty_increases'];
 
-
-
-// Total is the sum of both
-$total_items = $new_items + $qty_increases;
+// Count stock in items today (both new items and quantity increases)
+$stmt = $pdo->prepare("SELECT COUNT(*) as total_items 
+                      FROM stock_in_history 
+                      WHERE DATE(action_at) = CURDATE() 
+                      AND action_type IN ('new', 'add')");
+$stmt->execute();
+$total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total_items'];
 
 // Count of quantity deductions today
 $stmt = $pdo->prepare("SELECT COUNT(*) as qty_deductions FROM deductqtyitems WHERE DATE(deducted_at) = CURDATE()");
 $stmt->execute();
 $qty_deductions = $stmt->fetch(PDO::FETCH_ASSOC)['qty_deductions'];
-
-
-
 
 // Count of new deductions today (if you have a separate table for new deductions)
 $stmt = $pdo->prepare("SELECT COUNT(*) as new_deductions FROM stock_out_history WHERE DATE(action_at) = CURDATE() AND action_type = 'deduct'");
@@ -48,7 +48,6 @@ $new_deductions = $stmt->fetch(PDO::FETCH_ASSOC)['new_deductions'];
 $stmt = $pdo->prepare("SELECT COUNT(*) as new_transfer FROM transfer_history WHERE DATE(action_at) = CURDATE()");
 $stmt->execute();
 $new_transfer = $stmt->fetch(PDO::FETCH_ASSOC)['new_transfer'];
-
 
 // Count of new repair today (if you have a separate table for new deductions)
 $stmt = $pdo->prepare("SELECT COUNT(*) as new_repair FROM repair_items WHERE DATE(action_at) = CURDATE() AND action_type = 'send_for_repair'");
@@ -66,16 +65,10 @@ $new_repair_history = $stmt->fetch(PDO::FETCH_ASSOC)['new_repair_history'];
 $total_new_repair = $new_repair;
 $total_new_repair_history = $new_repair_history;
 
-$total_new_transfer=$new_transfer;
-
-
-
-
+$total_new_transfer = $new_transfer;
 
 // Total deductions is the sum of both
-$total_items_out = $qty_deductions;
-
-
+$total_items_out = $new_deductions;
 
 // Get recent access logs
 $stmt = $pdo->prepare("SELECT al.activity_type, al.activity_detail, al.created_at, u.username 
@@ -93,6 +86,7 @@ $stmt = $pdo->prepare("SELECT i.name, i.quantity, i.size, l.name as location
                       ORDER BY i.quantity ASC LIMIT 5");
 $stmt->execute();
 $low_stock_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 $items_per_page = 10;
 $page = isset($_GET['items_page']) ? max(1, intval($_GET['items_page'])) : 1;
 $offset = ($page - 1) * $items_per_page;
@@ -100,6 +94,7 @@ $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM items WHERE DATE(created_at
 $stmt->execute();
 $total_items_count = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 $total_items_pages = ceil($total_items_count / $items_per_page);
+
 // Get today's items for modal
 $stmt = $pdo->prepare("SELECT 
                         i.id,
@@ -138,9 +133,8 @@ foreach ($today_items as $item) {
   elseif ($item['status'] == 'Out of Stock') $status_color = 'danger';
   elseif ($item['status'] == 'In Repair') $status_color = 'info';
 }
+
 // Get today's transfers for modal
-// Get today's transfers for modal (corrected version)
-// Simplified version without user info
 $transfers_page = isset($_GET['transfers_page']) ? max(1, intval($_GET['transfers_page'])) : 1;
 $transfers_offset = ($transfers_page - 1) * $items_per_page;
 $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM stock_transfers WHERE DATE(created_at) = CURDATE()");
@@ -181,7 +175,6 @@ $stmt->bindValue(':limit', $items_per_page, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $repairs_offset, PDO::PARAM_INT);
 $stmt->execute();
 $today_repairs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
 
 ?>
 <style>
@@ -1084,7 +1077,7 @@ body {
         .quick-actions-container {
             display: flex;
             flex-wrap: wrap;
-            justify-content: left;
+            justify-content: center;
             gap: 1rem;
         }
 
@@ -1111,7 +1104,7 @@ body {
         @media (min-width: 768px) {
             .quick-actions-container {
                 flex-wrap: nowrap;
-                
+                justify-content: space-around;
             }
         }
 
@@ -1202,7 +1195,7 @@ body {
         
         .table-responsive {
             display: block;
-        }
+        } 
     }
 </style>
 
@@ -1271,7 +1264,6 @@ body {
         </div>
     </a>
 </div>
-
 <div class="col-md-12">
     <div class="card mb-4">
         <div class="card-header bg-secondary text-white">
@@ -1295,42 +1287,6 @@ body {
                     </a>
                 </div>
                 
-                <?php if (isAdmin()): ?>
-                <!-- Users Button -->
-                <div class="col-md-4 mb-3">
-                    <a href="user-control.php" class="btn btn-outline-orange btn-lg w-100 py-3">
-                        <i class="bi bi-people fs-1 d-block mb-2"></i>
-                        <?php echo t('users_button');?>
-                    </a>
-                </div>
-                
-                <!-- Locations Button -->
-                <div class="col-md-4 mb-3">
-                    <a href="location-control.php" class="btn btn-outline-purple btn-lg w-100 py-3">
-                        <i class="bi bi-pin-map fs-1 d-block mb-2"></i>
-                        <?php echo t('locations_button');?>
-                    </a>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (isAdmin()): ?>
-                <!-- Logs Button -->
-                <div class="col-md-4 mb-3">
-                    <a href="access-log.php" class="btn btn-outline-dark btn-lg w-100 py-3">
-                        <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
-                        <?php echo t('logs_button');?>
-                    </a>
-                </div>
-                
-                <!-- Reports Button -->
-                <div class="col-md-4 mb-3">
-                    <a href="report.php" class="btn btn-outline-secondary btn-lg w-100 py-3">
-                        <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
-                        <?php echo t('reports_button');?>
-                    </a>
-                </div>
-                <?php endif; ?>
-                
                 <!-- Low Stock Button -->
                 <div class="col-md-4 mb-3">
                     <a href="low-stock-alert.php" class="btn btn-outline-danger btn-lg w-100 py-3">
@@ -1342,9 +1298,64 @@ body {
         </div>
     </div>
 </div>
-
+<div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><?php echo t('recent_activities_title');?></h5>
+            </div>
+            <div class="card-body">
+                <!-- Desktop Table -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th><?php echo t('user_column');?></th>
+                                <th><?php echo t('activity_type_column');?></th>
+                                <th><?php echo t('activity_column');?></th>
+                                <th><?php echo t('time_column');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recent_logs as $log): ?>
+                                <tr>
+                                    <td data-label="<?php echo t('user_column');?>"><?php echo $log['username'] ?? 'System'; ?></td>
+                                    <td data-label="<?php echo t('activity_type_column');?>"><?php echo $log['activity_type']; ?></td>
+                                    <td data-label="<?php echo t('activity_column');?>"><?php echo $log['activity_detail']; ?></td>
+                                    <td data-label="<?php echo t('time_column');?>"><?php echo date('H:i', strtotime($log['created_at'])); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Mobile Cards -->
+                <div class="table-cards">
+                    <?php foreach ($recent_logs as $log): ?>
+                        <div class="table-card activity-card">
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('user_column');?>:</span>
+                                <span class="card-value"><?php echo $log['username'] ?? 'System'; ?></span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('activity_type_column');?>:</span>
+                                <span class="card-value"><?php echo $log['activity_type']; ?></span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('activity_column');?>:</span>
+                                <span class="card-value"><?php echo $log['activity_detail']; ?></span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label"><?php echo t('time_column');?>:</span>
+                                <span class="card-value"><?php echo date('H:i', strtotime($log['created_at'])); ?></span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <div class="col-md-12">
+    <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header bg-danger text-white">
                 <h5 class="mb-0"><?php echo t('low_stock_title');?></h5>

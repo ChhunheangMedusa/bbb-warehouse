@@ -1,6 +1,6 @@
 <?php
 ob_start();
-require_once 'includes/header-staff.php';
+require_once '../includes/header-staff.php';
 require_once  'translate.php'; 
 checkAuth();
 
@@ -771,5 +771,5 @@ function previewImage(input) {
 </script>
 
 <?php
-require_once 'includes/footer.php';
+require_once '../includes/footer.php';
 ?>

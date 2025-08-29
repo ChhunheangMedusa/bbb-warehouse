@@ -13,7 +13,6 @@ if (!isStaff()) {
   header('Location: dashboard.php');
   exit();
 }
-
 checkAuth();
 
 // Get today's date in YYYY-MM-DD format
@@ -58,6 +57,13 @@ $stmt = $pdo->prepare($query);
 $stmt->bindParam(':today', $today);
 $stmt->execute();
 $transfer_history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$items_per_page = 10;
+$total_items = count($transfer_history);
+$total_pages = ceil($total_items / $items_per_page);
+$current_page = isset($_GET['page']) ? max(1, min($total_pages, intval($_GET['page']))) : 1;
+$start_index = ($current_page - 1) * $items_per_page;
+$paginated_items = array_slice($transfer_history, $start_index, $items_per_page);
 ?>
 
 <!DOCTYPE html>
@@ -1201,14 +1207,14 @@ table th{
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($transfer_history)): ?>
+                            <?php if (empty($paginated_items)): ?>
                                 <tr>
                                     <td colspan="14" class="text-center"><?php echo t('no_transfers_today'); ?></td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($transfer_history as $index => $item): ?>
+                                <?php foreach ($paginated_items as $index => $item): ?>
                                     <tr>
-                                        <td><?php echo $index + 1; ?></td>
+                                    <td><?php echo $start_index + $index + 1; ?></td>
                                         <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
                                         <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                         <td><?php echo $item['invoice_no']; ?></td>
@@ -1236,6 +1242,72 @@ table th{
                             <?php endif; ?>
                         </tbody>
                     </table>
+                    <nav aria-label="Page navigation" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    <?php if ($current_page > 1): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;&laquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;</span>
+                        </li>
+                    <?php endif; ?>
+
+                    <?php 
+                    // Show page numbers
+                    $start_page = max(1, $current_page - 2);
+                    $end_page = min($total_pages, $current_page + 2);
+                    
+                    if ($start_page > 1) {
+                        echo '<li class="page-item"><span class="page-link">...</span></li>';
+                    }
+                    
+                    for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <li class="page-item <?php echo $i == $current_page ? 'active' : ''; ?>">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor;
+                    
+                    if ($end_page < $total_pages) {
+                        echo '<li class="page-item"><span class="page-link">...</span></li>';
+                    }
+                    ?>
+
+                    <?php if ($current_page < $total_pages): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;&raquo;</span>
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            </nav>
+            <div class="text-center text-muted">
+                <?php echo t('page');?> <?php echo $current_page; ?> <?php echo t('page_of');?> <?php echo $total_pages; ?> 
+            </div>
                 </div>
             </div>
         </div>

@@ -78,18 +78,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
             } else {
                 // Insert new item in destination
                 $stmt = $pdo->prepare("INSERT INTO items 
-                    (item_code, category_id,date, name, quantity, size, location_id, remark, alert_quantity) 
-                    VALUES (?,?, ?, ?, ?, ?, ?, ?, 10)");
-                $stmt->execute([
-                    $item['item_code'],
-                    $item['category_id'],
-                    $date,
-                    $item_name,
-                    $quantity,
-                    $item['size'],
-                    $to_location_id,
-                    $remark
-                ]);
+                (item_code, category_id,date,invoice_no, name, quantity, size, location_id, remark, alert_quantity) 
+                VALUES (?,?, ?, ?, ?,?, ?, ?, ?, 10)");
+            $stmt->execute([
+                $item['item_code'],
+                $item['category_id'],
+                $date,  // This is the third parameter
+                $invoice_no,
+                $item_name,
+                $quantity,
+                $item['size'],
+                $to_location_id,
+                $remark
+            ]);
             }
             
             // Record in transfer history - FIXED DATE FORMAT

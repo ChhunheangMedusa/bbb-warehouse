@@ -233,9 +233,6 @@ $hasAvatar = ($userPicture !== null);
                         <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard'); ?>
                     </a>
                 </li>
-               
-              
-               
                 
                 <li class="nav-item">
                     <a class="nav-link collapsed" data-bs-toggle="collapse" href="#itemManagementCollapse" role="button" aria-expanded="false">
@@ -244,9 +241,14 @@ $hasAvatar = ($userPicture !== null);
                     </a>
                     <div class="collapse" id="itemManagementCollapse">
                         <ul class="nav flex-column ps-4">
+                        <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/store.php' ? 'active' : ''; ?>" href="../Staff/store.php">
+                                    <i class="bi bi-currency-dollar me-2"></i><?php echo t('store_inventory'); ?>
+                                </a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/items.php' ? 'active' : ''; ?>" href="../Staff/items.php">
-                                    <i class="bi bi-box-arrow-in-down me-2"></i><?php echo t('item'); ?>
+                                    <i class="bi bi-box-seam me-2"></i><?php echo t('item'); ?>
                                 </a>
                             </li>
                        
@@ -261,6 +263,11 @@ $hasAvatar = ($userPicture !== null);
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/broken-items.php' ? 'active' : ''; ?>" href="../Staff/broken-items.php">
+                                    <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('broken_items'); ?>
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/remaining.php' ? 'active' : ''; ?>" href="../Staff/remaining.php">
                                     <i class="bi bi-arrow-left-right me-2"></i><?php echo t('remaining'); ?>
                                 </a>
@@ -269,9 +276,9 @@ $hasAvatar = ($userPicture !== null);
                     </div>
                 </li>
               
-                
+
             
-                
+
               
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Staff/low-stock-alert.php' ? 'active' : ''; ?>" href="../Staff/low-stock-alert.php">
@@ -344,8 +351,5 @@ $hasAvatar = ($userPicture !== null);
 ob_end_flush();
 ?>
 <script>
-document.getElementById('sidebarToggle').addEventListener('click', function() {
-    document.querySelector('.sidebar').classList.toggle('collapsed');
-    document.querySelector('.main-content').classList.toggle('expanded');
-});
+
 </script>

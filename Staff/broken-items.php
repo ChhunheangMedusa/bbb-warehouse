@@ -5,14 +5,14 @@ ob_start();
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth.php';
-require_once '../includes/header.php';
+require_once '../includes/header-staff.php';
 require_once 'translate.php';
 
-if (!isAdmin()) {
+if (!isStaff()) {
     $_SESSION['error'] = "You don't have permission to access this page";
-    header('Location: dashboard-staff.php');
+    header('Location: dashboard.php');
     exit();
-}
+  }
 checkAuth();
 
 // Get active tab from URL
