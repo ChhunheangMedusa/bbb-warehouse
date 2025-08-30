@@ -23,7 +23,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 10;
 $offset = ($page - 1) * $per_page;
 
-// Sort mapping
+// Sort mapping - Added date_asc and date_desc options
 $sort_mapping = [
     'name_asc' => ['field' => 'si.name', 'direction' => 'ASC'],
     'name_desc' => ['field' => 'si.name', 'direction' => 'DESC'],
@@ -34,12 +34,14 @@ $sort_mapping = [
     'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
     'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
-    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC']
+    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'si.date', 'direction' => 'ASC'],      // Added: Date Old-New
+    'date_desc' => ['field' => 'si.date', 'direction' => 'DESC']     // Added: Date New-Old
 ];
 
 // Default to name_asc if invalid option
 if (!array_key_exists($sort_option, $sort_mapping)) {
-    $sort_option = 'name_asc';
+    $sort_option = 'date_asc';
 }
 
 $sort_by = $sort_mapping[$sort_option]['field'];
@@ -1258,6 +1260,8 @@ table th{
                         <option value="price_desc" <?php echo $sort_option == 'price_desc' ? 'selected' : ''; ?>><?php echo t('price_high_low'); ?></option>
                         <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
                         <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
+                        <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
+                        <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
                     </select>
                 </div>
                 <div class="col-md-3">

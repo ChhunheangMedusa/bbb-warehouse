@@ -121,7 +121,10 @@ if (isset($_GET['download']) && $_GET['download'] === 'true' && isset($_SESSION[
 // Function to generate report data - UPDATED TO GET DATA FROM HISTORY TABLES
 function generateReportData($pdo, $report_type, $location_id, $start_date, $end_date) {
     if ($report_type === 'stock_in') {
-        // Get all items with their beginning quantities
+        // Calculate the previous period end date (day before start date)
+        $prev_end_date = date('Y-m-d', strtotime($start_date . ' -1 day'));
+        
+        // Get all items with their beginning quantities (ending quantity from previous period)
         $query = "SELECT 
             i.id as item_id,
             i.item_code,
@@ -133,22 +136,32 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             l.name as location_name,
             i.remark,
             COALESCE((
-                SELECT SUM(CASE 
-                    WHEN sih.action_type = 'new' THEN sih.action_quantity 
-                    WHEN sih.action_type = 'add' THEN sih.action_quantity 
-                    ELSE 0 
-                END)
-                FROM stock_in_history sih 
-                WHERE sih.item_id = i.id
-                AND sih.location_id = i.location_id
-                AND sih.date < :start_date
+                -- Calculate ending quantity for previous period
+                SELECT 
+                    COALESCE(SUM(CASE 
+                        WHEN sih.action_type IN ('new', 'add') THEN sih.action_quantity 
+                        ELSE 0 
+                    END), 0) -
+                    COALESCE(SUM(CASE 
+                        WHEN soh.action_type = 'deduct' THEN soh.action_quantity 
+                        ELSE 0 
+                    END), 0) -
+                    COALESCE(SUM(CASE 
+                        WHEN bih.action_type = 'broken' THEN bih.action_quantity 
+                        ELSE 0 
+                    END), 0)
+                FROM items it
+                LEFT JOIN stock_in_history sih ON it.id = sih.item_id AND sih.location_id = it.location_id AND sih.date <= :prev_end_date
+                LEFT JOIN stock_out_history soh ON it.id = soh.item_id AND soh.location_id = it.location_id AND soh.date <= :prev_end_date
+                LEFT JOIN broken_items_history bih ON it.id = bih.item_id AND bih.location_id = it.location_id AND bih.date <= :prev_end_date
+                WHERE it.id = i.id AND it.location_id = i.location_id
             ), 0) as beginning_quantity
         FROM items i
         LEFT JOIN categories c ON i.category_id = c.id
         JOIN locations l ON i.location_id = l.id
         WHERE 1=1";
         
-        $params = [':start_date' => $start_date];
+        $params = [':prev_end_date' => $prev_end_date];
         
         if ($location_id) {
             $query .= " AND i.location_id = :location_id";
@@ -161,13 +174,51 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
         $stmt->execute($params);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // For each item, calculate add, used, and broken quantities
+        // For each item, calculate add, used, and broken quantities for current period
         $report_data = [];
         foreach ($items as $item) {
             $item_id = $item['item_id'];
             $item_location_id = $item['location_id'];
-            
-            // Calculate add quantity (from stock_in_history)
+            // Get the most recent action date for this item in the period
+            $date_query = "SELECT MAX(date) as action_date
+                FROM (
+                    SELECT date FROM stock_in_history 
+                    WHERE item_id = :item_id 
+                    AND location_id = :location_id
+                    AND date BETWEEN :start_date AND :end_date
+                    AND action_type IN ('new', 'add')
+                    UNION ALL
+                    SELECT date FROM stock_out_history 
+                    WHERE item_id = :item_id2 
+                    AND location_id = :location_id2
+                    AND date BETWEEN :start_date2 AND :end_date2
+                    AND action_type = 'deduct'
+                    UNION ALL
+                    SELECT date FROM broken_items_history 
+                    WHERE item_id = :item_id3 
+                    AND location_id = :location_id3
+                    AND date BETWEEN :start_date3 AND :end_date3
+                    AND action_type = 'broken'
+                ) as all_actions";
+                
+            $date_stmt = $pdo->prepare($date_query);
+            $date_stmt->execute([
+                ':item_id' => $item_id,
+                ':location_id' => $item_location_id,
+                ':start_date' => $start_date,
+                ':end_date' => $end_date,
+                ':item_id2' => $item_id,
+                ':location_id2' => $item_location_id,
+                ':start_date2' => $start_date,
+                ':end_date2' => $end_date,
+                ':item_id3' => $item_id,
+                ':location_id3' => $item_location_id,
+                ':start_date3' => $start_date,
+                ':end_date3' => $end_date
+            ]);
+            $date_result = $date_stmt->fetch(PDO::FETCH_ASSOC);
+            $action_date = $date_result['action_date'] ?: $end_date;
+            // Calculate add quantity (from stock_in_history for current period)
             $add_query = "SELECT COALESCE(SUM(action_quantity), 0) as total_add
                 FROM stock_in_history 
                 WHERE item_id = :item_id 
@@ -185,7 +236,7 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             $add_result = $add_stmt->fetch(PDO::FETCH_ASSOC);
             $add_quantity = $add_result['total_add'];
             
-            // Calculate used quantity (from stock_out_history)
+            // Calculate used quantity (from stock_out_history for current period)
             $used_query = "SELECT COALESCE(SUM(action_quantity), 0) as total_used
                 FROM stock_out_history 
                 WHERE item_id = :item_id 
@@ -203,7 +254,7 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             $used_result = $used_stmt->fetch(PDO::FETCH_ASSOC);
             $used_quantity = $used_result['total_used'];
             
-            // Calculate broken quantity (from broken_items_history)
+            // Calculate broken quantity (from broken_items_history for current period)
             $broken_query = "SELECT COALESCE(SUM(action_quantity), 0) as total_broken
                 FROM broken_items_history 
                 WHERE item_id = :item_id 
@@ -240,7 +291,7 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
                     'used_quantity' => $used_quantity,
                     'broken_quantity' => $broken_quantity,
                     'ending_quantity' => $ending_quantity,
-                    'date' => $end_date // Use end date for reporting
+                    'date' => $action_date // Use the actual action date instead of end_date
                 ];
             }
         }
@@ -250,7 +301,6 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
     
     return [];
 }
-
 // Function to generate Excel report
 function generateExcelReport($report_type, $report_data, $start_date, $end_date, $location_id) {
     $filename = "";
