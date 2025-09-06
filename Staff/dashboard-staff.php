@@ -1264,31 +1264,58 @@ body {
         </div>
     </a>
 </div>
+
 <div class="col-md-12">
     <div class="card mb-4">
         <div class="card-header bg-secondary text-white">
             <h5 class="mb-0"><?php echo t('quick_actions_title');?></h5>
         </div>
         <div class="card-body">
-            <div class="row">
-                <!-- Items Button -->
-                <div class="col-md-4 mb-3">
-                    <a href="item-control.php" class="btn btn-outline-primary btn-lg w-100 py-3">
+            <div class="quick-actions-container">
+                <div class="quick-action-card">
+                    <a href="items.php" class="btn btn-outline-primary btn-lg w-100 py-3">
                         <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
                         <?php echo t('items_button');?>
                     </a>
                 </div>
-                
-                <!-- Transfers Button -->
-                <div class="col-md-4 mb-3">
+               
+                <div class="quick-action-card">
                     <a href="stock-transfer.php" class="btn btn-outline-success btn-lg w-100 py-3">
                         <i class="bi bi-arrow-left-right fs-1 d-block mb-2"></i>
                         <?php echo t('transfers_button');?>
                     </a>
                 </div>
+                <?php if (isAdmin()): ?>
+                <div class="quick-action-card">
+                    <a href="user-control.php" class="btn btn-outline-orange btn-lg w-100 py-3">
+                        <i class="bi bi-people fs-1 d-block mb-2"></i>
+                        <?php echo t('users_button');?>
+                    </a>
+                </div>
+              
+                <div class="quick-action-card">
+                    <a href="location-control.php" class="btn btn-outline-purple btn-lg w-100 py-3">
+                        <i class="bi bi-pin-map fs-1 d-block mb-2"></i>
+                        <?php echo t('locations_button');?>
+                    </a>
+                </div>
+                <?php endif; ?>
+                <?php if (isAdmin()): ?>
+                <div class="quick-action-card">
+                    <a href="access-log.php" class="btn btn-outline-dark btn-lg w-100 py-3">
+                        <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
+                        <?php echo t('logs_button');?>
+                    </a>
+                </div>
                 
-                <!-- Low Stock Button -->
-                <div class="col-md-4 mb-3">
+                <div class="quick-action-card">
+                    <a href="report.php" class="btn btn-outline-secondary btn-lg w-100 py-3">
+                        <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
+                        <?php echo t('reports_button');?>
+                    </a>
+                </div>
+                <?php endif; ?>
+                <div class="quick-action-card">
                     <a href="low-stock-alert.php" class="btn btn-outline-danger btn-lg w-100 py-3">
                         <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
                         <?php echo t('low_stock_button');?>

@@ -16,8 +16,7 @@ $name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
 $category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
 $location_filter = isset($_GET['location']) ? sanitizeInput($_GET['location']) : '';
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
-$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'name_asc';
-
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
 // Pagination parameters
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 10;
@@ -41,7 +40,7 @@ $sort_mapping = [
 
 // Default to name_asc if invalid option
 if (!array_key_exists($sort_option, $sort_mapping)) {
-    $sort_option = 'date_asc';
+  $sort_option = 'date_desc';
 }
 
 $sort_by = $sort_mapping[$sort_option]['field'];
@@ -1254,14 +1253,14 @@ table th{
                 </div>
                 <div class="col-md-2">
                     <select name="sort_option" class="form-select">
+                        <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
+                        <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
                         <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
                         <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
                         <option value="price_asc" <?php echo $sort_option == 'price_asc' ? 'selected' : ''; ?>><?php echo t('price_low_high'); ?></option>
                         <option value="price_desc" <?php echo $sort_option == 'price_desc' ? 'selected' : ''; ?>><?php echo t('price_high_low'); ?></option>
                         <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
                         <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
-                        <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
-                        <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -1314,7 +1313,7 @@ table th{
                                 <td><?php echo $item['date'] ? date('d/m/Y', strtotime($item['date'])) : ''; ?></td>
                                 <td><?php echo safeOutput($item['name']); ?></td>
                                 <td><?php echo safeOutput($item['quantity']); ?></td>
-                                <td><?php echo '$' . ($item['price'] ? number_format($item['price'], 2) : '0.00'); ?></td>
+                                <td><?php echo '$' . ($item['price'] ? number_format($item['price'], 3) : '0.0000'); ?></td>
                                 <td><?php echo '$' . number_format($subtotal, 2); ?></td> <!-- NEW COLUMN DATA -->
                                 <td><?php echo safeOutput($item['size']); ?></td>
                                 <td><?php echo safeOutput($item['location_name']); ?></td>

@@ -225,9 +225,16 @@ $repair_locations = $pdo->query("SELECT * FROM locations WHERE type = 'repair' O
 // Get all non-repair locations
 $non_repair_locations = $pdo->query("SELECT * FROM locations WHERE type != 'repair' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
+
+$current_limit_options = [10, 25, 50, 100];
+$current_per_page = isset($_GET['current_per_page']) ? (int)$_GET['current_per_page'] : 10;
+if (!in_array($current_per_page, $current_limit_options)) {
+    $current_per_page = 10;
+}
+
 // Get pagination parameters for current repairs
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = 10;
+$limit = $current_per_page;
 $offset = ($page - 1) * $limit;
 
 // Get filters for current repairs
@@ -391,10 +398,15 @@ foreach ($repair_locations as $location) {
     $stmt->execute([$location['id']]);
     $items_in_repair[$location['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+$history_limit_options = [10, 25, 50, 100];
+$history_per_page = isset($_GET['history_per_page']) ? (int)$_GET['history_per_page'] : 10;
+if (!in_array($history_per_page, $history_limit_options)) {
+    $history_per_page = 10;
+}
 
 // Get pagination parameters for history
 $history_page = isset($_GET['history_page']) ? (int)$_GET['history_page'] : 1;
-$history_limit = 10;
+$history_limit = $history_per_page;
 $history_offset = ($history_page - 1) * $history_limit;
 
 // Get filters for history
@@ -1512,6 +1524,30 @@ table th{
         width: 100%;
     }
 }
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    justify-content: flex-end; /* Changed from default to push to right */
+    margin-left: auto; /* Push to the right side */
+    width: fit-content; /* Only take needed width */
+}
+
+.entries-per-page label {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+    font-weight: 500;
+    color: #5a5c69;
+}
+
+.entries-per-page select {
+    width: auto;
+    min-width: 70px;
+    margin: 0 0.5rem;
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('repair_management'); ?></h2>
@@ -1540,13 +1576,30 @@ table th{
     
     <!-- Tab Content -->
     <div class="tab-content" id="repairTabsContent">
+        
         <!-- Current Repairs Tab -->
         <div class="tab-pane fade <?php echo $active_tab === 'current' ? 'show active' : ''; ?>" id="current-repairs" role="tabpanel" aria-labelledby="current-tab">
-            <!-- Filter Card -->
+        <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="current_per_page_select">
+                <?php foreach ($current_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $current_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
+        <!-- Filter Card -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
                 </div>
+                
                 <div class="card-body">
                     <form method="GET" class="filter-form">
                         <input type="hidden" name="tab" value="current">
@@ -1566,6 +1619,7 @@ table th{
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                            
                             <div class="col-md-2">
                                 <label class="form-label"><?php echo t('category'); ?></label>
                                 <select name="category" class="form-select">
@@ -1871,7 +1925,22 @@ table th{
         
         <!-- Repair History Tab -->
         <div class="tab-pane fade <?php echo $active_tab === 'history' ? 'show active' : ''; ?>" id="repair-history" role="tabpanel" aria-labelledby="history-tab">
-            <!-- Filter Card for History -->
+        <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="history_per_page_select">
+                <?php foreach ($history_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $history_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
+        <!-- Filter Card for History -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
@@ -2469,6 +2538,30 @@ table th{
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle entries per page change for current repairs
+    const currentPerPageSelect = document.getElementById('current_per_page_select');
+    if (currentPerPageSelect) {
+        currentPerPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('current_per_page', this.value);
+            url.searchParams.set('page', '1'); // Reset to first page
+            url.searchParams.set('tab', 'current'); // Keep on current tab
+            window.location.href = url.toString();
+        });
+    }
+    // Handle entries per page change for repair history
+    const historyPerPageSelect = document.getElementById('history_per_page_select');
+    if (historyPerPageSelect) {
+        historyPerPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('history_per_page', this.value);
+            url.searchParams.set('history_page', '1'); // Reset to first page
+            url.searchParams.set('tab', 'history'); // Keep on history tab
+            window.location.href = url.toString();
+        });
+    }
+});
 // Store items by location data
 const itemsByLocation = <?php echo json_encode($items_by_location); ?>;
 const itemsInRepair = <?php echo json_encode($items_in_repair); ?>;

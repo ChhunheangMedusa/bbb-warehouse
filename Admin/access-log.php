@@ -40,9 +40,13 @@ if (!array_key_exists($sort_option, $sort_mapping)) {
 
 $sort_by = $sort_mapping[$sort_option]['field'];
 $sort_order = $sort_mapping[$sort_option]['direction'];
-
+$limit_options = [10, 25, 50, 100];
+$per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
+if (!in_array($per_page, $limit_options)) {
+    $per_page = 10;
+}
 // Pagination settings
-$records_per_page = 10;
+$records_per_page = $per_page;
 $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($current_page < 1) $current_page = 1;
 $offset = ($current_page - 1) * $records_per_page;
@@ -710,9 +714,48 @@ body {
         min-width: 100%;
     }
 }
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    justify-content: flex-end; /* Changed from default to push to right */
+    margin-left: auto; /* Push to the right side */
+    width: fit-content; /* Only take needed width */
+}
+
+.entries-per-page label {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+    font-weight: 500;
+    color: #5a5c69;
+}
+
+.entries-per-page select {
+    width: auto;
+    min-width: 70px;
+    margin: 0 0.5rem;
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('logs_button');?></h2>
+    <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
 <!-- Filter Card -->
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
@@ -828,6 +871,7 @@ body {
                 <table class="table table-striped">
                     <thead>
                         <tr>
+                        <th><?php echo t('item_no');?></th>
                             <th><?php echo t('users_button');?></th>
                             <th><?php echo t('activity_type_column');?></th>
                             <th><?php echo t('activity_column');?></th>
@@ -842,6 +886,7 @@ body {
                         <?php else: ?>
                             <?php foreach ($logs as $index => $log): ?>
                                 <tr>
+                                        <td data-label="ល.រ"><?php echo $index + 1 + $offset; ?></td>
                                     <td data-label="អ្នកប្រើប្រាស់"><?php echo $log['username'] ?? 'System'; ?></td>
                                     <td data-label="ប្រភេទសកម្មភាព"><?php echo $log['activity_type']; ?></td>
                                     <td data-label="សកម្មភាព"><?php echo $log['activity_detail']; ?></td>
@@ -926,6 +971,20 @@ body {
     </div>
 </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Handle entries per page change
+    const perPageSelect = document.getElementById('per_page_select');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('per_page', this.value);
+            url.searchParams.set('page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        });
+    }
+});
+</script>
 <?php
 require_once '../includes/footer.php';
 ?>

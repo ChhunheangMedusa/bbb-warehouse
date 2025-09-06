@@ -118,11 +118,12 @@ if (isset($_GET['download']) && $_GET['download'] === 'true' && isset($_SESSION[
     }
 }
 
-// Function to generate report data - UPDATED TO GET DATA FROM HISTORY TABLES
+// Function to generate report data - FIXED DATE COLUMN TO USE ACTUAL DATES
 function generateReportData($pdo, $report_type, $location_id, $start_date, $end_date) {
     if ($report_type === 'stock_in') {
-        // Calculate the previous period end date (day before start date)
-        $prev_end_date = date('Y-m-d', strtotime($start_date . ' -1 day'));
+        // Calculate previous period correctly
+        $prev_start_date = date('Y-m-01', strtotime($start_date . ' -1 month'));
+        $prev_end_date = date('Y-m-t', strtotime($start_date . ' -1 month'));
         
         // Get all items with their beginning quantities (ending quantity from previous period)
         $query = "SELECT 
@@ -136,32 +137,40 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             l.name as location_name,
             i.remark,
             COALESCE((
-                -- Calculate ending quantity for previous period
-                SELECT 
-                    COALESCE(SUM(CASE 
-                        WHEN sih.action_type IN ('new', 'add') THEN sih.action_quantity 
-                        ELSE 0 
-                    END), 0) -
-                    COALESCE(SUM(CASE 
-                        WHEN soh.action_type = 'deduct' THEN soh.action_quantity 
-                        ELSE 0 
-                    END), 0) -
-                    COALESCE(SUM(CASE 
-                        WHEN bih.action_type = 'broken' THEN bih.action_quantity 
-                        ELSE 0 
-                    END), 0)
-                FROM items it
-                LEFT JOIN stock_in_history sih ON it.id = sih.item_id AND sih.location_id = it.location_id AND sih.date <= :prev_end_date
-                LEFT JOIN stock_out_history soh ON it.id = soh.item_id AND soh.location_id = it.location_id AND soh.date <= :prev_end_date
-                LEFT JOIN broken_items_history bih ON it.id = bih.item_id AND bih.location_id = it.location_id AND bih.date <= :prev_end_date
-                WHERE it.id = i.id AND it.location_id = i.location_id
+                -- Calculate ending quantity for previous period using a simpler approach
+                SELECT (COALESCE(SUM(CASE WHEN action_type IN ('new', 'add') THEN action_quantity ELSE 0 END), 0)
+                       - COALESCE(SUM(CASE WHEN action_type = 'deduct' THEN action_quantity ELSE 0 END), 0)
+                       - COALESCE(SUM(CASE WHEN action_type = 'broken' THEN action_quantity ELSE 0 END), 0))
+                FROM (
+                    SELECT 'in' as source, action_type, action_quantity, date 
+                    FROM stock_in_history 
+                    WHERE item_id = i.id AND location_id = i.location_id
+                    AND date BETWEEN :prev_start_date AND :prev_end_date
+                    UNION ALL
+                    SELECT 'out' as source, action_type, action_quantity, date 
+                    FROM stock_out_history 
+                    WHERE item_id = i.id AND location_id = i.location_id
+                    AND date BETWEEN :prev_start_date2 AND :prev_end_date2
+                    UNION ALL
+                    SELECT 'broken' as source, action_type, action_quantity, date 
+                    FROM broken_items_history 
+                    WHERE item_id = i.id AND location_id = i.location_id
+                    AND date BETWEEN :prev_start_date3 AND :prev_end_date3
+                ) combined_history
             ), 0) as beginning_quantity
         FROM items i
         LEFT JOIN categories c ON i.category_id = c.id
         JOIN locations l ON i.location_id = l.id
         WHERE 1=1";
         
-        $params = [':prev_end_date' => $prev_end_date];
+        $params = [
+            ':prev_start_date' => $prev_start_date,
+            ':prev_end_date' => $prev_end_date,
+            ':prev_start_date2' => $prev_start_date,
+            ':prev_end_date2' => $prev_end_date,
+            ':prev_start_date3' => $prev_start_date,
+            ':prev_end_date3' => $prev_end_date
+        ];
         
         if ($location_id) {
             $query .= " AND i.location_id = :location_id";
@@ -179,28 +188,34 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
         foreach ($items as $item) {
             $item_id = $item['item_id'];
             $item_location_id = $item['location_id'];
+            
+            // Ensure beginning quantity is never negative
+            $beginning_quantity = max(0, $item['beginning_quantity']);
+            
             // Get the most recent action date for this item in the period
-            $date_query = "SELECT MAX(date) as action_date
-                FROM (
-                    SELECT date FROM stock_in_history 
-                    WHERE item_id = :item_id 
-                    AND location_id = :location_id
-                    AND date BETWEEN :start_date AND :end_date
-                    AND action_type IN ('new', 'add')
-                    UNION ALL
-                    SELECT date FROM stock_out_history 
-                    WHERE item_id = :item_id2 
-                    AND location_id = :location_id2
-                    AND date BETWEEN :start_date2 AND :end_date2
-                    AND action_type = 'deduct'
-                    UNION ALL
-                    SELECT date FROM broken_items_history 
-                    WHERE item_id = :item_id3 
-                    AND location_id = :location_id3
-                    AND date BETWEEN :start_date3 AND :end_date3
-                    AND action_type = 'broken'
-                ) as all_actions";
-                
+            $date_query = "SELECT date, action_type 
+            FROM (
+                SELECT date, action_type FROM stock_in_history 
+                WHERE item_id = :item_id 
+                AND location_id = :location_id
+                AND date BETWEEN :start_date AND :end_date
+                AND action_type IN ('new', 'add')
+                UNION ALL
+                SELECT date, action_type FROM stock_out_history 
+                WHERE item_id = :item_id2 
+                AND location_id = :location_id2
+                AND date BETWEEN :start_date2 AND :end_date2
+                AND action_type = 'deduct'
+                UNION ALL
+                SELECT date, action_type FROM broken_items_history 
+                WHERE item_id = :item_id3 
+                AND location_id = :location_id3
+                AND date BETWEEN :start_date3 AND :end_date3
+                AND action_type = 'broken'
+            ) as all_actions
+            ORDER BY date DESC
+            LIMIT 1";
+            
             $date_stmt = $pdo->prepare($date_query);
             $date_stmt->execute([
                 ':item_id' => $item_id,
@@ -217,7 +232,15 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
                 ':end_date3' => $end_date
             ]);
             $date_result = $date_stmt->fetch(PDO::FETCH_ASSOC);
-            $action_date = $date_result['action_date'] ?: $end_date;
+            
+            // If no action found in period, skip this item
+            if (!$date_result) {
+                continue;
+            }
+            
+            $action_date = $date_result['date'];
+            $action_type = $date_result['action_type'];
+            
             // Calculate add quantity (from stock_in_history for current period)
             $add_query = "SELECT COALESCE(SUM(action_quantity), 0) as total_add
                 FROM stock_in_history 
@@ -272,11 +295,11 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             $broken_result = $broken_stmt->fetch(PDO::FETCH_ASSOC);
             $broken_quantity = $broken_result['total_broken'];
             
-            // Calculate ending quantity
-            $ending_quantity = $item['beginning_quantity'] + $add_quantity - $used_quantity - $broken_quantity;
+            // Calculate ending quantity (ensure it's never negative)
+            $ending_quantity = max(0, $beginning_quantity + $add_quantity - $used_quantity - $broken_quantity);
             
             // Only include items with activity in the period
-            if ($add_quantity > 0 || $used_quantity > 0 || $broken_quantity > 0 || $item['beginning_quantity'] > 0) {
+            if ($add_quantity > 0 || $used_quantity > 0 || $broken_quantity > 0 || $beginning_quantity > 0) {
                 $report_data[] = [
                     'item_id' => $item_id,
                     'item_code' => $item['item_code'],
@@ -286,12 +309,12 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
                     'location_id' => $item_location_id,
                     'location_name' => $item['location_name'],
                     'remark' => $item['remark'],
-                    'beginning_quantity' => $item['beginning_quantity'],
+                    'beginning_quantity' => $beginning_quantity,
                     'add_quantity' => $add_quantity,
                     'used_quantity' => $used_quantity,
                     'broken_quantity' => $broken_quantity,
                     'ending_quantity' => $ending_quantity,
-                    'date' => $action_date // Use the actual action date instead of end_date
+                    'date' => $action_date // Use the actual action date from the query
                 ];
             }
         }
@@ -301,6 +324,7 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
     
     return [];
 }
+
 // Function to generate Excel report
 function generateExcelReport($report_type, $report_data, $start_date, $end_date, $location_id) {
     $filename = "";
@@ -437,11 +461,11 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                     <th rowspan="2">Remarks</th>
                 </tr>
                 <tr>
-                    <th>(Beginning Period)</th>
+                    <th>(Beginning <br> Period)</th>
                     <th>(Add)</th>
                     <th>(Used)</th>
                     <th>(Broken)</th>
-                    <th>(Ending Period)</th>
+                    <th>(Ending <br> Period)</th>
                 </tr>
             </thead>
             <tbody>';
@@ -470,7 +494,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         
         echo '<tr>
                 <td class="text-center">'.($index + 1).'</td>
-                <td class="text-center">'.date('d/m/Y', strtotime($item['date'])).'</td>
+                <td class="text-center">'.$item['date'].'</td>
                 <td class="text-center">'.$item['item_code'].'</td>
                 <td class="text-center">'.$item['category_name'].'</td>
                 <td class="text-center">N/A</td>
@@ -497,29 +521,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
             <td colspan="2"></td>
         </tr>';
     
-    // Add signature rows with the requested column placement
-    echo '<tr>
-            <td class="signature-cell" colspan="1">
-                <div> Prepared by:</div>
-                <div class="signature-line"></div>
-                <div style="margin-top: 5px;">Name: _____________________</div>
-                <div style="margin-top: 5px;">Date: _____________________</div>
-            </td>
-            <td colspan="6"></td>
-            <td class="signature-cell" colspan="1">
-                <div>Checked By:</div>
-                <div class="signature-line"></div>
-                <div style="margin-top: 5px;">Name: _____________________</div>
-                <div style="margin-top: 5px;">Date: _____________________</div>
-            </td>
-            <td colspan="4"></td>
-            <td class="signature-cell" colspan="2">
-                <div>Approved By:</div>
-                <div class="signature-line"></div>
-                <div style="margin-top: 5px;">Name: _____________________</div>
-                <div style="margin-top: 5px;">Date: _____________________</div>
-            </td>
-        </tr>';
+   
     
     echo '</tbody>
         </table>

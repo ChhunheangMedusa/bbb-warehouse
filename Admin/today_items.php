@@ -204,7 +204,6 @@ $paginated_items = array_slice($stock_in_history, $start_index, $items_per_page)
                                 <th><?php echo t('item_date'); ?></th>
                                 <th><?php echo t('item_name'); ?></th>
                                 <th><?php echo t('item_qty'); ?></th>
-                                <th><?php echo t('action'); ?></th>
                                 <th><?php echo t('unit'); ?></th>
                                 <th><?php echo t('location'); ?></th>
                                 <th><?php echo t('item_remark'); ?></th>
@@ -226,13 +225,21 @@ $paginated_items = array_slice($stock_in_history, $start_index, $items_per_page)
                                         <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                         <td><?php echo $item['invoice_no']; ?></td>
                                         <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                        <td><?php echo $item['name']; ?></td>
+                                        <td><?php echo $item['name']; ?>
+                                        <span class="badge bg-<?php echo $item['action_type'] === 'new' ? 'primary' : 'success'; ?>">
+    <?php 
+    if ($item['action_type'] === 'new') {
+        echo t('status_new');
+    } elseif ($item['action_type'] === 'add') {
+        echo t('status_add');
+    } else {
+        echo ucfirst($item['action_type']);
+    }
+    ?>
+</span>
+                                    </td>
                                         <td class="text-success">+<?php echo $item['action_quantity']; ?></td>
-                                        <td>
-                                            <span class="badge bg-<?php echo $item['action_type'] === 'new' ? 'primary' : 'success'; ?>">
-                                                <?php echo ucfirst($item['action_type']); ?>
-                                            </span>
-                                        </td>
+
                                         <td><?php echo $item['size']; ?></td>
                                         <td><?php echo $item['location_name']; ?></td>
                                         <td><?php echo $item['remark']; ?></td>

@@ -399,6 +399,9 @@ JOIN
     users u ON si.action_by = u.id
 WHERE 1=1";
 
+// Add this condition to exclude 'broken' records:
+$in_query .= " AND si.action_type != 'broken'";
+
 $in_params = [];
 
 // Add filters for stock in
@@ -440,7 +443,8 @@ $in_count_query = "SELECT COUNT(*) as total FROM stock_in_history si
                 LEFT JOIN categories c ON si.category_id = c.id
                 JOIN locations l ON si.location_id = l.id
                 WHERE 1=1";
-
+// Add this condition to the count query too
+$in_count_query .= " AND si.action_type != 'broken'";
 $in_count_params = [];
 
 if ($in_year_filter !== null) {
@@ -1819,7 +1823,6 @@ table th{
                                     <th><?php echo t('item_date'); ?></th>
                                     <th><?php echo t('item_name'); ?></th>
                                     <th><?php echo t('history_qty'); ?></th>
-                                    <th><?php echo t('action'); ?></th>
                                     <th><?php echo t('item_size'); ?></th>
                                     <th><?php echo t('item_location'); ?></th>
                                     <th><?php echo t('item_remark'); ?></th>
@@ -1841,13 +1844,20 @@ table th{
                                             <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                             <td><?php echo $item['invoice_no']; ?></td>
                                             <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                            <td><?php echo $item['name']; ?></td>
-                                            <td class="text-success">+<?php echo $item['action_quantity']; ?></td>
-                                            <td>
-                                                <span class="badge bg-<?php echo $item['action_type'] === 'new' ? 'primary' : 'success'; ?>">
-                                                    <?php echo ucfirst($item['action_type']); ?>
-                                                </span>
+                                            <td><?php echo $item['name']; ?>
+                                            <span class="badge bg-<?php echo $item['action_type'] === 'new' ? 'primary' : 'success'; ?>">
+    <?php 
+    if ($item['action_type'] === 'new') {
+        echo t('status_new');
+    } elseif ($item['action_type'] === 'add') {
+        echo t('status_add');
+    } else {
+        echo ucfirst($item['action_type']);
+    }
+    ?>
+</span>
                                             </td>
+                                            <td class="text-success">+<?php echo $item['action_quantity']; ?></td>
                                             <td><?php echo $item['size']; ?></td>
                                             <td><?php echo $item['location_name']; ?></td>
                                             <td><?php echo $item['remark']; ?></td>
@@ -2080,7 +2090,7 @@ table th{
                                     <th><?php echo t('item_date'); ?></th>
                                     <th><?php echo t('item_name'); ?></th>
                                     <th><?php echo t('history_qty'); ?></th>
-                                    <th><?php echo t('action'); ?></th>
+                                 
                                     <th><?php echo t('item_size'); ?></th>
                                     <th><?php echo t('item_location'); ?></th>
                                     <th><?php echo t('item_remark'); ?></th>
@@ -2102,13 +2112,18 @@ table th{
                                             <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                             <td><?php echo $item['invoice_no']; ?></td>
                                             <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                            <td><?php echo $item['name']; ?></td>
+                                            <td><?php echo $item['name']; ?>
+                                            <span class="badge bg-danger">
+    <?php 
+    if ($item['action_type'] === 'deduct') {
+        echo t('status_deduct');
+    } else {
+        echo ucfirst($item['action_type']);
+    }
+    ?>
+</span>
+                                        </td>
                                             <td class="text-danger">-<?php echo $item['action_quantity']; ?></td>
-                                            <td>
-                                                <span class="badge bg-danger">
-                                                    <?php echo ucfirst($item['action_type']); ?>
-                                                </span>
-                                            </td>
                                             <td><?php echo $item['size']; ?></td>
                                             <td><?php echo $item['location_name']; ?></td>
                                             <td><?php echo $item['remark']; ?></td>
@@ -2288,7 +2303,7 @@ table th{
                                 </div>
                                 <div class="col-md-4">
         <label class="form-label"><?php echo t('price'); ?></label>
-        <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+        <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
     </div>
                             </div>
                             <div class="row">
@@ -2392,7 +2407,7 @@ table th{
                                 </div>
                                 <div class="col-md-4 mb-3">
         <label class="form-label"><?php echo t('price'); ?></label>
-        <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+        <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
     </div>
                             </div>
                             <div class="row">
@@ -2858,7 +2873,7 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
             </div>
              <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('price'); ?></label>
-                <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+                <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
             </div>
         </div>
         <div class="row">
@@ -3009,7 +3024,7 @@ document.getElementById('add-more-row').addEventListener('click', function() {
             </div>
             <div class="col-md-4">
                 <label class="form-label"><?php echo t('price'); ?></label>
-                <input type="number" class="form-control" name="price[]" step="0.01" min="0" value="0">
+                <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
             </div>
         </div>
         <div class="row">

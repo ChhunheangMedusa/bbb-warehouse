@@ -527,8 +527,18 @@ if (!array_key_exists($sort_option, $sort_mapping)) {
 $sort_by = $sort_mapping[$sort_option]['field'];
 $sort_order = $sort_mapping[$sort_option]['direction'];
 
-// Build query for items
-$query = "SELECT i.*, l.name as location_name, c.name as category_name 
+// Build query for items with action type detection
+// Replace the existing query with this one:
+// Replace the existing query with this one:
+// Replace the CASE statement in remaining.php with this:
+$query = "SELECT i.*, l.name as location_name, c.name as category_name,
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM broken_items bi WHERE bi.item_id = i.id) THEN 'broken'
+            WHEN EXISTS (SELECT 1 FROM addnewitems ani WHERE ani.item_id = i.id) 
+                 AND NOT EXISTS (SELECT 1 FROM addqtyitems aqi WHERE aqi.item_id = i.id) THEN 'new'
+            WHEN EXISTS (SELECT 1 FROM addqtyitems aqi WHERE aqi.item_id = i.id) THEN 'add'
+            ELSE 'unknown'
+          END as action_type
           FROM items i 
           JOIN locations l ON i.location_id = l.id 
           LEFT JOIN categories c ON i.category_id = c.id
@@ -563,10 +573,14 @@ if ($search_query) {
 
 // Add sorting
 $query .= " ORDER BY $sort_by $sort_order";
-
+$limit_options = [10, 25, 50, 100];
+$per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
+if (!in_array($per_page, $limit_options)) {
+    $per_page = 10;
+}
 // Get pagination parameters
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = 10;
+$limit = $per_page;
 $offset = ($page - 1) * $limit;
 
 // Get total count for pagination
@@ -1621,10 +1635,48 @@ table th{
         min-width: 100%;
     }
 }
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    justify-content: flex-end; /* Changed from default to push to right */
+    margin-left: auto; /* Push to the right side */
+    width: fit-content; /* Only take needed width */
+}
+
+.entries-per-page label {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+    font-weight: 500;
+    color: #5a5c69;
+}
+
+.entries-per-page select {
+    width: auto;
+    min-width: 70px;
+    margin: 0 0.5rem;
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('item_management');?></h2>
-    
+    <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
@@ -1789,6 +1841,7 @@ table th{
                             <th><?php echo t('item_size');?></th>
                             <th><?php echo t('item_location');?></th>
                             <th><?php echo t('item_remark');?></th>
+                           
                             <th><?php echo t('item_photo');?></th>
                             <th><?php echo t('column_action');?></th>
                         </tr>
@@ -1796,7 +1849,7 @@ table th{
                     <tbody>
                         <?php if (empty($items)): ?>
                             <tr>
-                                <td colspan="12" class="text-center"><?php echo t('no_itemss');?></td>
+                                <td colspan="13" class="text-center"><?php echo t('no_itemss');?></td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($items as $index => $item): ?>
@@ -1806,7 +1859,15 @@ table th{
                                     <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                     <td><?php echo $item['invoice_no']; ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                    <td><?php echo $item['name']; ?></td>
+                                    <td><?php echo $item['name']; ?>
+    <?php if ($item['action_type'] === 'new'): ?>
+        <span class="badge bg-primary"><?php echo t('status_new'); ?></span>
+    <?php elseif ($item['action_type'] === 'add'): ?>
+        <span class="badge bg-success"><?php echo t('status_add'); ?></span>
+    <?php elseif ($item['action_type'] === 'broken'): ?>
+        <span class="badge bg-danger"><?php echo t('status_broken'); ?></span>
+    <?php endif; ?>
+</td>
                                     <td class="<?php echo $item['quantity'] <= $item['alert_quantity'] ? 'text-danger fw-bold' : ''; ?>">
                                         <?php echo $item['quantity']; ?>
                                         <?php if ($item['quantity'] <= $item['alert_quantity']): ?>
@@ -1816,6 +1877,7 @@ table th{
                                     <td><?php echo $item['size']; ?></td>
                                     <td><?php echo $item['location_name']; ?></td>
                                     <td><?php echo $item['remark']; ?></td>
+                                   
                                     <td>
                                         <?php 
                                         $stmt = $pdo->prepare("SELECT id FROM item_images WHERE item_id = ? ORDER BY id DESC LIMIT 1");
@@ -2565,6 +2627,18 @@ table th{
 
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Handle entries per page change
+    const perPageSelect = document.getElementById('per_page_select');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('per_page', this.value);
+            url.searchParams.set('page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        });
+    }
+});
 const itemsByLocation = <?php echo json_encode($items_by_location); ?>;
 // Function to populate item dropdown
 // Function to populate item dropdown

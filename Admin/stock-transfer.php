@@ -66,32 +66,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
             $stmt->execute([$new_qty, $item_id]);
             
             // Check if item exists in destination location
+            $stmt = $pdo->prepare("SELECT id, quantity FROM items WHERE name = ? AND location_id = ?");// Update quantity in source location
+            $new_qty = $old_qty - $quantity;
+            $stmt = $pdo->prepare("UPDATE items SET quantity = ? WHERE id = ?");
+            $stmt->execute([$new_qty, $item_id]);
+            
+            // Check if item exists in destination location
             $stmt = $pdo->prepare("SELECT id, quantity FROM items WHERE name = ? AND location_id = ?");
             $stmt->execute([$item_name, $to_location_id]);
             $dest_item = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($dest_item) {
-                // Update quantity in destination
+                // Update quantity, invoice_no, remark, AND date in destination
                 $dest_new_qty = $dest_item['quantity'] + $quantity;
-                $stmt = $pdo->prepare("UPDATE items SET quantity = ? WHERE id = ?");
-                $stmt->execute([$dest_new_qty, $dest_item['id']]);
+                $stmt = $pdo->prepare("UPDATE items SET quantity = ?, invoice_no = ?, remark = ?, date = ? WHERE id = ?");
+                $stmt->execute([$dest_new_qty, $invoice_no, $remark, $date, $dest_item['id']]);
+                
+                $action_type = 'add'; // Item exists in destination
+             // Item exists in destination
             } else {
                 // Insert new item in destination
                 $stmt = $pdo->prepare("INSERT INTO items 
-                (item_code, category_id,date,invoice_no, name, quantity, size, location_id, remark, alert_quantity) 
-                VALUES (?,?, ?, ?, ?,?, ?, ?, ?, 10)");
-            $stmt->execute([
-                $item['item_code'],
-                $item['category_id'],
-                $date,  // This is the third parameter
-                $invoice_no,
-                $item_name,
-                $quantity,
-                $item['size'],
-                $to_location_id,
-                $remark
-            ]);
+                (item_code, category_id, date, invoice_no, name, quantity, size, location_id, remark, alert_quantity) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 10)");
+                $stmt->execute([
+                    $item['item_code'],
+                    $item['category_id'],
+                    $date,
+                    $invoice_no,
+                    $item_name,
+                    $quantity,
+                    $item['size'],
+                    $to_location_id,
+                    $remark
+                ]);
+                
+                $action_type = 'new'; // New item in destination
             }
+            
             
             // Record in transfer history - FIXED DATE FORMAT
             $stmt = $pdo->prepare("INSERT INTO transfer_history 
@@ -102,13 +114,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
                 $item['item_code'],
                 $item['category_id'],
                 $invoice_no,
-                $date, // This should now be in proper YYYY-MM-DD format
+                $date,
                 $item_name,
                 $quantity,
                 $item['size'],
                 $from_location_id,
                 $to_location_id,
                 $remark,
+                $_SESSION['user_id']
+            ]);
+            
+            // NEW: Record in stock_in_history table
+            $stmt = $pdo->prepare("INSERT INTO stock_in_history 
+                (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $item_id,
+                $item['item_code'],
+                $item['category_id'],
+                $invoice_no,
+                $date,
+                $item_name,
+                $quantity, // This should be the destination quantity, but we'll use the transferred quantity for action_quantity
+                10, // Default alert quantity
+                $item['size'],
+                $to_location_id, // This ensures it shows up in the to_location column in items.php
+                $remark,
+                $action_type, // 'add' or 'new' based on whether item existed in destination
+                $quantity, // The quantity that was transferred
                 $_SESSION['user_id']
             ]);
             
@@ -181,10 +214,14 @@ if ($locations) {
         $items_by_location[$location['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
-
+$limit_options = [10, 25, 50, 100];
+$per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
+if (!in_array($per_page, $limit_options)) {
+    $per_page = 10;
+}
 // Get transfer history with pagination and filtering
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = 10; // Fixed limit of 10 items per page
+$limit = $per_page;; // Fixed limit of 10 items per page
 $offset = ($page - 1) * $limit;
 
 // Build query with filters
@@ -943,6 +980,30 @@ body {
     scrollbar-width: thin;
     scrollbar-color: #c1c1c1 transparent;
 }
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    justify-content: flex-end; /* Changed from default to push to right */
+    margin-left: auto; /* Push to the right side */
+    width: fit-content; /* Only take needed width */
+}
+
+.entries-per-page label {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+    font-weight: 500;
+    color: #5a5c69;
+}
+
+.entries-per-page select {
+    width: auto;
+    min-width: 70px;
+    margin: 0 0.5rem;
+}
     </style>
 </head>
 <body>
@@ -952,7 +1013,21 @@ body {
 </button>
 <div class="container-fluid">
         <h2 class="mb-4"><?php echo t('transfer_items'); ?></h2>
-        
+        <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
         <!-- Filter Card -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
@@ -1414,7 +1489,18 @@ body {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
     <script>
-
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle entries per page change
+    const perPageSelect = document.getElementById('per_page_select');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('per_page', this.value);
+            url.searchParams.set('page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        });
+    }
+});
     // Store items by location data
     const itemsByLocation = <?php echo json_encode($items_by_location); ?>;
 

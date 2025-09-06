@@ -106,13 +106,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Insert into broken_items_history instead of stock_out_history
                 $stmt = $pdo->prepare("INSERT INTO broken_items_history 
-                    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
-                    SELECT 
-                        id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'broken', ?, ?
-                    FROM items 
-                    WHERE id = ?");
-                $stmt->execute([$invoice_no, $date, $broken_quantity, $_SESSION['user_id'], $item_id]);
-                
+                (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+                SELECT 
+                    id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'broken', ?, ?
+                FROM items 
+                WHERE id = ?");
+            $stmt->execute([$invoice_no, $date, $broken_quantity, $_SESSION['user_id'], $item_id]);
+                // NEW: Also insert into stock_in_history with action_type 'broken'
+$stmt = $pdo->prepare("INSERT INTO stock_in_history 
+(item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+SELECT 
+    id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'broken', ?, ?
+FROM items 
+WHERE id = ?");
+$stmt->execute([$invoice_no, $date, $broken_quantity, $_SESSION['user_id'], $item_id]);
                 // Get location name for log
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
                 $stmt->execute([$location_id]);
@@ -121,9 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Log activity
                 logActivity($_SESSION['user_id'], 'Broken Item', "Marked as broken: $item_name ($broken_quantity $size) at {$location['name']}");
             }
-            
+            $broke_itm=t('broke_itm');
             $pdo->commit();
-            $_SESSION['success'] = "Broken items added successfully";
+            $_SESSION['success'] = "$broke_itm";
             redirect('broken-items.php');
         } catch (PDOException $e) {
             $pdo->rollBack();
@@ -1326,7 +1333,7 @@ table th{
     </div>
     
     <div class="card mb-4">
-        <div class="card-header bg-warning text-dark">
+        <div class="card-header bg-danger text-white">
             <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
         </div>
         <div class="card-body">
@@ -1388,10 +1395,10 @@ table th{
                             </select>
                         </div>
                         <div class="action-buttons">
-                            <button type="submit" class="btn btn-warning">
+                            <button type="submit" class="btn btn-danger">
                                 <i class="bi bi-filter"></i> <?php echo t('search'); ?>
                             </button>
-                            <a href="broken-items.php" class="btn btn-outline-secondary">
+                            <a href="broken-items.php" class="btn btn-secondary">
                                 <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
                             </a>
                         </div>
@@ -1402,154 +1409,156 @@ table th{
     </div>
     
     <!-- Data Table Card -->
-    <div class="card mb-4">
-        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><?php echo t('broken_items_history'); ?></h5>
-            <div>
-                <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addBrokenItemModal">
-                    <i class="bi bi-plus-circle"></i> <?php echo t('broken_items_history'); ?>
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th><?php echo t('item_no'); ?></th>
-                            <th><?php echo t('item_code'); ?></th>
-                            <th><?php echo t('category'); ?></th>
-                            <th><?php echo t('item_invoice'); ?></th>
-                            <th><?php echo t('item_date'); ?></th>
-                            <th><?php echo t('item_name'); ?></th>
-                            <th><?php echo t('item_qty'); ?></th>
-                            <th><?php echo t('item_size'); ?></th>
-                            <th><?php echo t('item_location'); ?></th>
-                            <th><?php echo t('item_remark'); ?></th>
-                            <th><?php echo t('item_photo'); ?></th>
-                            <th><?php echo t('item_addby'); ?></th>
-                            <th><?php echo t('action_at'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($broken_items)): ?>
-                            <tr>
-                                <td colspan="14" class="text-center"><?php echo t('no_broken_items'); ?></td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($broken_items as $index => $item): ?>
-                                <tr>
-                                    <td><?php echo $index + 1 + $offset; ?></td>
-                                    <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
-                                    <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
-                                    <td><?php echo $item['invoice_no']; ?></td>
-                                    <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                    <td><?php echo $item['name']; ?></td>
-                                    <td class="text-danger"><?php echo $item['broken_quantity']; ?></td>
-                                    <td><?php echo $item['size']; ?></td>
-                                    <td><?php echo $item['location_name']; ?></td>
-                                    <td><?php echo $item['remark']; ?></td>
-                                    <td>
-                                        <?php if ($item['image_id']): ?>
-                                            <img src="display_image.php?id=<?php echo $item['image_id']; ?>" 
-                                                 class="img-thumbnail" width="50"
-                                                 data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
-                                                 data-item-id="<?php echo $item['item_id']; ?>">
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?php echo $item['action_by_name']; ?></td>
-                                    <td><?php echo date('d/m/Y H:i', strtotime($item['action_at'])); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Pagination -->
-            <?php if ($total_pages >= 1): ?>
-                <nav aria-label="Page navigation" class="mt-3">
-                    <ul class="pagination justify-content-center">
-                        <?php 
-                        $pagination_params = array_merge($_GET, [
-                            'tab' => 'broken',
-                            'search' => $search_query,
-                            'location' => $location_filter,
-                            'category' => $category_filter,
-                            'month' => $month_filter,
-                            'year' => $year_filter,
-                            'sort_option' => $sort_option
-                        ]);
-                        ?>
-                        
-                        <?php if ($page > 1): ?>
-                            <li class="page-item">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => 1])); ?>" aria-label="First">
-                                    <span aria-hidden="true">&laquo;&laquo;</span>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $page - 1])); ?>" aria-label="Previous">
-                                    <span aria-hidden="true">&laquo;</span>
-                                </a>
-                            </li>
-                        <?php else: ?>
-                            <li class="page-item disabled">
-                                <span class="page-link">&laquo;&laquo;</span>
-                            </li>
-                            <li class="page-item disabled">
-                                <span class="page-link">&laquo;</span>
-                            </li>
-                        <?php endif; ?>
-
-                        <?php 
-                        $start_page = max(1, $page - 2);
-                        $end_page = min($total_pages, $page + 2);
-                        
-                        if ($start_page > 1) {
-                            echo '<li class="page-item"><span class="page-link">...</span></li>';
-                        }
-                        
-                        for ($i = $start_page; $i <= $end_page; $i++): ?>
-                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                            </li>
-                        <?php endfor;
-                        
-                        if ($end_page < $total_pages) {
-                            echo '<li class="page-item"><span class="page-link">...</span></li>';
-                        }
-                        ?>
-
-                        <?php if ($page < $total_pages): ?>
-                            <li class="page-item">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $page + 1])); ?>" aria-label="Next">
-                                    <span aria-hidden="true">&raquo;</span>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $total_pages])); ?>" aria-label="Last">
-                                    <span aria-hidden="true">&raquo;&raquo;</span>
-                                </a>
-                            </li>
-                        <?php else: ?>
-                            <li class="page-item disabled">
-                                <span class="page-link">&raquo;</span>
-                            </li>
-                            <li class="page-item disabled">
-                                <span class="page-link">&raquo;&raquo;</span>
-                            </li>
-                        <?php endif; ?>
-                    </ul>
-                </nav>
-                <div class="text-center text-muted">
-                    <?php echo t('page'); ?> <?php echo $page; ?> <?php echo t('page_of'); ?> <?php echo $total_pages; ?> 
-                </div>
-            <?php endif; ?>
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><?php echo t('broken_items_history'); ?></h5>
+        <div>
+            <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addBrokenItemModal">
+                <i class="bi bi-plus-circle"></i> <?php echo t('broken_items_history'); ?>
+            </button>
         </div>
     </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th><?php echo t('item_no'); ?></th>
+                        <th><?php echo t('item_code'); ?></th>
+                        <th><?php echo t('category'); ?></th>
+                        <th><?php echo t('item_invoice'); ?></th>
+                        <th><?php echo t('item_date'); ?></th>
+                        <th><?php echo t('item_name'); ?></th>
+                        <th><?php echo t('item_qty'); ?></th>
+                        <th><?php echo t('item_size'); ?></th>
+                        <th><?php echo t('item_location'); ?></th>
+                        <th><?php echo t('item_remark'); ?></th>
+                        <th><?php echo t('item_photo'); ?></th>
+                        <th><?php echo t('item_addby'); ?></th>
+                        <th><?php echo t('action_at'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($broken_items)): ?>
+                        <tr>
+                            <td colspan="14" class="text-center"><?php echo t('no_broken_items'); ?></td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($broken_items as $index => $item): ?>
+                            <tr>
+                                <td><?php echo $index + 1 + $offset; ?></td>
+                                <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
+                                <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
+                                <td><?php echo $item['invoice_no']; ?></td>
+                                <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
+                                <td><?php echo $item['name']; ?>
+                                    <span class="badge bg-danger"><?php echo t('status_broken'); ?></span>
+                                </td>
+                                <td class="text-danger"><?php echo $item['broken_quantity']; ?></td>
+                                <td><?php echo $item['size']; ?></td>
+                                <td><?php echo $item['location_name']; ?></td>
+                                <td><?php echo $item['remark']; ?></td>
+                                <td>
+                                    <?php if ($item['image_id']): ?>
+                                        <img src="display_image.php?id=<?php echo $item['image_id']; ?>" 
+                                             class="img-thumbnail" width="50"
+                                             data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
+                                             data-item-id="<?php echo $item['item_id']; ?>">
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo $item['action_by_name']; ?></td>
+                                <td><?php echo date('d/m/Y H:i', strtotime($item['action_at'])); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <?php if ($total_pages >= 1): ?>
+            <nav aria-label="Page navigation" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    <?php 
+                    $pagination_params = array_merge($_GET, [
+                        'tab' => 'broken',
+                        'search' => $search_query,
+                        'location' => $location_filter,
+                        'category' => $category_filter,
+                        'month' => $month_filter,
+                        'year' => $year_filter,
+                        'sort_option' => $sort_option
+                    ]);
+                    ?>
+                    
+                    <?php if ($page > 1): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => 1])); ?>" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $page - 1])); ?>" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;&laquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;</span>
+                        </li>
+                    <?php endif; ?>
+
+                    <?php 
+                    $start_page = max(1, $page - 2);
+                    $end_page = min($total_pages, $page + 2);
+                    
+                    if ($start_page > 1) {
+                        echo '<li class="page-item"><span class="page-link">...</span></li>';
+                    }
+                    
+                    for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor;
+                    
+                    if ($end_page < $total_pages) {
+                        echo '<li class="page-item"><span class="page-link">...</span></li>';
+                    }
+                    ?>
+
+                    <?php if ($page < $total_pages): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $page + 1])); ?>" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $total_pages])); ?>" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;&raquo;</span>
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            </nav>
+            <div class="text-center text-muted">
+                <?php echo t('page'); ?> <?php echo $page; ?> <?php echo t('page_of'); ?> <?php echo $total_pages; ?> 
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
 </div>
 
 <!-- Add Broken Item Modal -->
@@ -1557,7 +1566,7 @@ table th{
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="POST">
-                <div class="modal-header bg-warning text-dark">
+                <div class="modal-header bg-danger text-dark">
                     <h5 class="modal-title" id="addBrokenItemModalLabel"><?php echo t('broken_items_history'); ?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -1638,7 +1647,7 @@ table th{
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
-                    <button type="submit" name="add_broken_item" class="btn btn-warning"><?php echo t('send'); ?></button>
+                    <button type="submit" name="add_broken_item" class="btn btn-danger"><?php echo t('send'); ?></button>
                 </div>
             </form>
         </div>

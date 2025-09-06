@@ -134,9 +134,13 @@ if (!empty($search_term)) {
     $search_condition = "WHERE name LIKE :search";
     $search_params[':search'] = "%$search_term%";
 }
-
+$limit_options = [10, 25, 50, 100];
+$per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
+if (!in_array($per_page, $limit_options)) {
+    $per_page = 10;
+}
 // Pagination settings
-$records_per_page = 10;
+$records_per_page = $per_page;
 $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($current_page < 1) $current_page = 1;
 $offset = ($current_page - 1) * $records_per_page;
@@ -748,10 +752,48 @@ body {
         min-width: 100%;
     }
 }
+.entries-per-page {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    justify-content: flex-end; /* Changed from default to push to right */
+    margin-left: auto; /* Push to the right side */
+    width: fit-content; /* Only take needed width */
+}
+
+.entries-per-page label {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+    font-weight: 500;
+    color: #5a5c69;
+}
+
+.entries-per-page select {
+    width: auto;
+    min-width: 70px;
+    margin: 0 0.5rem;
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('category_management'); ?></h2>
-    
+    <div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex align-items-center entries-per-page">
+            <span class="me-2"><?php echo t('show_entries'); ?></span>
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <span class="ms-2"><?php echo t('entries'); ?></span>
+        </div>
+    </div>
+</div>
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header bg-info text-white">
@@ -1043,6 +1085,18 @@ body {
 </div>
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Handle entries per page change
+    const perPageSelect = document.getElementById('per_page_select');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('per_page', this.value);
+            url.searchParams.set('page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        });
+    }
+});
 document.addEventListener('DOMContentLoaded', function() {
     // Handle edit category button click
     document.querySelectorAll('.edit-category').forEach(button => {
