@@ -136,30 +136,45 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             i.location_id,
             l.name as location_name,
             i.remark,
+            i.deporty_id,
+            d.name as deporty_name,
             COALESCE((
                 -- Calculate ending quantity for previous period using a simpler approach
                 SELECT (COALESCE(SUM(CASE WHEN action_type IN ('new', 'add') THEN action_quantity ELSE 0 END), 0)
                        - COALESCE(SUM(CASE WHEN action_type = 'deduct' THEN action_quantity ELSE 0 END), 0)
                        - COALESCE(SUM(CASE WHEN action_type = 'broken' THEN action_quantity ELSE 0 END), 0))
                 FROM (
-                    SELECT 'in' as source, action_type, action_quantity, date 
+                    SELECT 'in' as source, action_type, action_quantity, date, invoice_no 
                     FROM stock_in_history 
                     WHERE item_id = i.id AND location_id = i.location_id
                     AND date BETWEEN :prev_start_date AND :prev_end_date
                     UNION ALL
-                    SELECT 'out' as source, action_type, action_quantity, date 
+                    SELECT 'out' as source, action_type, action_quantity, date, NULL as invoice_no 
                     FROM stock_out_history 
                     WHERE item_id = i.id AND location_id = i.location_id
                     AND date BETWEEN :prev_start_date2 AND :prev_end_date2
                     UNION ALL
-                    SELECT 'broken' as source, action_type, action_quantity, date 
+                    SELECT 'broken' as source, action_type, action_quantity, date, NULL as invoice_no 
                     FROM broken_items_history 
                     WHERE item_id = i.id AND location_id = i.location_id
                     AND date BETWEEN :prev_start_date3 AND :prev_end_date3
                 ) combined_history
-            ), 0) as beginning_quantity
+            ), 0) as beginning_quantity,
+            -- Get the most recent invoice number for current period
+            COALESCE((
+                SELECT sih.invoice_no 
+                FROM stock_in_history sih 
+                WHERE sih.item_id = i.id 
+                AND sih.location_id = i.location_id
+                AND sih.date BETWEEN :start_date_search AND :end_date_search
+                AND sih.invoice_no IS NOT NULL
+                AND sih.invoice_no != ''
+                ORDER BY sih.date DESC, sih.id DESC 
+                LIMIT 1
+            ), 'N/A') as invoice_no
         FROM items i
         LEFT JOIN categories c ON i.category_id = c.id
+        LEFT JOIN deporty d ON i.deporty_id = d.id
         JOIN locations l ON i.location_id = l.id
         WHERE 1=1";
         
@@ -169,7 +184,9 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             ':prev_start_date2' => $prev_start_date,
             ':prev_end_date2' => $prev_end_date,
             ':prev_start_date3' => $prev_start_date,
-            ':prev_end_date3' => $prev_end_date
+            ':prev_end_date3' => $prev_end_date,
+            ':start_date_search' => $start_date,
+            ':end_date_search' => $end_date
         ];
         
         if ($location_id) {
@@ -309,12 +326,14 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
                     'location_id' => $item_location_id,
                     'location_name' => $item['location_name'],
                     'remark' => $item['remark'],
+                    'invoice_no' => $item['invoice_no'], // Add invoice number
                     'beginning_quantity' => $beginning_quantity,
                     'add_quantity' => $add_quantity,
                     'used_quantity' => $used_quantity,
                     'broken_quantity' => $broken_quantity,
                     'ending_quantity' => $ending_quantity,
-                    'date' => $action_date // Use the actual action date from the query
+                    'date' => $action_date,
+                    'deporty_name' => $item['deporty_name'] // Add deporty name
                 ];
             }
         }
@@ -324,7 +343,6 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
     
     return [];
 }
-
 // Function to generate Excel report
 function generateExcelReport($report_type, $report_data, $start_date, $end_date, $location_id) {
     $filename = "";
@@ -350,7 +368,7 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
     generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color);
 }
 
-// Function to generate Excel content - UPDATED VERSION
+// Function to generate Excel content - UPDATED VERSION with alternating row colors
 function generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color) {
     // Get location name
     $location_name = $location_id ? $report_data[0]['location_name'] : t('report_all_location');
@@ -380,6 +398,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     $name = t('name');
     $date_label = t('date');
     $total_label = t('total');
+    $deporty = t('deporty'); // Add deporty translation
     
     echo '<!DOCTYPE html>
     <html>
@@ -417,7 +436,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                 padding: 4px;
                 border: 1px solid #000;
                 vertical-align: middle;
-                font-size: 11px;
+                font-size: 16px;
             }
             .text-center { text-align: center; }
             .text-left { text-align: left; }
@@ -435,6 +454,15 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                 border-top: 1px solid #000;
                 width: 80%;
                 display: inline-block;
+            }
+            /* Add styles for alternating row colors */
+            .row-odd {
+                background-color:#469C83;
+                color: #ffffff;
+            }
+            .row-even {
+                background-color: #ffffff;
+                color: #000000;
             }
         </style>
     </head>
@@ -457,6 +485,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                     <th rowspan="2">Description</th>
                     <th rowspan="2">Unit</th>
                     <th colspan="5">Quantity</th>
+                    <th rowspan="2">Deporty</th>
                     <th rowspan="2">Location</th>
                     <th rowspan="2">Remarks</th>
                 </tr>
@@ -478,6 +507,9 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     $total_ending = 0;
     
     foreach ($report_data as $index => $item) {
+        // Determine row class for alternating colors
+        $row_class = ($index % 2 == 0) ? 'row-even' : 'row-odd';
+        
         // Get quantities from the query results
         $beginning = $item['beginning_quantity'];
         $add = $item['add_quantity'];
@@ -492,12 +524,12 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         $total_broken += $broken;
         $total_ending += $ending;
         
-        echo '<tr>
+        echo '<tr class="'.$row_class.'">
                 <td class="text-center">'.($index + 1).'</td>
                 <td class="text-center">'.$item['date'].'</td>
                 <td class="text-center">'.$item['item_code'].'</td>
                 <td class="text-center">'.$item['category_name'].'</td>
-                <td class="text-center">N/A</td>
+                <td class="text-center" style="mso-number-format:\@">'.$item['invoice_no'].'</td>
                 <td class="text-left">'.$item['name'].'</td>
                 <td class="text-center">'.$item['size'].'</td>
                 <td class="text-center">'.$beginning.'</td>
@@ -505,12 +537,13 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                 <td class="text-center">'.$used.'</td>
                 <td class="text-center">'.$broken.'</td>
                 <td class="text-center">'.$ending.'</td>
+                <td class="text-center">'.($item['deporty_name'] ?: 'N/A').'</td>
                 <td class="text-center">'.$item['location_name'].'</td>
                 <td class="text-left">'.$item['remark'].'</td>
             </tr>';
     }
     
-    // Add totals row
+    // Add totals row (no special background color)
     echo '<tr class="bold">
             <td colspan="7" class="text-right">'.$total_label.':</td>
             <td class="text-center">'.$total_beginning.'</td>
@@ -518,17 +551,14 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
             <td class="text-center">'.$total_used.'</td>
             <td class="text-center">'.$total_broken.'</td>
             <td class="text-center">'.$total_ending.'</td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
         </tr>';
-    
-   
     
     echo '</tbody>
         </table>
     </body>
     </html>';
 }
-
 // Helper functions for styling
 function darkenColor($color, $percent) {
     // Simple color darkening function

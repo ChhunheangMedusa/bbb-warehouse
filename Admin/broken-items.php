@@ -1566,18 +1566,18 @@ table th{
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="POST">
-                <div class="modal-header bg-danger text-dark">
+                <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="addBrokenItemModalLabel"><?php echo t('broken_items_history'); ?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label class="form-label"><?php echo t('item_invoice'); ?></label>
                             <input type="text" class="form-control" name="invoice_no" id="broken_invoice_no">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label for="broken_date" class="form-label"><?php echo t('item_date'); ?></label>
                             <input type="date" class="form-control" id="broken_date" name="date" required>
                         </div>
@@ -1653,7 +1653,31 @@ table th{
         </div>
     </div>
 </div>
-
+<!-- Select Location Modal for Broken Items -->
+<div class="modal fade" id="selectLocationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('warning'); ?>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-geo-alt-fill text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-dark mb-3"><?php echo t('warning_location1'); ?></h4>
+                <p><?php echo t('warn_loc'); ?></p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                    <i class="bi bi-check-circle"></i> <?php echo t('agree'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Image Gallery Modal -->
 <div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -1680,6 +1704,17 @@ table th{
 </div>
 
 <script>
+    // Function to check if location is selected
+function checkLocationSelected() {
+    const locationId = document.getElementById('broken_location_id').value;
+    if (!locationId) {
+        const locationAlertModal = new bootstrap.Modal(document.getElementById('selectLocationModal'));
+        locationAlertModal.show();
+        return false;
+    }
+    return true;
+}
+
 // Store items by location data
 const itemsByLocation = <?php echo json_encode($items_by_location); ?>;
 
@@ -1793,6 +1828,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const addMoreBtn = document.getElementById('add-broken-more-row');
     if (addMoreBtn) {
         addMoreBtn.addEventListener('click', function() {
+            if (!checkLocationSelected()) {
+            return;
+        }
             const container = document.getElementById('broken_items_container');
             const firstRow = container.querySelector('.broken-item-row');
             const newRow = firstRow.cloneNode(true);

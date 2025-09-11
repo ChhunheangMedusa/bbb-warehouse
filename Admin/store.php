@@ -1275,7 +1275,7 @@ table th{
     <div class="card">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><?php echo t('store_inventory'); ?></h5>
-            <span class="badge bg-light text-dark"><?php echo t('total_items'); ?>: <?php echo $total_items; ?></span>
+            <!--   <span class="badge bg-light text-dark"><?php echo t('total_items'); ?>: <?php echo $total_items; ?></span>-->
         </div>
         <div class="card-body">
             <?php if ($items): ?>

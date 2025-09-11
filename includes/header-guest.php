@@ -189,10 +189,10 @@ $hasAvatar = ($userPicture !== null);
         <ul class="nav flex-column">
     
         <li class="nav-item">
-                <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == '../Guest/stock-in.php' ? 'active' : ''; ?>" href="../Guest/stock-in.php">
-                    <i class="bi bi-box-arrow-in-down me-2"></i><?php echo t('stock_in'); ?>
-                </a>
-            </li>
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Guest/remaining.php' ? 'active' : ''; ?>" href="../Guest/remaining.php">
+                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('remaining'); ?>
+                                </a>
+                            </li>
            
            
         </ul>

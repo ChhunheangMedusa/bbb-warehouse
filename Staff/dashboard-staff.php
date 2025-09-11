@@ -1074,38 +1074,11 @@ body {
             transform: translateY(-5px);
         }
 
-        .quick-actions-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1rem;
-        }
-
-        .quick-action-card {
-            flex: 1;
-            min-width: 160px;
-            max-width: 200px;
-        }
-        /* Mobile view - one card per row */
-        @media (max-width: 767.98px) {
-            .quick-actions-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .quick-action-card {
-                width: 100%;
-                max-width: 100%;
-                margin-bottom: 1rem;
-            }
-        }
+  
 
         /* Desktop view - all in one row */
         @media (min-width: 768px) {
-            .quick-actions-container {
-                flex-wrap: nowrap;
-                justify-content: space-around;
-            }
+       
         }
 
         .btn-outline-orange {
@@ -1197,6 +1170,50 @@ body {
             display: block;
         } 
     }
+    .quick-actions-container {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: left; /* Center the cards */
+    gap: 0.25rem; /* Very small gap between cards */
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.quick-action-card {
+    flex: 1;
+    min-width: 140px;
+    max-width: 160px; /* Reduced maximum width */
+    margin: 0 0.1rem; /* Minimal margin */
+}
+
+.quick-action-card .btn {
+    padding: 0.6rem 0.4rem; /* Compact padding */
+    white-space: nowrap;
+    border-radius: 0.5rem; /* Slightly rounded corners */
+}
+
+.quick-action-card .btn i {
+    font-size: 1.5rem !important; /* Smaller icons */
+    margin-bottom: 0.4rem;
+}
+
+/* Mobile view adjustments */
+@media (max-width: 767.98px) {
+  .quick-actions-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .quick-action-card {
+                width: 100%;
+                max-width: 100%;
+                margin-bottom: 1rem;
+            }
+    
+
+}
+
+
 </style>
 
 <div class="container-fluid">
@@ -1285,36 +1302,7 @@ body {
                         <?php echo t('transfers_button');?>
                     </a>
                 </div>
-                <?php if (isAdmin()): ?>
-                <div class="quick-action-card">
-                    <a href="user-control.php" class="btn btn-outline-orange btn-lg w-100 py-3">
-                        <i class="bi bi-people fs-1 d-block mb-2"></i>
-                        <?php echo t('users_button');?>
-                    </a>
-                </div>
-              
-                <div class="quick-action-card">
-                    <a href="location-control.php" class="btn btn-outline-purple btn-lg w-100 py-3">
-                        <i class="bi bi-pin-map fs-1 d-block mb-2"></i>
-                        <?php echo t('locations_button');?>
-                    </a>
-                </div>
-                <?php endif; ?>
-                <?php if (isAdmin()): ?>
-                <div class="quick-action-card">
-                    <a href="access-log.php" class="btn btn-outline-dark btn-lg w-100 py-3">
-                        <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
-                        <?php echo t('logs_button');?>
-                    </a>
-                </div>
-                
-                <div class="quick-action-card">
-                    <a href="report.php" class="btn btn-outline-secondary btn-lg w-100 py-3">
-                        <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
-                        <?php echo t('reports_button');?>
-                    </a>
-                </div>
-                <?php endif; ?>
+
                 <div class="quick-action-card">
                     <a href="low-stock-alert.php" class="btn btn-outline-danger btn-lg w-100 py-3">
                         <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>

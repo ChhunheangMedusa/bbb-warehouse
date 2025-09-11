@@ -1273,7 +1273,7 @@ body {
         <div class="card-body">
             <div class="quick-actions-container">
                 <div class="quick-action-card">
-                    <a href="item-control.php" class="btn btn-outline-primary btn-lg w-100 py-3">
+                    <a href="items.php" class="btn btn-outline-primary btn-lg w-100 py-3">
                         <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
                         <?php echo t('items_button');?>
                     </a>

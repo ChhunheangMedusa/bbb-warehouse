@@ -2272,7 +2272,7 @@ table th{
                             <input type="text" class="form-control" name="invoice_no" id="send_invoice_no">
                         </div>
                         <div class="col-md-6">
-                            <label for="send_date" class="form-label"><?php echo t('date'); ?></label>
+                            <label for="send_date" class="form-label"><?php echo t('item_date'); ?></label>
                             <input type="date" class="form-control" id="send_date" name="date" required>
                         </div>
                     </div>

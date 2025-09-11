@@ -27,8 +27,10 @@ $translations = [
         'remaining'=>'សម្ភារៈនៅសល់',
         'store_inventory'=>'តារាងតម្លៃសម្ភារៈ',
         'broken_items'=>'សម្ភារៈខូច',
+        'deporty_management'=>'គ្រប់គ្រងដេប៉ូ',
     ],
     'en' => [
+        'deporty_management'=>'Deporty Management',
         'broken_items'=>'Broken Item',
         'store_inventory'=>'Price List',
         'remaining'=>'Remaining',

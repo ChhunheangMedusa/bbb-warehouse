@@ -14,6 +14,9 @@ if (!isStaff()) {
     exit();
   }
 checkAuth();
+// Get deporties for dropdowns
+$deporty_stmt = $pdo->query("SELECT * FROM deporty ORDER BY name");
+$deporties = $deporty_stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get active tab from URL
 $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'in';
 
@@ -74,13 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($_POST['name'] as $index => $name) {
                 $item_code = sanitizeInput($_POST['item_code'][$index]);
                 $category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
+                $deporty_id = !empty($_POST['deporty_id'][$index]) ? (int)$_POST['deporty_id'][$index] : null;
                 $location_id = (int)$_POST['location_id'][$index];
                 $name = sanitizeInput($name);
                 $quantity = (float)$_POST['quantity'][$index];
                 $alert_quantity = (int)$_POST['alert_quantity'][$index];
                 $size = sanitizeInput($_POST['size'][$index]);
                 $remark = sanitizeInput($_POST['remark'][$index]);
-                $price = (float)$_POST['price'][$index]; // ADD THIS LINE
+                $price = (float)$_POST['price'][$index];
                 
                 $dupli=t('duplicate_itm2');
                 $stmt = $pdo->prepare("SELECT id FROM items WHERE name = ? AND location_id = ?");
@@ -96,60 +100,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception("$dupli");
                 }
                 
-                // Insert the item into the database
-                $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
+                // Insert the item into the database with deporty_id
+                $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, deporty_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$item_code, $category_id, $deporty_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
                 $item_id = $pdo->lastInsertId();
                 
-                // Also insert into store_items table - FIXED
-                $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $quantity, $price, $alert_quantity, $size, $location_id, $remark]);
-                   // Also insert into addnewitems table
-            $stmt = $pdo->prepare("INSERT INTO addnewitems 
-            (item_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, added_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([
-$item_id,
-$invoice_no,
-$date,
-$name,
-$quantity,
-$alert_quantity,
-$size,
-$location_id,
-$remark,
-$_SESSION['user_id']
-]);
-// In the add_item section, after inserting the item:
-$stmt = $pdo->prepare("INSERT INTO stock_in_history 
-    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)");
-$stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark, $quantity, $_SESSION['user_id']]);
-         // Replace the file upload section with this:
-         if (!empty($_FILES['images']['name'][$index][0])) {
-            foreach ($_FILES['images']['tmp_name'][$index] as $key => $tmp_name) {
-                if ($_FILES['images']['error'][$index][$key] === UPLOAD_ERR_OK) {
-                    // Validate image type
-                    $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
-                    $mime = finfo_file($fileInfo, $tmp_name);
-                    finfo_close($fileInfo);
-                    $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/avif', 'image/jpg'];
-                    
-                    if (!in_array($mime, $allowedMimes)) {
-                        throw new Exception("Invalid file type.");
+                // Also insert into store_items table with deporty_id
+                $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, deporty_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$item_id, $item_code, $category_id, $deporty_id, $invoice_no, $date, $name, $quantity, $price, $alert_quantity, $size, $location_id, $remark]);
+                
+                // Also insert into addnewitems table
+                $stmt = $pdo->prepare("INSERT INTO addnewitems 
+                (item_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, deporty_id, remark, added_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $item_id,
+                    $invoice_no,
+                    $date,
+                    $name,
+                    $quantity,
+                    $alert_quantity,
+                    $size,
+                    $location_id,
+                    $deporty_id,
+                    $remark,
+                    $_SESSION['user_id']
+                ]);
+                
+                // Insert into stock_in_history with deporty_id
+                $stmt = $pdo->prepare("INSERT INTO stock_in_history 
+                    (item_id, item_code, category_id, deporty_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)");
+                $stmt->execute([$item_id, $item_code, $category_id, $deporty_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark, $quantity, $_SESSION['user_id']]);
+                
+                // File upload handling (unchanged)
+                if (!empty($_FILES['images']['name'][$index][0])) {
+                    foreach ($_FILES['images']['tmp_name'][$index] as $key => $tmp_name) {
+                        if ($_FILES['images']['error'][$index][$key] === UPLOAD_ERR_OK) {
+                            // Validate image type
+                            $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
+                            $mime = finfo_file($fileInfo, $tmp_name);
+                            finfo_close($fileInfo);
+                            $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/avif', 'image/jpg'];
+                            
+                            if (!in_array($mime, $allowedMimes)) {
+                                throw new Exception("Invalid file type.");
+                            }
+                            
+                            // Read the file content
+                            $imageData = file_get_contents($tmp_name);
+                            
+                            // Insert into database
+                            $stmt = $pdo->prepare("INSERT INTO item_images (item_id, image_path) VALUES (?, ?)");
+                            $stmt->execute([$item_id, $imageData]);
+                        }
                     }
-                    
-                    // Read the file content
-                    $imageData = file_get_contents($tmp_name);
-                    
-                    // Insert into database
-                    $stmt = $pdo->prepare("INSERT INTO item_images (item_id, image_path) VALUES (?, ?)");
-                    $stmt->execute([$item_id, $imageData]);
-                }
-            }
-        }     
+                }     
+                
                 // Log activity for this item
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
                 $stmt->execute([$location_id]);
@@ -179,80 +188,88 @@ $stmt->execute([$item_id, $item_code, $category_id, $invoice_no, $date, $name, $
         }
     } elseif (isset($_POST['add_qty'])) {
         // Add quantity to items
-        $invoice_no = sanitizeInput($_POST['invoice_no']);
-        $date = sanitizeInput($_POST['date']);
-        $location_id = (int)$_POST['location_id'];
+       // Add quantity to items
+$invoice_no = sanitizeInput($_POST['invoice_no']);
+$date = sanitizeInput($_POST['date']);
+$location_id = (int)$_POST['location_id'];
+$add_qty1=t('add_qty1');
+$add_qty2=t('add_qty2');
+
+try {
+    $pdo->beginTransaction();
+    
+    // Loop through each item
+    foreach ($_POST['item_id'] as $index => $item_id) {
+        $item_id = (int)$item_id;
+        $quantity = (float)$_POST['quantity'][$index];
+        $price = (float)$_POST['price'][$index];
+        $size = sanitizeInput($_POST['size'][$index] ?? '');
+        $remark = sanitizeInput($_POST['remark'][$index] ?? '');
+        $item_code = sanitizeInput($_POST['item_code'][$index] ?? '');
+        $deporty_id = !empty($_POST['deporty_id'][$index]) ? (int)$_POST['deporty_id'][$index] : null; // ADD THIS LINE
         
-        try {
-            $pdo->beginTransaction();
-            
-            // Loop through each item
-            foreach ($_POST['item_id'] as $index => $item_id) {
-                $item_id = (int)$item_id;
-                $quantity = (float)$_POST['quantity'][$index];
-                $price = (float)$_POST['price'][$index]; // ADD THIS LINE
-                $size = sanitizeInput($_POST['size'][$index] ?? '');
-                $remark = sanitizeInput($_POST['remark'][$index] ?? '');
-                
-                // Get current quantity
-                $stmt = $pdo->prepare("SELECT quantity, name FROM items WHERE id = ?");
-                $stmt->execute([$item_id]);
-                $item = $stmt->fetch(PDO::FETCH_ASSOC);
-                $old_qty = $item['quantity'];
-                $item_name = $item['name'];
-                
-                // Update quantity
-                $new_qty = $old_qty + $quantity;
-                $stmt = $pdo->prepare("UPDATE items SET quantity = ?,invoice_no = ?, date = ?, remark=? WHERE id = ?");
-                $stmt->execute([$new_qty,$invoice_no,$date,$remark, $item_id]);
-                
-                // Insert into addqtyitems table
-                $stmt = $pdo->prepare("INSERT INTO addqtyitems 
-                (item_id, invoice_no, date, added_quantity, size, remark, added_by) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([
-                    $item_id,
-                    $invoice_no,
-                    $date,
-                    $quantity,
-                    $size,
-                    $remark,
-                    $_SESSION['user_id']
-                ]);
-                
-                // After updating the item quantity, add to history:
-                $stmt = $pdo->prepare("INSERT INTO stock_in_history 
-                    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
-                    SELECT 
-                        id, item_code, category_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'add', ?, ?
-                    FROM items 
-                    WHERE id = ?");
-                $stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
-                
-                // FIXED: Insert into store_items with price
-                $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
-                SELECT id, item_code, category_id, ?, ?, name, ?, ?, alert_quantity, size, location_id, remark 
-                FROM items WHERE id = ?");
-                $stmt->execute([$invoice_no, $date, $quantity, $price, $item_id]);
-                // Get location name for log
-                $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
-                $stmt->execute([$location_id]);
-                $location = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                // Log each item update
-                logActivity($_SESSION['user_id'], 'Stock In', "Increase stock: $item_name($quantity $size) at {$location['name']} (Total: $old_qty+$quantity=$new_qty)");
-            }
-            
-            $pdo->commit();
-            $add_qty1=t('add_qty1');
-            $add_qty2=t('add_qty2');
-            
-            $_SESSION['success'] = "$add_qty1";
-            redirect('items.php');
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $_SESSION['error'] = "$add_qty2";
-        }
+        // Get current quantity and item details including deporty_id
+        $stmt = $pdo->prepare("SELECT quantity, name, item_code, deporty_id FROM items WHERE id = ?");
+        $stmt->execute([$item_id]);
+        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+        $old_qty = $item['quantity'];
+        $item_name = $item['name'];
+        $current_deporty_id = $item['deporty_id'];
+        
+        // Use the item_code from the form, fall back to database value if not provided
+        $item_code = !empty($item_code) ? $item_code : $item['item_code'];
+        
+        // Update quantity and other fields - use $deporty_id variable
+        $new_qty = $old_qty + $quantity;
+        $stmt = $pdo->prepare("UPDATE items SET quantity = ?, invoice_no = ?, date = ?, remark = ?, item_code = ?, deporty_id = ? WHERE id = ?");
+        $stmt->execute([$new_qty, $invoice_no, $date, $remark, $item_code, $deporty_id, $item_id]);
+        
+        // Insert into addqtyitems table (include deporty_id)
+        $stmt = $pdo->prepare("INSERT INTO addqtyitems 
+            (item_id, invoice_no, date, added_quantity, size, remark, added_by, item_code) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $item_id,
+            $invoice_no,
+            $date,
+            $quantity,
+            $size,
+            $remark,
+            $_SESSION['user_id'],
+            $item_code
+        ]);          
+        
+        // After updating the item quantity, add to history (include deporty_id)
+        $stmt = $pdo->prepare("INSERT INTO stock_in_history 
+            (item_id, item_code, category_id, deporty_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
+            SELECT 
+                id, item_code, category_id, deporty_id, ?, ?, name, quantity, alert_quantity, size, location_id, remark, 'add', ?, ?
+            FROM items 
+            WHERE id = ?");
+        $stmt->execute([$invoice_no, $date, $quantity, $_SESSION['user_id'], $item_id]);
+        
+        // Insert into store_items with price and item_code (include deporty_id)
+        $stmt = $pdo->prepare("INSERT INTO store_items (item_id, item_code, category_id, deporty_id, invoice_no, date, name, quantity, price, alert_quantity, size, location_id, remark) 
+            SELECT id, item_code, category_id, deporty_id, ?, ?, name, ?, ?, alert_quantity, size, location_id, remark 
+            FROM items WHERE id = ?");
+        $stmt->execute([$invoice_no, $date, $quantity, $price, $item_id]);
+        
+        // Get location name for log
+        $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
+        $stmt->execute([$location_id]);
+        $location = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Log each item update
+        logActivity($_SESSION['user_id'], 'Stock In', "Increase stock: $item_name($quantity $size) at {$location['name']} (Total: $old_qty+$quantity=$new_qty)");
+    }
+    
+    $pdo->commit();
+    $_SESSION['success'] = "$add_qty1";
+    redirect('items.php');
+} catch (PDOException $e) {
+    $pdo->rollBack();
+    $_SESSION['error'] = "$add_qty2";
+}
     } elseif (isset($_POST['deduct_qty'])) {
         // Deduct quantity from items
         $invoice_no = sanitizeInput($_POST['invoice_no']);
@@ -388,11 +405,15 @@ $in_query = "SELECT
     si.action_by,
     u.username as action_by_name,
     si.action_at,
+    si.deporty_id,
+    d.name as deporty_name,
     (SELECT id FROM item_images WHERE item_id = si.item_id ORDER BY id DESC LIMIT 1) as image_id
 FROM 
     stock_in_history si
 LEFT JOIN 
     categories c ON si.category_id = c.id
+LEFT JOIN 
+    deporty d ON si.deporty_id = d.id
 JOIN 
     locations l ON si.location_id = l.id
 JOIN
@@ -657,7 +678,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $items_by_location = [];
 if ($locations) {
     foreach ($locations as $location) {
-        $stmt = $pdo->prepare("SELECT id, name, quantity, size, remark FROM items WHERE location_id = ? ORDER BY name");
+        $stmt = $pdo->prepare("SELECT id, name, quantity, size, remark, item_code, deporty_id FROM items WHERE location_id = ? ORDER BY name");
         $stmt->execute([$location['id']]);
         $items_by_location[$location['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -1680,6 +1701,50 @@ table th{
         margin-left: 0; /* Reset margin on mobile */
     }
 }
+/* Prevent invoice number from wrapping */
+input[name="invoice_no"] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (max-width: 768px) {
+    .modal-body .row {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    
+    .modal-body .col-md-6 {
+        flex: 0 0 auto;
+        width: 50%;
+        min-width: 200px;
+    }
+}
+/* Invoice number field styling */
+#main_invoice_no {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* Allows the field to shrink properly */
+}
+
+/* Ensure the container doesn't cause wrapping */
+.modal-body .row .col-md-6 {
+    flex: 0 0 auto;
+    width: 50%;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    #main_invoice_no {
+        font-size: 14px; /* Slightly smaller font on mobile */
+        padding: 0.5rem;
+    }
+    
+    .modal-body .row .col-md-6 {
+        width: 100%; /* Stack inputs on mobile */
+        margin-bottom: 10px;
+    }
+}
 </style>
 
 <div class="container-fluid">
@@ -1824,6 +1889,7 @@ table th{
                                     <th><?php echo t('item_name'); ?></th>
                                     <th><?php echo t('history_qty'); ?></th>
                                     <th><?php echo t('item_size'); ?></th>
+                                    <th><?php echo t('deporty'); ?></th>
                                     <th><?php echo t('item_location'); ?></th>
                                     <th><?php echo t('item_remark'); ?></th>
                                     <th><?php echo t('item_photo'); ?></th>
@@ -1859,6 +1925,8 @@ table th{
                                             </td>
                                             <td class="text-success">+<?php echo $item['action_quantity']; ?></td>
                                             <td><?php echo $item['size']; ?></td>
+                                            <td><?php echo $item['deporty_name'] ?: 'N/A'; ?></td>
+
                                             <td><?php echo $item['location_name']; ?></td>
                                             <td><?php echo $item['remark']; ?></td>
                                             <td>
@@ -2090,7 +2158,6 @@ table th{
                                     <th><?php echo t('item_date'); ?></th>
                                     <th><?php echo t('item_name'); ?></th>
                                     <th><?php echo t('history_qty'); ?></th>
-                                 
                                     <th><?php echo t('item_size'); ?></th>
                                     <th><?php echo t('item_location'); ?></th>
                                     <th><?php echo t('item_remark'); ?></th>
@@ -2254,11 +2321,11 @@ table th{
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label class="form-label"><?php echo t('item_invoice'); ?></label>
-                            <input type="text" class="form-control" name="invoice_no" id="main_invoice_no">
+                            <input type="text" class="form-control" name="invoice_no" id="main_invoice_no" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label for="date" class="form-label"><?php echo t('item_date'); ?></label>
                             <input type="date" class="form-control" id="date" name="date" required>
                         </div>
@@ -2294,6 +2361,15 @@ table th{
                             </div>
                             <div class="row">
                                 <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('deporty'); ?></label>
+                                    <select class="form-select" name="deporty_id[]" >
+                                        <option value=""><?php echo t('select_deporty'); ?></option>
+                                        <?php foreach ($deporties as $deporty): ?>
+                                            <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <input type="text" class="form-control" name="name[]" required>
                                 </div>
@@ -2301,12 +2377,12 @@ table th{
                                     <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
                                 </div>
-                                <div class="col-md-4">
-        <label class="form-label"><?php echo t('price'); ?></label>
-        <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
-    </div>
                             </div>
                             <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('price'); ?></label>
+                                    <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
+                                </div>
                                 <div class="col-md-4">
                                     <label class="form-label"><?php echo t('low_stock_title'); ?></label>
                                     <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
@@ -2315,7 +2391,9 @@ table th{
                                     <label class="form-label"><?php echo t('item_size'); ?></label>
                                     <input type="text" class="form-control" name="size[]">
                                 </div>
-                                <div class="col-md-4">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
                                     <label class="form-label"><?php echo t('item_remark'); ?></label>
                                     <input type="text" class="form-control" name="remark[]">
                                 </div>
@@ -2355,11 +2433,11 @@ table th{
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label class="form-label"><?php echo t('item_invoice'); ?></label>
                             <input type="text" class="form-control" name="invoice_no" id="add_invoice_no">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label for="add_date" class="form-label"><?php echo t('item_date'); ?></label>
                             <input type="date" class="form-control" id="add_date" name="date" required>
                         </div>
@@ -2381,7 +2459,7 @@ table th{
                         <!-- First item row -->
                         <div class="add-qty-item-row mb-3 border p-3">
                             <div class="row">
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-12 mb-3">
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -2401,28 +2479,42 @@ table th{
                                         </ul>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label"><?php echo t('deporty'); ?></label>
+                                    <select class="form-select deporty-select" name="deporty_id[]" >
+                                        <option value=""><?php echo t('select_deporty'); ?></option>
+                                        <?php foreach ($deporties as $deporty): ?>
+                                            <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
                                 </div>
                                 <div class="col-md-4 mb-3">
-        <label class="form-label"><?php echo t('price'); ?></label>
-        <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
-    </div>
+                                    <label class="form-label"><?php echo t('price'); ?></label>
+                                    <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
+                                </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label"><?php echo t('item_size'); ?></label>
-                                    <input type="text" class="form-control" name="size[]" readonly>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label"><?php echo t('item_code'); ?></label>
+                                    <input type="text" class="form-control item-code-input" name="item_code[]">
                                 </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label"><?php echo t('item_size'); ?></label>
+                                    <input type="text" class="form-control" name="size[]">
+                                </div>
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label"><?php echo t('item_remark'); ?></label>
                                     <input type="text" class="form-control" name="remark[]">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
                     <button type="button" id="add-qty-more-row" class="btn btn-secondary btn-sm mb-3">
                         <i class="bi bi-plus-circle"></i> <?php echo t('add_transfer_row'); ?>
                     </button>
@@ -2435,6 +2527,7 @@ table th{
         </div>
     </div>
 </div>
+
 <!-- Quantity Exceed Modal -->
 <div class="modal fade" id="quantityExceedModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -2473,11 +2566,11 @@ table th{
                 <div class="modal-body">
                     <!-- Common fields (invoice and date) -->
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label for="deduct_invoice_no" class="form-label"><?php echo t('item_invoice'); ?></label>
                             <input type="text" class="form-control" id="deduct_invoice_no" name="invoice_no" >
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <label for="deduct_date" class="form-label"><?php echo t('item_date'); ?></label>
                             <input type="date" class="form-control" id="deduct_date" name="date" required>
                         </div>
@@ -2627,123 +2720,10 @@ table th{
 </div>
 
 <script>
-    // Add this to your existing JavaScript
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle entries per page change for stock in
-    const inPerPageSelect = document.getElementById('in_per_page_select');
-    if (inPerPageSelect) {
-        inPerPageSelect.addEventListener('change', function() {
-            const url = new URL(window.location);
-            url.searchParams.set('in_per_page', this.value);
-            url.searchParams.set('in_page', '1'); // Reset to first page
-            window.location.href = url.toString();
-        });
-    }
-
-    // Handle entries per page change for stock out
-    const outPerPageSelect = document.getElementById('out_per_page_select');
-    if (outPerPageSelect) {
-        outPerPageSelect.addEventListener('change', function() {
-            const url = new URL(window.location);
-            url.searchParams.set('out_per_page', this.value);
-            url.searchParams.set('out_page', '1'); // Reset to first page
-            window.location.href = url.toString();
-        });
-    }
-});
-    // Add this to your existing JavaScript
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle tab clicks to preserve pagination
-    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            const targetTab = e.target.getAttribute('data-bs-target');
-            const url = new URL(window.location);
-            
-            // Update the tab parameter
-            if (targetTab === '#in-tab-pane') {
-                url.searchParams.set('tab', 'in');
-            } else if (targetTab === '#out-tab-pane') {
-                url.searchParams.set('tab', 'out');
-            }
-            
-            // Update URL without reloading
-            window.history.replaceState({}, '', url);
-        });
-    });
-    
-    // Ensure correct tab is active on page load
-    const urlParams = new URLSearchParams(window.location.search);
-    const activeTab = urlParams.get('tab');
-    
-    if (activeTab === 'out') {
-        const outTab = new bootstrap.Tab(document.getElementById('out-tab'));
-        outTab.show();
-    } else {
-        const inTab = new bootstrap.Tab(document.getElementById('in-tab'));
-        inTab.show();
-    }
-});
-
-
-// Image gallery functionality
-document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
-    img.addEventListener('click', function() {
-        const itemId = this.getAttribute('data-item-id');
-        fetch(`get_item_images.php?id=${itemId}`)
-            .then(response => response.json())
-            .then(images => {
-                const carouselInner = document.getElementById('carousel-inner');
-                carouselInner.innerHTML = '';
-                
-                if (images.length > 0) {
-                    images.forEach((image, index) => {
-                        const item = document.createElement('div');
-                        item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-                        
-                        const imgElement = document.createElement('img');
-                        imgElement.src = `display_image.php?id=${image.id}`;
-                        imgElement.className = 'd-block w-100';
-                        imgElement.alt = 'Item Image';
-                        imgElement.style.maxHeight = '70vh';
-                        imgElement.style.objectFit = 'contain';
-                        
-                        item.appendChild(imgElement);
-                        carouselInner.appendChild(item);
-                    });
-                } else {
-                    carouselInner.innerHTML = `
-                        <div class="carousel-item active">
-                            <img src="assets/images/no-image.png" 
-                                 class="d-block w-100" 
-                                 alt="No image"
-                                 style="max-height: 70vh; object-fit: contain;">
-                        </div>
-                    `;
-                }
-            });
-    });
-});
-
-// Auto-hide success messages after 5 seconds
-document.addEventListener('DOMContentLoaded', function() {
-    const successMessages = document.querySelectorAll('.alert-success');
-    
-    successMessages.forEach(message => {
-        setTimeout(() => {
-            message.style.transition = 'opacity 0.5s ease';
-            message.style.opacity = '0';
-            
-            // Remove the element after fade out
-            setTimeout(() => {
-                message.remove();
-            }, 500);
-        }, 5000); // 5000 milliseconds = 5 seconds
-    });
-});
-
-// Store items by location data
+  // Store items by location data
 const itemsByLocation = <?php echo json_encode($items_by_location); ?>;
 
+// Function to populate item dropdown
 // Function to populate item dropdown
 function populateItemDropdown(dropdownElement, locationId) {
     const dropdownMenu = dropdownElement.querySelector('.dropdown-menu');
@@ -2777,26 +2757,49 @@ function populateItemDropdown(dropdownElement, locationId) {
                     itemElement.type = 'button';
                     itemElement.textContent = `${item.name} (${item.quantity} ${item.size || ''})`.trim();
                     itemElement.dataset.id = item.id;
+                    itemElement.dataset.code = item.item_code || '';
+                    itemElement.dataset.category = item.category_name || '';
                     itemElement.dataset.maxQuantity = item.quantity;
                     itemElement.dataset.size = item.size || '';
                     itemElement.dataset.remark = item.remark || '';
+                    itemElement.dataset.deporty = item.deporty_id || '';
                     
                     itemElement.addEventListener('click', function() {
-                        dropdownToggle.textContent = this.textContent;
-                        hiddenInput.value = this.dataset.id;
-                        
-                        const row = dropdownElement.closest('.add-qty-item-row');
-                        const sizeInput = row.querySelector('input[name="size[]"]');
-                        const remarkInput = row.querySelector('input[name="remark[]"]');
-                        
-                        if (sizeInput) sizeInput.value = this.dataset.size;
-                        if (remarkInput) remarkInput.value = this.dataset.remark;
-                        
-                        const quantityInput = row.querySelector('input[name="quantity[]"]');
-                        if (quantityInput) {
-                            quantityInput.removeAttribute('max'); // Remove max for adding quantity
-                        }
-                    });
+    dropdownToggle.textContent = this.textContent;
+    hiddenInput.value = this.dataset.id;
+    
+    const row = dropdownElement.closest('.add-qty-item-row, .deduct-qty-item-row');
+    
+    // Set item code
+    const itemCodeInput = row.querySelector('.item-code-input');
+    const sizeInput = row.querySelector('input[name="size[]"]');
+    const remarkInput = row.querySelector('input[name="remark[]"]');
+    const deportySelect = row.querySelector('select[name="deporty_id[]"]');
+    
+    if (itemCodeInput) itemCodeInput.value = this.dataset.code || '';
+    
+    // Set size and remark
+    if (sizeInput) {
+        if (sizeInput.hasAttribute('readonly')) {
+            sizeInput.value = this.dataset.size || '';
+        } else {
+            sizeInput.value = this.dataset.size || '';
+        }
+    }
+    
+    if (remarkInput) remarkInput.value = this.dataset.remark || '';
+    
+    // Set deporty if available
+    if (deportySelect && this.dataset.deporty) {
+        deportySelect.value = this.dataset.deporty;
+    }
+    
+    // For deduct quantity, set max value for quantity input
+    const quantityInput = row.querySelector('input[name="quantity[]"]');
+    if (quantityInput && row.closest('#deduct_qty_items_container')) {
+        quantityInput.setAttribute('max', this.dataset.maxQuantity);
+    }
+});
                     
                     itemContainer.appendChild(itemElement);
                     hasVisibleItems = true;
@@ -2843,11 +2846,14 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
         return;
     }
     
+    // Get the deporty selection from the first row
+    const firstDeportySelect = container.querySelector('.add-qty-item-row select[name="deporty_id[]"]');
+    
     const newRow = document.createElement('div');
     newRow.className = 'add-qty-item-row mb-3 border p-3';
     newRow.innerHTML = `
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-12 mb-3">
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -2867,21 +2873,36 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
                     </ul>
                 </div>
             </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label"><?php echo t('deporty'); ?></label>
+                <select class="form-select deporty-select" name="deporty_id[]" >
+                    <option value=""><?php echo t('select_deporty'); ?></option>
+                    <?php foreach ($deporties as $deporty): ?>
+                        <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
             </div>
-             <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('price'); ?></label>
                 <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label"><?php echo t('item_size'); ?></label>
-                <input type="text" class="form-control" name="size[]" readonly>
+            <div class="col-md-4 mb-3">
+                <label class="form-label"><?php echo t('item_code'); ?></label>
+                <input type="text" class="form-control item-code-input" name="item_code[]">
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
+                <label class="form-label"><?php echo t('item_size'); ?></label>
+                <input type="text" class="form-control" name="size[]">
+            </div>
+            <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('item_remark'); ?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
@@ -2899,6 +2920,12 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
     
     // Initialize Bootstrap dropdown
     new bootstrap.Dropdown(newRow.querySelector('.dropdown-toggle'));
+    
+    // Copy the deporty selection from the first row to the new row
+    const newDeportySelect = newRow.querySelector('select[name="deporty_id[]"]');
+    if (newDeportySelect && firstDeportySelect && firstDeportySelect.value) {
+        newDeportySelect.value = firstDeportySelect.value;
+    }
     
     // Add event listener for the remove button
     newRow.querySelector('.remove-row').addEventListener('click', function() {
@@ -2962,7 +2989,19 @@ function setupImagePreview(inputElement, previewContainerId) {
         }
     });
 }
-
+// Add event listener to ensure item code is set when dropdown item is clicked
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('dropdown-item')) {
+        const row = e.target.closest('.add-qty-item-row');
+        if (row) {
+            const itemCodeInput = row.querySelector('.item-code-input');
+            if (itemCodeInput) {
+                itemCodeInput.value = e.target.dataset.code || '';
+                console.log('Item code set to:', e.target.dataset.code);
+            }
+        }
+    }
+});
 // Initialize preview for the first row
 document.addEventListener('DOMContentLoaded', function() {
     // Setup for the first row's image input
@@ -2970,12 +3009,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (firstImageInput) {
         setupImagePreview(firstImageInput, 'image-preview-0');
     }
+    
+    // Set up event delegation for add quantity modal to ensure item code and remark are set
+    document.getElementById('add_qty_items_container').addEventListener('click', function(e) {
+        if (e.target.classList.contains('dropdown-item')) {
+            const row = e.target.closest('.add-qty-item-row');
+            const itemCodeInput = row.querySelector('input[name="item_code[]"]');
+            const remarkInput = row.querySelector('input[name="remark[]"]');
+            
+            // Ensure item code and remark are set
+            if (itemCodeInput) {
+            itemCodeInput.value = e.target.dataset.code || '';
+        }
+            if (remarkInput) {
+                remarkInput.value = e.target.dataset.remark || '';
+            }
+        }
+    });
 });
 
 // Update the add-more-row event listener to check for location selection first
 document.getElementById('add-more-row').addEventListener('click', function() {
     // Check if a location is selected in the first row
     const firstLocationSelect = document.querySelector('#items-container select[name="location_id[]"]');
+    const firstDeportySelect = document.querySelector('#items-container select[name="deporty_id[]"]');
     
     if (!firstLocationSelect || !firstLocationSelect.value) {
         const locationAlertModal = new bootstrap.Modal(document.getElementById('selectLocationModal'));
@@ -3015,6 +3072,15 @@ document.getElementById('add-more-row').addEventListener('click', function() {
         </div>
         <div class="row">
             <div class="col-md-4">
+                <label class="form-label"><?php echo t('deporty'); ?></label>
+                <select class="form-select" name="deporty_id[]" >
+                    <option value=""><?php echo t('select_deporty'); ?></option>
+                    <?php foreach ($deporties as $deporty): ?>
+                        <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-4">
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <input type="text" class="form-control" name="name[]" required>
             </div>
@@ -3022,12 +3088,12 @@ document.getElementById('add-more-row').addEventListener('click', function() {
                 <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" value="0" required>
             </div>
+        </div>
+        <div class="row">
             <div class="col-md-4">
                 <label class="form-label"><?php echo t('price'); ?></label>
                 <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
             </div>
-        </div>
-        <div class="row">
             <div class="col-md-4">
                 <label class="form-label"><?php echo t('low_stock_title'); ?></label>
                 <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
@@ -3036,7 +3102,9 @@ document.getElementById('add-more-row').addEventListener('click', function() {
                 <label class="form-label"><?php echo t('item_size'); ?></label>
                 <input type="text" class="form-control" name="size[]">
             </div>
-            <div class="col-md-4">
+        </div>
+        <div class="row">
+            <div class="col-md-12">
                 <label class="form-label"><?php echo t('item_remark'); ?></label>
                 <input type="text" class="form-control" name="remark[]">
             </div>
@@ -3069,6 +3137,12 @@ document.getElementById('add-more-row').addEventListener('click', function() {
     if (newLocationSelect && firstLocationSelect.value) {
         newLocationSelect.value = firstLocationSelect.value;
     }
+    
+    // Copy the deporty selection from the first row to the new row
+    const newDeportySelect = newRow.querySelector('select[name="deporty_id[]"]');
+    if (newDeportySelect && firstDeportySelect && firstDeportySelect.value) {
+        newDeportySelect.value = firstDeportySelect.value;
+    }
 });
 
 // Set today's date when modals are shown
@@ -3090,6 +3164,7 @@ document.getElementById('addQtyModal').addEventListener('shown.bs.modal', functi
         populateItemDropdown(dropdown, locationId);
     }
 });
+
 // Handle location change for deduct quantity modal
 document.getElementById('deduct_location_id').addEventListener('change', function() {
     const locationId = this.value;
@@ -3223,6 +3298,114 @@ document.getElementById('deductQtyModal').addEventListener('shown.bs.modal', fun
     // Set today's date
     document.getElementById('deduct_date').valueAsDate = new Date();
 });
+
+// Image gallery functionality
+document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
+    img.addEventListener('click', function() {
+        const itemId = this.getAttribute('data-item-id');
+        fetch(`get_item_images.php?id=${itemId}`)
+            .then(response => response.json())
+            .then(images => {
+                const carouselInner = document.getElementById('carousel-inner');
+                carouselInner.innerHTML = '';
+                
+                if (images.length > 0) {
+                    images.forEach((image, index) => {
+                        const item = document.createElement('div');
+                        item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+                        
+                        const imgElement = document.createElement('img');
+                        imgElement.src = `display_image.php?id=${image.id}`;
+                        imgElement.className = 'd-block w-100';
+                        imgElement.alt = 'Item Image';
+                        imgElement.style.maxHeight = '70vh';
+                        imgElement.style.objectFit = 'contain';
+                        
+                        item.appendChild(imgElement);
+                        carouselInner.appendChild(item);
+                    });
+                } else {
+                    carouselInner.innerHTML = `
+                        <div class="carousel-item active">
+                            <img src="assets/images/no-image.png" 
+                                 class="d-block w-100" 
+                                 alt="No image"
+                                 style="max-height: 70vh; object-fit: contain;">
+                        </div>
+                    `;
+                }
+            });
+    });
+});
+
+// Auto-hide success messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const successMessages = document.querySelectorAll('.alert-success');
+    
+    successMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.5s ease';
+            message.style.opacity = '0';
+            
+            // Remove the element after fade out
+            setTimeout(() => {
+                message.remove();
+            }, 500);
+        }, 5000); // 5000 milliseconds = 5 seconds
+    });
+});
+
+// Handle entries per page change for stock in
+const inPerPageSelect = document.getElementById('in_per_page_select');
+if (inPerPageSelect) {
+    inPerPageSelect.addEventListener('change', function() {
+        const url = new URL(window.location);
+        url.searchParams.set('in_per_page', this.value);
+        url.searchParams.set('in_page', '1'); // Reset to first page
+        window.location.href = url.toString();
+    });
+}
+
+// Handle entries per page change for stock out
+const outPerPageSelect = document.getElementById('out_per_page_select');
+if (outPerPageSelect) {
+    outPerPageSelect.addEventListener('change', function() {
+        const url = new URL(window.location);
+        url.searchParams.set('out_per_page', this.value);
+        url.searchParams.set('out_page', '1'); // Reset to first page
+        window.location.href = url.toString();
+    });
+}
+
+// Handle tab clicks to preserve pagination
+document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('click', function(e) {
+        const targetTab = e.target.getAttribute('data-bs-target');
+        const url = new URL(window.location);
+        
+        // Update the tab parameter
+        if (targetTab === '#in-tab-pane') {
+            url.searchParams.set('tab', 'in');
+        } else if (targetTab === '#out-tab-pane') {
+            url.searchParams.set('tab', 'out');
+        }
+        
+        // Update URL without reloading
+        window.history.replaceState({}, '', url);
+    });
+});
+
+// Ensure correct tab is active on page load
+const urlParams = new URLSearchParams(window.location.search);
+const activeTab = urlParams.get('tab');
+
+if (activeTab === 'out') {
+    const outTab = new bootstrap.Tab(document.getElementById('out-tab'));
+    outTab.show();
+} else {
+    const inTab = new bootstrap.Tab(document.getElementById('in-tab'));
+    inTab.show();
+}
 </script>
 
 <?php

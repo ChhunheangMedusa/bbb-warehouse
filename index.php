@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 logActivity($user['id'], 'Login', "Guest user logged in: {$username} ");
                 
                 // Redirect guest to stock-in.php
-                header("Location: Guest/stock-in.php");
+                header("Location: Guest/remaining.php");
                 exit();
             }
             // Handle regular users (with password)
@@ -67,60 +67,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Validate password length
                 else if (strlen($password) < 8) {
                     $error = "ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងហោចណាស់ ៨ តួអក្សរ។";
-                }  else if (password_verify($password, $user['password'])) {
-                        // Reset login attempts for this user in database
-                        $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
-                        $resetStmt->execute([$user['id']]);
-                        
-                        // Set session variables
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['username'] = $user['username'];
-                        $_SESSION['user_type'] = $user['user_type'];
-                        $_SESSION['email'] = $user['email'];
-                        $_SESSION['picture'] = $user['picture'];
-                        $_SESSION['show_welcome'] = true;
-                        logActivity($user['id'], 'Login', "User logged in: {$username} ");
-                        
-                        // Redirect based on user type
-                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
-                        
-                        if (isset($_SESSION['redirect_url'])) {
-                            $redirect_url = $_SESSION['redirect_url'];
-                            unset($_SESSION['redirect_url']);
-                            header("Location: $redirect_url");
-                        } else {
-                            header("Location: $dashboard");
-                        }
-                        exit();
+                } else if (password_verify($password, $user['password'])) {
+                    // Reset login attempts for this user in database
+                    $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
+                    $resetStmt->execute([$user['id']]);
+                    
+                    // Set session variables
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['user_type'] = $user['user_type'];
+                    $_SESSION['email'] = $user['email'];
+                    $_SESSION['picture'] = $user['picture'];
+                    $_SESSION['show_welcome'] = true;
+                    logActivity($user['id'], 'Login', "User logged in: {$username} ");
+                    
+                    // Redirect based on user type
+                    $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
+                    
+                    if (isset($_SESSION['redirect_url'])) {
+                        $redirect_url = $_SESSION['redirect_url'];
+                        unset($_SESSION['redirect_url']);
+                        header("Location: $redirect_url");
                     } else {
-                        // Reset login attempts
-                        $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
-                        $resetStmt->execute([$user['id']]);
-                        
-                        // Set session variables
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['username'] = $user['username'];
-                        $_SESSION['user_type'] = $user['user_type'];
-                        $_SESSION['email'] = $user['email'];
-                        $_SESSION['picture'] = $user['picture'];
-                        $_SESSION['show_welcome'] = true;
-                        logActivity($user['id'], 'Login', "User logged in: {$username} ");
-                        
-                        // Redirect based on user type
-                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
-                        
-                        if (isset($_SESSION['redirect_url'])) {
-                            $redirect_url = $_SESSION['redirect_url'];
-                            unset($_SESSION['redirect_url']);
-                            header("Location: $redirect_url");
-                        } else {
-                            header("Location: $dashboard");
-                        }
-                        exit();
+                        header("Location: $dashboard");
+                    }
+                    exit();
+                } else {
+                    // INCORRECT PASSWORD - Increment login attempts and show error
+                    $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";
+                    
+                    // Increment login attempts in database
+                    $updateStmt = $pdo->prepare("UPDATE users SET login_attempts = login_attempts + 1, last_attempt_time = NOW() WHERE id = ?");
+                    $updateStmt->execute([$user['id']]);
+                    
+                    // Check if user should be blocked due to too many attempts
+                    $stmt = $pdo->prepare("SELECT login_attempts FROM users WHERE id = ?");
+                    $stmt->execute([$user['id']]);
+                    $attempts = $stmt->fetchColumn();
+                    
+                    if ($attempts >= 3) {
+                        // Block user for 5 minutes after 3 failed attempts
+                        $_SESSION['login_blocked_users'][$user['id']] = time() + 300; // 5 minutes
+                        $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
                     }
                 }
             }
-        } else {
+        }
+    } else {
         // User doesn't exist - we can't track attempts in DB for non-existent users
         // So we'll use session for unknown usernames
         if (!isset($_SESSION['unknown_user_attempts'][$username])) {

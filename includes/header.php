@@ -294,7 +294,11 @@ $hasAvatar = ($userPicture !== null);
                     </a>
                 </li>
        
-              
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/deporty.php' ? 'active' : ''; ?>" href="../Admin/deporty.php">
+                        <i class="bi bi-geo-alt me-2"></i><?php echo t('deporty_management'); ?>
+                    </a>
+                </li>
               
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/access-log.php' ? 'active' : ''; ?>" href="../Admin/access-log.php">

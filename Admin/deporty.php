@@ -1,191 +1,161 @@
 <?php
+ob_start();
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth.php';
-require_once '../includes/header-staff.php';
+require_once '../includes/header.php';
 require_once 'translate.php';
 
-if (!isStaff()) {
-  $_SESSION['error'] = "You don't have permission to access this page";
-  header('Location: dashboard.php');
-  exit();
+if (!isAdmin()) {
+    $_SESSION['error'] = "You don't have permission to access this page";
+    header('Location: dashboard-staff.php');
+    exit();
 }
+checkAuth();
 
 // Get filter parameters
-$name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
-$category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
-$location_filter = isset($_GET['location']) ? sanitizeInput($_GET['location']) : '';
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
-$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
-// Pagination parameters
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$per_page = 10;
-$offset = ($page - 1) * $per_page;
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'name_asc';
 
-// Sort mapping - Added date_asc and date_desc options
+// Sort mapping
 $sort_mapping = [
-    'name_asc' => ['field' => 'si.name', 'direction' => 'ASC'],
-    'name_desc' => ['field' => 'si.name', 'direction' => 'DESC'],
-    'quantity_asc' => ['field' => 'si.quantity', 'direction' => 'ASC'],
-    'quantity_desc' => ['field' => 'si.quantity', 'direction' => 'DESC'],
-    'price_asc' => ['field' => 'si.price', 'direction' => 'ASC'],
-    'price_desc' => ['field' => 'si.price', 'direction' => 'DESC'],
-    'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
-    'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
-    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
-    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'si.date', 'direction' => 'ASC'],      // Added: Date Old-New
-    'date_desc' => ['field' => 'si.date', 'direction' => 'DESC']     // Added: Date New-Old
+    'name_asc' => ['field' => 'name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'created_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'created_at', 'direction' => 'DESC'],
+    'id_asc' => ['field' => 'id', 'direction' => 'ASC'],
+    'id_desc' => ['field' => 'id', 'direction' => 'DESC']
 ];
 
 // Default to name_asc if invalid option
 if (!array_key_exists($sort_option, $sort_mapping)) {
-  $sort_option = 'date_desc';
+    $sort_option = 'name_asc';
 }
 
 $sort_by = $sort_mapping[$sort_option]['field'];
 $sort_order = $sort_mapping[$sort_option]['direction'];
 
-// Build query for counting total items
-$count_query = "SELECT COUNT(*) as total
-FROM 
-    store_items si
-LEFT JOIN 
-    categories c ON si.category_id = c.id
-JOIN 
-    locations l ON si.location_id = l.id
-WHERE 1=1";
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['add_deporty'])) {
+        $name = sanitizeInput($_POST['name']);
+        
+        try {
+            // Check for duplicate deporty name
+            $stmt = $pdo->prepare("SELECT id FROM deporty WHERE name = ?");
+            $stmt->execute([$name]);
+            
+            if ($stmt->fetch()) {
+                $_SESSION['error'] = t('deporty_duplicate_error');
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO deporty (name) VALUES (?)");
+                $stmt->execute([$name]);
+                
+                $_SESSION['success'] = t('deporty_added_success');
+            }
+            redirect('deporty.php');
+        } catch (PDOException $e) {
+            $_SESSION['error'] = t('deporty_added_error');
+            redirect('deporty.php');
+        }
+    } elseif (isset($_POST['update_deporty'])) {
+        $id = (int)$_POST['id'];
+        $name = sanitizeInput($_POST['name']);
+        
+        try {
+            // Check for duplicate deporty name (excluding current record)
+            $stmt = $pdo->prepare("SELECT id FROM deporty WHERE name = ? AND id != ?");
+            $stmt->execute([$name, $id]);
+            
+            if ($stmt->fetch()) {
+                $_SESSION['error'] = t('deporty_duplicate_error');
+            } else {
+                $stmt = $pdo->prepare("UPDATE deporty SET name = ? WHERE id = ?");
+                $stmt->execute([$name, $id]);
+                
+                $_SESSION['success'] = t('deporty_updated_success');
+            }
+            redirect('deporty.php');
+        } catch (PDOException $e) {
+            $_SESSION['error'] = t('deporty_updated_error');
+            redirect('deporty.php');
+        }
+    } elseif (isset($_POST['delete_deporty'])) {
+        $id = (int)$_POST['id'];
+        
+        try {
+            // Check if deporty is being used in items
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM items WHERE deporty_id = ?");
+            $stmt->execute([$id]);
+            $count = $stmt->fetchColumn();
+            
+            if ($count > 0) {
+                $_SESSION['error'] = t('deporty_in_use_error');
+            } else {
+                $stmt = $pdo->prepare("DELETE FROM deporty WHERE id = ?");
+                $stmt->execute([$id]);
+                
+                $_SESSION['success'] = t('deporty_deleted_success');
+            }
+            redirect('deporty.php');
+        } catch (PDOException $e) {
+            $_SESSION['error'] = t('deporty_deleted_error');
+            redirect('deporty.php');
+        }
+    }
+}
 
+// Get pagination parameters
+$per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit = $per_page;
+$offset = ($page - 1) * $limit;
+
+// Build query for deporty records
+$query = "SELECT * FROM deporty WHERE 1=1";
 $params = [];
+$count_params = [];
 
-// Add filters to count query
-if ($name_filter) {
-    $count_query .= " AND si.name LIKE :name";
-    $params[':name'] = "%$name_filter%";
-}
-
-if ($category_filter) {
-    $count_query .= " AND si.category_id = :category_id";
-    $params[':category_id'] = $category_filter;
-}
-
-if ($location_filter) {
-    $count_query .= " AND si.location_id = :location_id";
-    $params[':location_id'] = $location_filter;
-}
-
+// Add search filter
 if ($search_query) {
-    $count_query .= " AND (si.name LIKE :search OR si.item_code LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
+    $query .= " AND (name LIKE :search OR id LIKE :search)";
     $params[':search'] = "%$search_query%";
+    $count_params[':search'] = "%$search_query%";
 }
 
-// Execute count query
-$stmt = $pdo->prepare($count_query);
+// Order by
+$query .= " ORDER BY $sort_by $sort_order";
+
+// Get total count for pagination
+$count_query = "SELECT COUNT(*) as total FROM deporty WHERE 1=1";
+if ($search_query) {
+    $count_query .= " AND (name LIKE :search OR id LIKE :search)";
+}
+
+$count_stmt = $pdo->prepare($count_query);
+foreach ($count_params as $key => $value) {
+    $count_stmt->bindValue($key, $value);
+}
+$count_stmt->execute();
+$total_items = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_items / $limit);
+
+// Get paginated results
+$query .= " LIMIT :limit OFFSET :offset";
+$stmt = $pdo->prepare($query);
 foreach ($params as $key => $value) {
     $stmt->bindValue($key, $value);
 }
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
-$total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_items / $per_page);
+$deporties = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Ensure page is within valid range
-if ($page < 1) $page = 1;
-if ($page > $total_pages && $total_pages > 0) $page = $total_pages;
-
-// Build main query
-// Change the query to use store_items instead of items
-$query = "SELECT 
-    si.id,
-    si.item_code,
-    si.category_id,
-    c.name as category_name,
-    si.invoice_no,
-    si.date,
-    si.name,
-    si.quantity,
-    si.price,
-    si.alert_quantity,
-    si.size,
-    si.location_id,
-    l.name as location_name,
-    si.remark,
-    (SELECT id FROM item_images WHERE item_id = si.item_id ORDER BY id DESC LIMIT 1) as image_id
-FROM 
-    store_items si
-LEFT JOIN 
-    categories c ON si.category_id = c.id
-JOIN 
-    locations l ON si.location_id = l.id
-WHERE 1=1";
-
-// Add filters to main query
-if ($name_filter) {
-    $query .= " AND si.name LIKE :name";
-    // Parameter already bound above
-}
-
-if ($category_filter) {
-    $query .= " AND si.category_id = :category_id";
-    // Parameter already bound above
-}
-
-if ($location_filter) {
-    $query .= " AND si.location_id = :location_id";
-    // Parameter already bound above
-}
-
-if ($search_query) {
-    $query .= " AND (si.name LIKE :search OR si.item_code LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
-    // Parameter already bound above
-}
-
+// Entries per page options
 $limit_options = [10, 25, 50, 100];
-$per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
-if (!in_array($per_page, $limit_options)) {
-    $per_page = 10;
-}
-
-// Update the pagination calculation
-$offset = ($page - 1) * $per_page;
-$total_pages = ceil($total_items / $per_page);
-
-// Order by
-$query .= " ORDER BY $sort_by $sort_order LIMIT :limit OFFSET :offset";
-
-// Add pagination parameters
-$params[':limit'] = $per_page;
-$params[':offset'] = $offset;
-
-// Get all locations for filter dropdown
-$stmt = $pdo->query("SELECT * FROM locations WHERE type !='repair' ORDER BY name");
-$locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get all categories
-$stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
-$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Execute main query
-$stmt = $pdo->prepare($query);
-foreach ($params as $key => $value) {
-    if ($key === ':limit' || $key === ':offset') {
-        $stmt->bindValue($key, $value, PDO::PARAM_INT);
-    } else {
-        $stmt->bindValue($key, $value);
-    }
-}
-$stmt->execute();
-$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Helper function to safely output values
-function safeOutput($value, $default = '') {
-    if ($value === null) {
-        return $default;
-    }
-    return htmlspecialchars($value);
-}
 ?>
 <style>
-     :root {
+    :root {
   --primary: #4e73df;
   --primary-dark: #2e59d9;
   --primary-light: #f8f9fc;
@@ -1201,279 +1171,342 @@ table th{
         margin-left: 0; /* Reset margin on mobile */
     }
 }
+/* Prevent invoice number from wrapping */
+input[name="invoice_no"] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (max-width: 768px) {
+    .modal-body .row {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    
+    .modal-body .col-md-6 {
+        flex: 0 0 auto;
+        width: 50%;
+        min-width: 200px;
+    }
+}
+/* Invoice number field styling */
+#main_invoice_no {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* Allows the field to shrink properly */
+}
+
+/* Ensure the container doesn't cause wrapping */
+.modal-body .row .col-md-6 {
+    flex: 0 0 auto;
+    width: 50%;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    #main_invoice_no {
+        font-size: 14px; /* Slightly smaller font on mobile */
+        padding: 0.5rem;
+    }
+    
+    .modal-body .row .col-md-6 {
+        width: 100%; /* Stack inputs on mobile */
+        margin-bottom: 10px;
+    }
+}
 </style>
 <div class="container-fluid">
-    <h2 class="mb-4"><?php echo t('store_inventory'); ?></h2>
-    <!-- Show entries per page selection -->
-<div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
+    <h2 class="mb-4"><?php echo t('deporty_management'); ?></h2>
+    
+    
+    <!-- Filter Card -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="d-flex align-items-center entries-per-page">
+                <span class="me-2"><?php echo t('show_entries'); ?></span>
+                <select class="form-select form-select-sm" id="per_page_select">
+                    <?php foreach ($limit_options as $option): ?>
+                        <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                            <?php echo $option; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="ms-2"><?php echo t('entries'); ?></span>
+            </div>
         </div>
     </div>
-</div>
-    <!-- Filter Card -->
+    
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
         </div>
         <div class="card-body">
-            <form method="GET" class="row g-2">
-                <input type="hidden" name="page" value="1">
-                <div class="col-md-3">
-                    <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo safeOutput($search_query); ?>">
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <form method="GET" class="row g-2">
+                        <div class="col-md-4">
+                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <select name="sort_option" class="form-select">
+                                <option value="name_asc" <?php echo $sort_option === 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
+                                <option value="name_desc" <?php echo $sort_option === 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
+                                <option value="date_asc" <?php echo $sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
+                                <option value="date_desc" <?php echo $sort_option === 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 action-buttons">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                            </button>
+                            <a href="deporty.php" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                            </a>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-md-2">
-                    <select name="location" class="form-select">
-                        <option value=""><?php echo t('report_all_location'); ?></option>
-                        <?php foreach ($locations as $location): ?>
-                            <option value="<?php echo safeOutput($location['id']); ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
-                                <?php echo safeOutput($location['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="category" class="form-select">
-                        <option value=""><?php echo t('all_categories'); ?></option>
-                        <?php foreach ($categories as $category): ?>
-                            <option value="<?php echo safeOutput($category['id']); ?>" <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
-                                <?php echo safeOutput($category['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="sort_option" class="form-select">
-                        <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
-                        <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
-                        <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
-                        <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
-                        <option value="price_asc" <?php echo $sort_option == 'price_asc' ? 'selected' : ''; ?>><?php echo t('price_low_high'); ?></option>
-                        <option value="price_desc" <?php echo $sort_option == 'price_desc' ? 'selected' : ''; ?>><?php echo t('price_high_low'); ?></option>
-                        <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
-                        <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary"><?php echo t('search'); ?></button>
-                    <a href="store.php" class="btn btn-secondary"><?php echo t('reset'); ?></a>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
     
-    <!-- Store Inventory Table -->
-    <div class="card">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><?php echo t('store_inventory'); ?></h5>
-            <!--   <span class="badge bg-light text-dark"><?php echo t('total_items'); ?>: <?php echo $total_items; ?></span>-->
+    <!-- Data Table Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><?php echo t('deporty_list'); ?></h5>
+            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addDeportyModal">
+                <i class="bi bi-plus-circle"></i> <?php echo t('add_deporty'); ?>
+            </button>
         </div>
         <div class="card-body">
-            <?php if ($items): ?>
-                <div class="table-responsive">
-                <table class="table table-striped table-bordered">
+            <div class="table-responsive">
+                <table class="table table-striped">
                     <thead>
                         <tr>
                             <th><?php echo t('item_no'); ?></th>
-                            <th><?php echo t('item_code'); ?></th>
-                            <th><?php echo t('category'); ?></th>
-                            <th><?php echo t('item_invoice'); ?></th>
-                            <th><?php echo t('item_date'); ?></th>
-                            <th><?php echo t('item_name'); ?></th>
-                            <th><?php echo t('item_qty'); ?></th>
-                            <th><?php echo t('price'); ?></th>
-                            <th><?php echo t('sub_total'); ?></th> <!-- NEW COLUMN -->
-                            <th><?php echo t('unit'); ?></th>
-                            <th><?php echo t('location'); ?></th>
-                            <th><?php echo t('item_remark'); ?></th>
-                            <th><?php echo t('item_photo'); ?></th>
+                            <th><?php echo t('name'); ?></th>
+                            <th><?php echo t('column_action'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($items as $index => $item): 
-                            // Calculate subtotal
-                            $quantity = (float)$item['quantity'];
-                            $price = (float)$item['price'];
-                            $subtotal = $quantity * $price;
-                        ?>
+                        <?php if (empty($deporties)): ?>
                             <tr>
-                                <td><?php echo $offset + $index + 1; ?></td>
-                                <td><?php echo safeOutput($item['item_code']); ?></td>
-                                <td><?php echo safeOutput($item['category_name']); ?></td>
-                                <td><?php echo safeOutput($item['invoice_no']); ?></td>
-                                <td><?php echo $item['date'] ? date('d/m/Y', strtotime($item['date'])) : ''; ?></td>
-                                <td><?php echo safeOutput($item['name']); ?></td>
-                                <td><?php echo safeOutput($item['quantity']); ?></td>
-                                <td><?php echo '$' . ($item['price'] ? number_format($item['price'], 3) : '0.0000'); ?></td>
-                                <td><?php echo '$' . number_format($subtotal, 2); ?></td> <!-- NEW COLUMN DATA -->
-                                <td><?php echo safeOutput($item['size']); ?></td>
-                                <td><?php echo safeOutput($item['location_name']); ?></td>
-                                <td><?php echo safeOutput($item['remark']); ?></td>
-                                <td>
-                                    <?php if ($item['image_id']): ?>
-                                        <img src="display_image.php?id=<?php echo safeOutput($item['image_id']); ?>" 
-                                             class="img-thumbnail" width="50"
-                                             data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
-                                             data-item-id="<?php echo safeOutput($item['id']); ?>">
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
-                                    <?php endif; ?>
-                                </td>
+                                <td colspan="4" class="text-center"><?php echo t('no_deporty_found'); ?></td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($deporties as $index => $deporty): ?>
+                                <tr>
+                                    <td><?php echo $deporty['id']; ?></td>
+                                    <td><?php echo $deporty['name']; ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editDeportyModal" 
+                                                data-id="<?php echo $deporty['id']; ?>" data-name="<?php echo $deporty['name']; ?>">
+                                            <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDeportyModal" 
+                                                data-id="<?php echo $deporty['id']; ?>" data-name="<?php echo $deporty['name']; ?>">
+                                            <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Pagination -->
+            <?php if ($total_pages >= 1): ?>
+                <nav aria-label="Page navigation" class="mt-3">
+                    <ul class="pagination justify-content-center">
+                        <?php 
+                        // Create a parameter array for filters
+                        $params_for_pagination = [
+                            'search' => $search_query,
+                            'sort_option' => $sort_option,
+                            'per_page' => $per_page
+                        ];
+                        
+                        // Merge with existing GET parameters but prioritize our parameters
+                        $pagination_params = array_merge($_GET, $params_for_pagination);
+                        ?>
+                        
+                        <?php if ($page > 1): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => 1])); ?>" aria-label="First">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $page - 1])); ?>" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        <?php else: ?>
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;&laquo;</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;</span>
+                            </li>
+                        <?php endif; ?>
+
+                        <?php 
+                        // Show page numbers
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        if ($start_page > 1) {
+                            echo '<li class="page-item"><span class="page-link">...</span></li>';
+                        }
+                        
+                        for ($i = $start_page; $i <= $end_page; $i++): ?>
+                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                            </li>
+                        <?php endfor;
+                        
+                        if ($end_page < $total_pages) {
+                            echo '<li class="page-item"><span class="page-link">...</span></li>';
+                        }
+                        ?>
+
+                        <?php if ($page < $total_pages): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $page + 1])); ?>" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($pagination_params, ['page' => $total_pages])); ?>" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                        <?php else: ?>
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;&raquo;</span>
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </nav>
+                <div class="text-center text-muted">
+                    <?php echo t('page'); ?> <?php echo $page; ?> <?php echo t('page_of'); ?> <?php echo $total_pages; ?> 
+                    (<?php echo t('total_records'); ?>: <?php echo $total_items; ?>)
                 </div>
-                
-               <!-- Pagination -->
-<?php if ($total_pages > 1): ?>
-<nav aria-label="Page navigation" class="mt-3">
-    <ul class="pagination justify-content-center">
-        <!-- First page link -->
-        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
-                <span aria-hidden="true">&laquo;&laquo;</span>
-            </a>
-        </li>
-        
-        <!-- Previous page link -->
-        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-            </a>
-        </li>
-
-        <!-- Page number links -->
-        <?php 
-        // Show page numbers with ellipsis for many pages
-        $start_page = max(1, $page - 2);
-        $end_page = min($total_pages, $page + 2);
-        
-        if ($start_page > 1) {
-            echo '<li class="page-item"><span class="page-link">...</span></li>';
-        }
-        
-        for ($i = $start_page; $i <= $end_page; $i++): ?>
-            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>">
-                    <?php echo $i; ?>
-                </a>
-            </li>
-        <?php endfor;
-        
-        if ($end_page < $total_pages) {
-            echo '<li class="page-item"><span class="page-link">...</span></li>';
-        }
-        ?>
-
-        <!-- Next page link -->
-        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-            </a>
-        </li>
-        
-        <!-- Last page link -->
-        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
-                <span aria-hidden="true">&raquo;&raquo;</span>
-            </a>
-        </li>
-    </ul>
-</nav>
-
-<!-- Page number display -->
-<div class="text-center text-muted">
-    <?php echo t('page'); ?> <?php echo $page; ?> <?php echo t('page_of'); ?> <?php echo $total_pages; ?> 
-</div>
-<?php endif; ?>
-                
-            <?php else: ?>
-                <div class="alert alert-info"><?php echo t('no_items_found'); ?></div>
             <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- Image Gallery Modal (same as in items.php) -->
-<div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- Add Deporty Modal -->
+<div class="modal fade" id="addDeportyModal" tabindex="-1" aria-labelledby="addDeportyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><?php echo t('item_photo'); ?></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <div id="carouselExample" class="carousel slide">
-                    <div class="carousel-inner" id="carousel-inner">
-                        <!-- Images will be loaded here via JavaScript -->
-                    </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    </button>
+            <form method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addDeportyModalLabel"><?php echo t('add_deporty'); ?></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-            </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label"><?php echo t('name'); ?></label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
+                    <button type="submit" name="add_deporty" class="btn btn-primary"><?php echo t('form_save'); ?></button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<!-- Edit Deporty Modal -->
+<div class="modal fade" id="editDeportyModal" tabindex="-1" aria-labelledby="editDeportyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="editDeportyModalLabel"><?php echo t('edit_deporty'); ?></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="edit_id">
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label"><?php echo t('name'); ?></label>
+                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
+                    <button type="submit" name="update_deporty" class="btn btn-primary"><?php echo t('update'); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Deporty Modal -->
+<div class="modal fade" id="deleteDeportyModal" tabindex="-1" aria-labelledby="deleteDeportyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteDeportyModalLabel"><?php echo t('delete_deporty'); ?></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="delete_id">
+                    <p><?php echo t('confirm_delete_deporty'); ?>: <strong id="delete_name"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
+                    <button type="submit" name="delete_deporty" class="btn btn-danger"><?php echo t('delete'); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script>
-    document.getElementById('per_page_select').addEventListener('change', function() {
-    const url = new URL(window.location);
-    url.searchParams.set('per_page', this.value);
-    url.searchParams.set('page', '1'); // Reset to first page
-    window.location.href = url.toString();
+// Handle edit modal
+document.getElementById('editDeportyModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    const name = button.getAttribute('data-name');
+    
+    const modal = this;
+    modal.querySelector('#edit_id').value = id;
+    modal.querySelector('#edit_name').value = name;
 });
-// Image gallery functionality (same as in items.php)
-document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
-    img.addEventListener('click', function() {
-        const itemId = this.getAttribute('data-item-id');
-        fetch(`get_item_images.php?id=${itemId}`)
-            .then(response => response.json())
-            .then(images => {
-                const carouselInner = document.getElementById('carousel-inner');
-                carouselInner.innerHTML = '';
-                
-                if (images.length > 0) {
-                    images.forEach((image, index) => {
-                        const item = document.createElement('div');
-                        item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-                        
-                        const imgElement = document.createElement('img');
-                        imgElement.src = `display_image.php?id=${image.id}`;
-                        imgElement.className = 'd-block w-100';
-                        imgElement.alt = 'Item Image';
-                        imgElement.style.maxHeight = '70vh';
-                        imgElement.style.objectFit = 'contain';
-                        
-                        item.appendChild(imgElement);
-                        carouselInner.appendChild(item);
-                    });
-                } else {
-                    carouselInner.innerHTML = `
-                        <div class="carousel-item active">
-                            <img src="assets/images/no-image.png" 
-                                 class="d-block w-100" 
-                                 alt="No image"
-                                 style="max-height: 70vh; object-fit: contain;">
-                        </div>
-                    `;
-                }
-            });
+
+// Handle delete modal
+document.getElementById('deleteDeportyModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    const name = button.getAttribute('data-name');
+    
+    const modal = this;
+    modal.querySelector('#delete_id').value = id;
+    modal.querySelector('#delete_name').textContent = name;
+});
+
+// Handle entries per page change
+const perPageSelect = document.getElementById('per_page_select');
+if (perPageSelect) {
+    perPageSelect.addEventListener('change', function() {
+        const url = new URL(window.location);
+        url.searchParams.set('per_page', this.value);
+        url.searchParams.set('page', '1'); // Reset to first page
+        window.location.href = url.toString();
     });
-});
+}
 </script>
+
+<?php
+require_once '../includes/footer.php';
+?>
