@@ -1237,6 +1237,24 @@ table th{
         margin-left: 0; /* Reset margin on mobile */
     }
 }
+@media (max-width: 768px) {
+    #editItemModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #editItemModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #editItemModal .modal-footer form {
+        flex: 1;
+    }
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('store_inventory'); ?></h2>

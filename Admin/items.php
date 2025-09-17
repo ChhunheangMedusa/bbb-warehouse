@@ -1745,6 +1745,60 @@ input[name="invoice_no"] {
         margin-bottom: 10px;
     }
 }
+@media (max-width: 768px) {
+    #addItemModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addItemModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #addItemModal .modal-footer form {
+        flex: 1;
+    }
+}
+@media (max-width: 768px) {
+    #addQtyModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addQtyModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #addQtyModal .modal-footer form {
+        flex: 1;
+    }
+}
+@media (max-width: 768px) {
+    #deductQtyModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #deductQtyModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #deductQtyModal .modal-footer form {
+        flex: 1;
+    }
+}
 </style>
 
 <div class="container-fluid">

@@ -851,6 +851,97 @@ body {
     min-width: 70px;
     margin: 0 0.5rem;
 }
+
+@media (max-width: 767.98px) {
+    /* Delete Confirm Modal */
+    #deleteConfirmModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #deleteConfirmModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    /* Add Location Modal */
+    #addLocationModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addLocationModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    /* Edit Location Modal */
+    #editLocationModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #editLocationModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+}
+
+/* Very small devices */
+@media (max-width: 400px) {
+    #deleteConfirmModal .modal-footer .btn,
+    #addLocationModal .modal-footer .btn,
+    #editLocationModal .modal-footer .btn {
+        padding: 0.4rem;
+        font-size: 0.85rem;
+    }
+}
+@media (max-width: 768px) {
+    #editLocationModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #editLocationModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #editLocationModal .modal-footer form {
+        flex: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    #addLocationModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addLocationModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #addLocationModal .modal-footer form {
+        flex: 1;
+    }
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"> <?php echo t('location_title');?></h2>
@@ -1165,7 +1256,7 @@ body {
         </div>
     </div>
 </div>
-<!-- Add Location Modal -->
+<!-- Add Location Modal with updated footer -->
 <div class="modal fade" id="addLocationModal" tabindex="-1" aria-labelledby="addLocationModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1188,14 +1279,19 @@ body {
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
-                    <button type="submit" name="add_location" class="btn btn-primary"><?php echo t('form_save');?></button>
-                </div>
+                <div class="modal-footer d-flex justify-content-center gap-2">
+    <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+        <?php echo t('form_close');?>
+    </button>
+    <button type="submit" name="add_location" class="btn btn-primary flex-grow-1 flex-md-grow-0">
+        <?php echo t('form_save');?>
+    </button>
+</div>
             </form>
         </div>
     </div>
 </div>
+
 
 <!-- Edit Location Modal -->
 <div class="modal fade" id="editLocationModal" tabindex="-1" aria-labelledby="editLocationModalLabel" aria-hidden="true">
@@ -1221,10 +1317,14 @@ body {
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close');?></button>
-                    <button type="submit" name="edit_location" class="btn btn-warning"><?php echo t('form_update');?></button>
-                </div>
+                <div class="modal-footer d-flex justify-content-center gap-2">
+    <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+        <?php echo t('form_close');?>
+    </button>
+    <button type="submit" name="edit_location" class="btn btn-warning flex-grow-1 flex-md-grow-0">
+        <?php echo t('form_update');?>
+    </button>
+</div>
             </form>
         </div>
     </div>

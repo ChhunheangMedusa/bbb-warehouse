@@ -1215,6 +1215,62 @@ input[name="invoice_no"] {
         margin-bottom: 10px;
     }
 }
+@media (max-width: 768px) {
+    #deleteDeportyModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #deleteDeportyModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #deleteDeportyModal .modal-footer form {
+        flex: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    #editDeportyModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #editDeportyModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #editDeportyModal .modal-footer form {
+        flex: 1;
+    }
+}
+@media (max-width: 768px) {
+    #addDeportyModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addDeportyModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #addDeportyModal .modal-footer form {
+        flex: 1;
+    }
+}
+
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('deporty_management'); ?></h2>
@@ -1473,7 +1529,7 @@ input[name="invoice_no"] {
                 <p class="mb-3"><?php echo t('del_usr2'); ?></p>
                 <div id="deleteDeportyInfo" class="alert alert-light mb-0"></div>
             </div>
-            <div class="modal-footer d-flex justify-content-center gap-2">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
                 </button>

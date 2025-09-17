@@ -1004,6 +1004,24 @@ body {
     min-width: 70px;
     margin: 0 0.5rem;
 }
+@media (max-width: 768px) {
+    #transferItemModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #transferItemModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #transferItemModal .modal-footer form {
+        flex: 1;
+    }
+}
     </style>
 </head>
 <body>

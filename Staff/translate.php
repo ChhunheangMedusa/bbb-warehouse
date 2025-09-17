@@ -455,11 +455,13 @@ $translations = [
 'name_deport'=>'ឈ្មោះដេប៉ូ',
 'no_categories_found_for_search'=>'មិនមានប្រភេទសម្ភារៈត្រូវបានរកឃើញនោះទេ',
 'price_upt'=>'តម្លៃត្រូវបានកែប្រែដោយជោគជ័យ',
-'no_items_in_deporty'=>'មិនមានសម្ភារៈត្រូវបានរកឃើញនៅក្នុងដេប៉ូនេះទេ'
+'no_items_in_deporty'=>'មិនមានសម្ភារៈត្រូវបានរកឃើញនៅក្នុងដេប៉ូនេះទេ',
+'form_guest'=>'អ្នកទស្សនា'
     ],
 
 
     'en' => [
+        'form_guest'=>'Guest',
         'no_items_in_deporty'=>'No items found in this deporty',
         'price_upt'=>'Price has been updated successfully',
         'no_categories_found_for_search'=>'No categories found',

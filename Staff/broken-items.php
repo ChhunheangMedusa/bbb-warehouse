@@ -1310,6 +1310,24 @@ table th{
         margin-left: 0; /* Reset margin on mobile */
     }
 }
+@media (max-width: 768px) {
+    #addBrokenItemModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addBrokenItemModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #addBrokenItemModal .modal-footer form {
+        flex: 1;
+    }
+}
 </style>
 
 <div class="container-fluid">

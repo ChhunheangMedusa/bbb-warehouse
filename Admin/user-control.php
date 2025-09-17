@@ -1277,6 +1277,61 @@ body {
         min-width: 100%;
     }
 }
+@media (max-width: 768px) {
+    #addUserModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addUserModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #addUserModal .modal-footer form {
+        flex: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    #deleteConfirmModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #deleteConfirmModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #deleteConfirmModal .modal-footer form {
+        flex: 1;
+    }
+}
+@media (max-width: 768px) {
+    #editUserModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #editUserModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #editUserModal .modal-footer form {
+        flex: 1;
+    }
+}
 </style>
 
 <div class="container-fluid">

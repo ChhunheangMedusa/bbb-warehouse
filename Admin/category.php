@@ -776,6 +776,43 @@ body {
     min-width: 70px;
     margin: 0 0.5rem;
 }
+@media (max-width: 768px) {
+    #editCategoryModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #editCategoryModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #editCategoryModal .modal-footer form {
+        flex: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    #addCategoryModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #addCategoryModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #addCategoryModal .modal-footer form {
+        flex: 1;
+    }
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('category_management'); ?></h2>
@@ -991,11 +1028,14 @@ body {
                         <label class="form-label"><?php echo t('name'); ?></label>
                         <input type="text" class="form-control" name="name" required>
                     </div>
-                   
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
-                    <button type="submit" name="add_category" class="btn btn-primary"><?php echo t('form_save'); ?></button>
+                <div class="modal-footer d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
+                    </button>
+                    <button type="submit" name="add_category" class="btn btn-primary flex-grow-1 flex-md-grow-0">
+                        <i class="bi bi-check-circle"></i> <?php echo t('form_save'); ?>
+                    </button>
                 </div>
             </form>
         </div>
@@ -1017,11 +1057,14 @@ body {
                         <label class="form-label"><?php echo t('name'); ?></label>
                         <input type="text" class="form-control" name="name" id="edit_category_name" required>
                     </div>
-                   
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
-                    <button type="submit" name="edit_category" class="btn btn-warning"><?php echo t('form_update'); ?></button>
+                <div class="modal-footer d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
+                    </button>
+                    <button type="submit" name="edit_category" class="btn btn-warning flex-grow-1 flex-md-grow-0">
+                        <i class="bi bi-check-circle"></i> <?php echo t('form_update'); ?>
+                    </button>
                 </div>
             </form>
         </div>

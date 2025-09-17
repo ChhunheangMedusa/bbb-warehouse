@@ -1548,6 +1548,43 @@ table th{
     min-width: 70px;
     margin: 0 0.5rem;
 }
+@media (max-width: 768px) {
+    #sendForRepairModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #sendForRepairModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #sendForRepairModal .modal-footer form {
+        flex: 1;
+    }
+}
+@media (max-width: 768px) {
+    #returnFromRepairModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #returnFromRepairModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #returnFromRepairModal .modal-footer form {
+        flex: 1;
+    }
+}
+
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('repair_management'); ?></h2>
