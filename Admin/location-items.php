@@ -639,7 +639,7 @@ body {
 }
 </style>
 <div class="container-fluid" >
-    <h2 class="mb-4"><?php echo t('item_locationsss');?>: <?php echo htmlspecialchars($location['name']); ?></h2>
+    <h2 class="mb-4"><?php echo t('location');?>: <?php echo htmlspecialchars($location['name']); ?></h2>
     <div class="row mb-3">
     <div class="col-md-12">
         <div class="d-flex align-items-center entries-per-page">

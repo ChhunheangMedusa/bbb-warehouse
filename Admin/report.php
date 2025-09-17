@@ -398,7 +398,15 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     $name = t('name');
     $date_label = t('date');
     $total_label = t('total');
-    $deporty = t('deporty'); // Add deporty translation
+    $deporty = t('deporty');
+    
+    // Helper function to format numbers
+    function formatQuantity($number) {
+        if ($number >= 1000) {
+            return number_format($number);
+        }
+        return $number;
+    }
     
     echo '<!DOCTYPE html>
     <html>
@@ -457,12 +465,18 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
             }
             /* Add styles for alternating row colors */
             .row-odd {
-                background-color:#469C83;
+                background-color:#83E28E;
                 color: #ffffff;
             }
             .row-even {
                 background-color: #ffffff;
                 color: #000000;
+            }
+            /* Number formatting for Excel */
+            .number-cell {
+                mso-number-format:"#,##0";
+                text-align: right;
+                padding-right: 8px;
             }
         </style>
     </head>
@@ -532,11 +546,11 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
                 <td class="text-center" style="mso-number-format:\@">'.$item['invoice_no'].'</td>
                 <td class="text-left">'.$item['name'].'</td>
                 <td class="text-center">'.$item['size'].'</td>
-                <td class="text-center">'.$beginning.'</td>
-                <td class="text-center">'.$add.'</td>
-                <td class="text-center">'.$used.'</td>
-                <td class="text-center">'.$broken.'</td>
-                <td class="text-center">'.$ending.'</td>
+                <td class="number-cell" style="text-align:center;">'.formatQuantity($beginning).'</td>
+                <td class="number-cell" style="text-align:center;">'.formatQuantity($add).'</td>
+                <td class="number-cell" style="text-align:center;">'.formatQuantity($used).'</td>
+                <td class="number-cell" style="text-align:center;">'.formatQuantity($broken).'</td>
+                <td class="number-cell" style="text-align:center;">'.formatQuantity($ending).'</td>
                 <td class="text-center">'.($item['deporty_name'] ?: 'N/A').'</td>
                 <td class="text-center">'.$item['location_name'].'</td>
                 <td class="text-left">'.$item['remark'].'</td>
@@ -546,11 +560,11 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     // Add totals row (no special background color)
     echo '<tr class="bold">
             <td colspan="7" class="text-right">'.$total_label.':</td>
-            <td class="text-center">'.$total_beginning.'</td>
-            <td class="text-center">'.$total_add.'</td>
-            <td class="text-center">'.$total_used.'</td>
-            <td class="text-center">'.$total_broken.'</td>
-            <td class="text-center">'.$total_ending.'</td>
+            <td class="number-cell">'.formatQuantity($total_beginning).'</td>
+            <td class="number-cell">'.formatQuantity($total_add).'</td>
+            <td class="number-cell">'.formatQuantity($total_used).'</td>
+            <td class="number-cell">'.formatQuantity($total_broken).'</td>
+            <td class="number-cell">'.formatQuantity($total_ending).'</td>
             <td colspan="3"></td>
         </tr>';
     

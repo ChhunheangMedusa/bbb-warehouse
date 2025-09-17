@@ -1,227 +1,157 @@
+
 <?php
+ob_start();
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth.php';
-require_once '../includes/header-staff.php';
+require_once '../includes/header.php';
 require_once 'translate.php';
 
-if (!isStaff()) {
-  $_SESSION['error'] = "You don't have permission to access this page";
-  header('Location: dashboard.php');
-  exit();
+if (!isAdmin()) {
+    $_SESSION['error'] = "You don't have permission to access this page";
+    header('Location: dashboard-staff.php');
+    exit();
 }
-// Handle update request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_item'])) {
-  $id = (int)$_POST['id'];
-  $quantity = (float)$_POST['quantity'];
-  $price = (float)$_POST['price'];
-  $price_upt=t('price_upt');
-  try {
-      $update_stmt = $pdo->prepare("UPDATE store_items SET quantity = :quantity, price = :price WHERE id = :id");
-      $update_stmt->execute([
-          ':quantity' => $quantity,
-          ':price' => $price,
-          ':id' => $id
-      ]);
-      
-      $_SESSION['success'] = "$price_upt";
-      
-      // Check if headers have been sent
-      if (!headers_sent()) {
-          header('Location: store.php?' . http_build_query($_GET));
-          exit();
-      } else {
-          echo '<script>window.location.href = "store.php?' . http_build_query($_GET) . '";</script>';
-          exit();
-      }
-  } catch (PDOException $e) {
-      $_SESSION['error'] = "Error updating item: " . $e->getMessage();
-      
-      // Check if headers have been sent
-      if (!headers_sent()) {
-          header('Location: store.php?' . http_build_query($_GET));
-          exit();
-      } else {
-          echo '<script>window.location.href = "store.php?' . http_build_query($_GET) . '";</script>';
-          exit();
-      }
-  }
-}
-// Get filter parameters
-$name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
-$category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
-$location_filter = isset($_GET['location']) ? sanitizeInput($_GET['location']) : '';
-$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
-$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
-// Pagination parameters
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$per_page = 10;
-$offset = ($page - 1) * $per_page;
+checkAuth();
 
-// Sort mapping - Added date_asc and date_desc options
+// Get deporty ID from URL
+$deporty_id = isset($_GET['deporty_id']) ? (int)$_GET['deporty_id'] : 0;
+
+// Get deporty details
+$stmt = $pdo->prepare("SELECT * FROM deporty WHERE id = ?");
+$stmt->execute([$deporty_id]);
+$deporty = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$deporty) {
+    $_SESSION['error'] = t('deporty_not_found');
+    header('Location: deporty.php');
+    exit();
+}
+
+// Get filter parameters
+$year_filter = isset($_GET['year']) && $_GET['year'] != 0 ? (int)$_GET['year'] : null;
+$month_filter = isset($_GET['month']) && $_GET['month'] != 0 ? (int)$_GET['month'] : null;
+$location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
+$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+
+// Get sort parameters
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+
+// Validate and parse sort option
 $sort_mapping = [
-    'name_asc' => ['field' => 'si.name', 'direction' => 'ASC'],
-    'name_desc' => ['field' => 'si.name', 'direction' => 'DESC'],
-    'quantity_asc' => ['field' => 'si.quantity', 'direction' => 'ASC'],
-    'quantity_desc' => ['field' => 'si.quantity', 'direction' => 'DESC'],
-    'price_asc' => ['field' => 'si.price', 'direction' => 'ASC'],
-    'price_desc' => ['field' => 'si.price', 'direction' => 'DESC'],
+    'name_asc' => ['field' => 'i.name', 'direction' => 'ASC'],
+    'name_desc' => ['field' => 'i.name', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'i.date', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'i.date', 'direction' => 'DESC'],
     'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
     'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
-    'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
-    'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'si.date', 'direction' => 'ASC'],      // Added: Date Old-New
-    'date_desc' => ['field' => 'si.date', 'direction' => 'DESC']     // Added: Date New-Old
+    'quantity_asc' => ['field' => 'i.quantity', 'direction' => 'ASC'],
+    'quantity_desc' => ['field' => 'i.quantity', 'direction' => 'DESC']
 ];
 
-// Default to name_asc if invalid option
+// Default to date_desc if invalid option
 if (!array_key_exists($sort_option, $sort_mapping)) {
-  $sort_option = 'date_desc';
+    $sort_option = 'date_desc';
 }
 
 $sort_by = $sort_mapping[$sort_option]['field'];
 $sort_order = $sort_mapping[$sort_option]['direction'];
 
-// Build query for counting total items
-$count_query = "SELECT COUNT(*) as total
-FROM 
-    store_items si
-LEFT JOIN 
-    categories c ON si.category_id = c.id
-JOIN 
-    locations l ON si.location_id = l.id
-WHERE 1=1";
+// Build query for items in this deporty
+$query = "SELECT i.*, l.name as location_name, d.name as deporty_name, c.name as category_name 
+          FROM items i 
+          JOIN locations l ON i.location_id = l.id 
+          LEFT JOIN deporty d ON i.deporty_id = d.id
+          LEFT JOIN categories c ON i.category_id = c.id
+          WHERE i.deporty_id = :deporty_id";
+$params = [':deporty_id' => $deporty_id];
 
-$params = [];
-
-// Add filters to count query
-if ($name_filter) {
-    $count_query .= " AND si.name LIKE :name";
-    $params[':name'] = "%$name_filter%";
+// Add filters only if they have values
+if ($year_filter !== null) {
+    $query .= " AND YEAR(i.date) = :year";
+    $params[':year'] = $year_filter;
 }
 
-if ($category_filter) {
-    $count_query .= " AND si.category_id = :category_id";
-    $params[':category_id'] = $category_filter;
+if ($month_filter !== null) {
+    $query .= " AND MONTH(i.date) = :month";
+    $params[':month'] = $month_filter;
 }
 
 if ($location_filter) {
-    $count_query .= " AND si.location_id = :location_id";
+    $query .= " AND i.location_id = :location_id";
     $params[':location_id'] = $location_filter;
 }
 
 if ($search_query) {
-    $count_query .= " AND (si.name LIKE :search OR si.item_code LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
+    $query .= " AND (i.name LIKE :search OR i.invoice_no LIKE :search OR i.remark LIKE :search)";
     $params[':search'] = "%$search_query%";
 }
 
-// Execute count query
-$stmt = $pdo->prepare($count_query);
-foreach ($params as $key => $value) {
-    $stmt->bindValue($key, $value);
-}
-$stmt->execute();
-$total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_items / $per_page);
-
-// Ensure page is within valid range
-if ($page < 1) $page = 1;
-if ($page > $total_pages && $total_pages > 0) $page = $total_pages;
-
-// Build main query
-// Change the query to use store_items instead of items
-$query = "SELECT 
-    si.id,
-    si.item_code,
-    si.category_id,
-    c.name as category_name,
-    si.invoice_no,
-    si.date,
-    si.name,
-    si.quantity,
-    si.price,
-    si.alert_quantity,
-    si.size,
-    si.location_id,
-    l.name as location_name,
-    si.remark,
-    (SELECT id FROM item_images WHERE item_id = si.item_id ORDER BY id DESC LIMIT 1) as image_id
-FROM 
-    store_items si
-LEFT JOIN 
-    categories c ON si.category_id = c.id
-JOIN 
-    locations l ON si.location_id = l.id
-WHERE 1=1";
-
-// Add filters to main query
-if ($name_filter) {
-    $query .= " AND si.name LIKE :name";
-    // Parameter already bound above
-}
-
-if ($category_filter) {
-    $query .= " AND si.category_id = :category_id";
-    // Parameter already bound above
-}
-
-if ($location_filter) {
-    $query .= " AND si.location_id = :location_id";
-    // Parameter already bound above
-}
-
-if ($search_query) {
-    $query .= " AND (si.name LIKE :search OR si.item_code LIKE :search OR si.invoice_no LIKE :search OR si.remark LIKE :search)";
-    // Parameter already bound above
-}
-
+// Add sorting
+$query .= " ORDER BY $sort_by $sort_order";
 $limit_options = [10, 25, 50, 100];
 $per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
 if (!in_array($per_page, $limit_options)) {
     $per_page = 10;
 }
+// Get pagination parameters
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit = $per_page;
+$offset = ($page - 1) * $limit;
 
-// Update the pagination calculation
-$offset = ($page - 1) * $per_page;
-$total_pages = ceil($total_items / $per_page);
+// Get total count for pagination
+$count_query = "SELECT COUNT(*) as total FROM items i 
+                JOIN locations l ON i.location_id = l.id 
+                LEFT JOIN deporty d ON i.deporty_id = d.id
+                LEFT JOIN categories c ON i.category_id = c.id
+                WHERE i.deporty_id = :deporty_id";
 
-// Order by
-$query .= " ORDER BY $sort_by $sort_order LIMIT :limit OFFSET :offset";
+// Add the same filters to the count query
+if ($year_filter !== null) {
+    $count_query .= " AND YEAR(i.date) = :year";
+}
+if ($month_filter !== null) {
+    $count_query .= " AND MONTH(i.date) = :month";
+}
+if ($location_filter) {
+    $count_query .= " AND i.location_id = :location_id";
+}
+if ($search_query) {
+    $count_query .= " AND (i.name LIKE :search OR i.invoice_no LIKE :search OR i.remark LIKE :search)";
+}
 
-// Add pagination parameters
-$params[':limit'] = $per_page;
-$params[':offset'] = $offset;
-
-// Get all locations for filter dropdown
-$stmt = $pdo->query("SELECT * FROM locations WHERE type !='repair' ORDER BY name");
-$locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get all categories
-$stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
-$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Execute main query
-$stmt = $pdo->prepare($query);
+$stmt = $pdo->prepare($count_query);
+$stmt->bindValue(':deporty_id', $deporty_id, PDO::PARAM_INT);
 foreach ($params as $key => $value) {
-    if ($key === ':limit' || $key === ':offset') {
-        $stmt->bindValue($key, $value, PDO::PARAM_INT);
-    } else {
+    if ($key !== ':deporty_id') {
         $stmt->bindValue($key, $value);
     }
 }
 $stmt->execute();
+$total_items = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_items / $limit);
+
+// Get items with pagination
+$query .= " LIMIT :limit OFFSET :offset";
+$stmt = $pdo->prepare($query);
+$stmt->bindValue(':deporty_id', $deporty_id, PDO::PARAM_INT);
+foreach ($params as $key => $value) {
+    if ($key !== ':deporty_id') {
+        $stmt->bindValue($key, $value);
+    }
+}
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Helper function to safely output values
-function safeOutput($value, $default = '') {
-    if ($value === null) {
-        return $default;
-    }
-    return htmlspecialchars($value);
-}
+// Get all locations for filter dropdown
+$stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
+$locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
+<!-- CSS styles would be the same as in category_items.php -->
 <style>
-     :root {
+  :root {
   --primary: #4e73df;
   --primary-dark: #2e59d9;
   --primary-light: #f8f9fc;
@@ -1237,11 +1167,110 @@ table th{
         margin-left: 0; /* Reset margin on mobile */
     }
 }
+/* Prevent invoice number from wrapping */
+input[name="invoice_no"] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (max-width: 768px) {
+    .modal-body .row {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    
+    .modal-body .col-md-6 {
+        flex: 0 0 auto;
+        width: 50%;
+        min-width: 200px;
+    }
+}
+/* Invoice number field styling */
+#main_invoice_no {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* Allows the field to shrink properly */
+}
+
+/* Ensure the container doesn't cause wrapping */
+.modal-body .row .col-md-6 {
+    flex: 0 0 auto;
+    width: 50%;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    #main_invoice_no {
+        font-size: 14px; /* Slightly smaller font on mobile */
+        padding: 0.5rem;
+    }
+    
+    .modal-body .row .col-md-6 {
+        width: 100%; /* Stack inputs on mobile */
+        margin-bottom: 10px;
+    }
+}
+.filter-section {
+        background-color: #f8f9fa;
+        border-radius: 0.35rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .sort-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: end;
+    }
+
+    .sort-select {
+        min-width: 120px;
+    }
+
+    .sort-order-select {
+        min-width: 100px;
+    }
+
+    @media (max-width: 768px) {
+        .filter-group {
+            min-width: 100%;
+        }
+        .sort-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .sort-select, .sort-order-select {
+            min-width: 100%;
+        }
+    }
 </style>
 <div class="container-fluid">
-    <h2 class="mb-4"><?php echo t('store_inventory'); ?></h2>
-    <!-- Show entries per page selection -->
-<div class="row mb-3">
+    <h2 class="mb-4"><?php echo t('deporty'); ?>: <?php echo htmlspecialchars($deporty['name']); ?></h2>
+    <div class="row mb-3">
     <div class="col-md-12">
         <div class="d-flex align-items-center entries-per-page">
             <span class="me-2"><?php echo t('show_entries'); ?></span>
@@ -1256,150 +1285,229 @@ table th{
         </div>
     </div>
 </div>
+    <!-- Back button -->
+    
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
-        </div>
-        <div class="card-body">
-            <form method="GET" class="row g-2">
-                <input type="hidden" name="page" value="1">
-                <div class="col-md-3">
-                    <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo safeOutput($search_query); ?>">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="filter-form">
+            <input type="hidden" name="deporty_id" value="<?php echo $deporty_id; ?>">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('search'); ?></label>
+                    <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_query); ?>" placeholder="<?php echo t('search'); ?>...">
                 </div>
-                <div class="col-md-2">
+                
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('location_column'); ?></label>
                     <select name="location" class="form-select">
                         <option value=""><?php echo t('report_all_location'); ?></option>
                         <?php foreach ($locations as $location): ?>
-                            <option value="<?php echo safeOutput($location['id']); ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
-                                <?php echo safeOutput($location['name']); ?>
+                            <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                <?php echo $location['name']; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <select name="category" class="form-select">
-                        <option value=""><?php echo t('all_categories'); ?></option>
-                        <?php foreach ($categories as $category): ?>
-                            <option value="<?php echo safeOutput($category['id']); ?>" <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
-                                <?php echo safeOutput($category['name']); ?>
+                
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('month'); ?></label>
+                    <select name="month" class="form-select">
+                        <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_months'); ?></option>
+                        <?php for ($m = 1; $m <= 12; $m++): ?>
+                            <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
+                                <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
                             </option>
-                        <?php endforeach; ?>
+                        <?php endfor; ?>
                     </select>
                 </div>
-                <div class="col-md-2">
+                
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('year'); ?></label>
+                    <select name="year" class="form-select">
+                        <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
+                        <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                            <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
+                                <?php echo $y; ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('sort'); ?></label>
                     <select name="sort_option" class="form-select">
-                        <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
-                        <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
-                        <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
-                        <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
-                        <option value="price_asc" <?php echo $sort_option == 'price_asc' ? 'selected' : ''; ?>><?php echo t('price_low_high'); ?></option>
-                        <option value="price_desc" <?php echo $sort_option == 'price_desc' ? 'selected' : ''; ?>><?php echo t('price_high_low'); ?></option>
-                        <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
-                        <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
+                        <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>>
+                            <?php echo t('name_a_to_z'); ?>
+                        </option>
+                        <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>>
+                            <?php echo t('name_z_to_a'); ?>
+                        </option>
+                        <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
+                            <?php echo t('date_oldest_first'); ?>
+                        </option>
+                        <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
+                            <?php echo t('date_newest_first'); ?>
+                        </option>
+                        <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
+                            <?php echo t('location_az'); ?>
+                        </option>
+                        <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
+                            <?php echo t('location_za'); ?>
+                        </option>
+                        <option value="quantity_asc" <?php echo $sort_option == 'quantity_asc' ? 'selected' : ''; ?>>
+                            <?php echo t('quantity_low_to_high'); ?>
+                        </option>
+                        <option value="quantity_desc" <?php echo $sort_option == 'quantity_desc' ? 'selected' : ''; ?>>
+                            <?php echo t('quantity_high_to_low'); ?>
+                        </option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary"><?php echo t('search'); ?></button>
-                    <a href="store.php" class="btn btn-secondary"><?php echo t('reset'); ?></a>
-                </div>
-            </form>
-        </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                </button>
+                <a href="deporty_items.php?deporty_id=<?php echo $deporty_id; ?>" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                </a>
+            </div>
+            
+            <input type="hidden" name="page" value="1">
+        </form>
     </div>
+</div>
     
-    <!-- Store Inventory Table -->
-    <div class="card">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><?php echo t('store_inventory'); ?></h5>
-            <!--   <span class="badge bg-light text-dark"><?php echo t('total_items'); ?>: <?php echo $total_items; ?></span>-->
+    <!-- Data Card -->
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color:#674ea7;">
+            <h5 class="mb-0"><?php echo t('item_list'); ?></h5>
         </div>
         <div class="card-body">
-            <?php if ($items): ?>
-                <div class="table-responsive">
-                <table class="table table-striped table-bordered">
+            <?php if (!empty($search_query) || $location_filter || $month_filter || $year_filter): ?>
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i> 
+                    <?php echo t('showing_filtered_results'); ?>
+                    <?php if (!empty($search_query)): ?>
+                        <span class="badge bg-secondary"><?php echo t('search'); ?>: <?php echo htmlspecialchars($search_query); ?></span>
+                    <?php endif; ?>
+                    <?php if ($location_filter): ?>
+                        <span class="badge bg-secondary"><?php echo t('location_column'); ?>: <?php 
+                            $location_name = '';
+                            foreach ($locations as $loc) {
+                                if ($loc['id'] == $location_filter) {
+                                    $location_name = $loc['name'];
+                                    break;
+                                }
+                            }
+                            echo $location_name;
+                        ?></span>
+                    <?php endif; ?>
+                    <?php if ($month_filter && $month_filter != 0): ?>
+                        <span class="badge bg-secondary"><?php echo t('month'); ?>: <?php echo date('F', mktime(0, 0, 0, $month_filter, 1)); ?></span>
+                    <?php endif; ?>
+                    <?php if ($year_filter && $year_filter != 0): ?>
+                        <span class="badge bg-secondary"><?php echo t('year'); ?>: <?php echo $year_filter; ?></span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            
+            <div class="table-responsive">
+                <table class="table table-striped">
                     <thead>
                         <tr>
                             <th><?php echo t('item_no'); ?></th>
                             <th><?php echo t('item_code'); ?></th>
                             <th><?php echo t('category'); ?></th>
+                            <th><?php echo t('deporty'); ?></th>
                             <th><?php echo t('item_invoice'); ?></th>
                             <th><?php echo t('item_date'); ?></th>
                             <th><?php echo t('item_name'); ?></th>
                             <th><?php echo t('item_qty'); ?></th>
-                            <th><?php echo t('price'); ?></th>
-                            <th><?php echo t('sub_total'); ?></th> <!-- NEW COLUMN -->
-                            <th><?php echo t('unit'); ?></th>
-                            <th><?php echo t('location'); ?></th>
+                            <th><?php echo t('item_size'); ?></th>
+                            <th><?php echo t('item_location'); ?></th>
                             <th><?php echo t('item_remark'); ?></th>
                             <th><?php echo t('item_photo'); ?></th>
-                            <th><?php echo t('action'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($items as $index => $item): 
-                            // Calculate subtotal
-                            $quantity = (float)$item['quantity'];
-                            $price = (float)$item['price'];
-                            $subtotal = $quantity * $price;
-                        ?>
+                        <?php if (empty($items)): ?>
                             <tr>
-                                <td><?php echo $offset + $index + 1; ?></td>
-                                <td><?php echo safeOutput($item['item_code']); ?></td>
-                                <td><?php echo safeOutput($item['category_name']); ?></td>
-                                <td><?php echo safeOutput($item['invoice_no']); ?></td>
-                                <td><?php echo $item['date'] ? date('d/m/Y', strtotime($item['date'])) : ''; ?></td>
-                                <td><?php echo safeOutput($item['name']); ?></td>
-                                <td><?php echo safeOutput($item['quantity']); ?></td>
-                                <td><?php echo '$' . ($item['price'] ? number_format($item['price'], 3) : '0.0000'); ?></td>
-                                <td><?php echo '$' . number_format($subtotal, 2); ?></td> <!-- NEW COLUMN DATA -->
-                                <td><?php echo safeOutput($item['size']); ?></td>
-                                <td><?php echo safeOutput($item['location_name']); ?></td>
-                                <td><?php echo safeOutput($item['remark']); ?></td>
-                                <td>
-                                    <?php if ($item['image_id']): ?>
-                                        <img src="display_image.php?id=<?php echo safeOutput($item['image_id']); ?>" 
-                                             class="img-thumbnail" width="50"
-                                             data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
-                                             data-item-id="<?php echo safeOutput($item['id']); ?>">
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                        <button class="btn btn-sm btn-warning edit-btn" 
-                                                data-id="<?php echo $item['id']; ?>"
-                                                data-quantity="<?php echo $item['quantity']; ?>"
-                                                data-price="<?php echo $item['price']; ?>">
-                                            <i class="fas fa-edit"></i> <?php echo t('update_button'); ?>
-                                        </button>
-                                    </td>
+                                <td colspan="12" class="text-center"><?php echo t('no_items_in_deporty'); ?></td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($items as $index => $item): ?>
+                                <tr>
+                                    <td><?php echo $index + 1 + $offset; ?></td>
+                                    <td><?php echo $item['item_code'] ?: 'N/A'; ?></td>
+                                    <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
+                                    <td><?php echo $item['deporty_name'] ?: 'N/A'; ?></td>
+                                    <td><?php echo $item['invoice_no']; ?></td>
+                                    <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
+                                    <td><?php echo $item['name']; ?></td>
+                                    <td class="<?php echo $item['quantity'] <= $item['alert_quantity'] ? 'text-danger fw-bold' : ''; ?>">
+                                        <?php echo $item['quantity']; ?>
+                                        <?php if ($item['quantity'] <= $item['alert_quantity']): ?>
+                                            <span class="badge bg-danger"><?php echo t('low_stock_title'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo $item['size']; ?></td>
+                                    <td><?php echo $item['location_name']; ?></td>
+                                    <td><?php echo $item['remark']; ?></td>
+                                    <td>
+                                        <?php 
+                                        $stmt = $pdo->prepare("SELECT id FROM item_images WHERE item_id = ? ORDER BY id DESC LIMIT 1");
+                                        $stmt->execute([$item['id']]);
+                                        $image = $stmt->fetch(PDO::FETCH_ASSOC);
+                                        
+                                        if ($image): ?>
+                                            <img src="display_image.php?id=<?php echo $image['id']; ?>" 
+                                                 alt="<?php echo htmlspecialchars($item['name']); ?>" 
+                                                 class="img-thumbnail" 
+                                                 width="50"
+                                                 data-bs-toggle="modal" 
+                                                 data-bs-target="#imageGalleryModal"
+                                                 data-item-id="<?php echo $item['id']; ?>">
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">No image</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
-                </div>
-                
-               <!-- Pagination -->
-<?php if ($total_pages > 1): ?>
+            </div>
+            
+         <!-- Pagination -->
 <nav aria-label="Page navigation" class="mt-3">
     <ul class="pagination justify-content-center">
-        <!-- First page link -->
-        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
-                <span aria-hidden="true">&laquo;&laquo;</span>
-            </a>
-        </li>
-        
-        <!-- Previous page link -->
-        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-            </a>
-        </li>
+        <?php if ($page > 1): ?>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        <?php else: ?>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;&laquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+        <?php endif; ?>
 
-        <!-- Page number links -->
         <?php 
-        // Show page numbers with ellipsis for many pages
+        // Show page numbers
         $start_page = max(1, $page - 2);
         $end_page = min($total_pages, $page + 2);
         
@@ -1409,9 +1517,7 @@ table th{
         
         for ($i = $start_page; $i <= $end_page; $i++): ?>
             <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>">
-                    <?php echo $i; ?>
-                </a>
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
             </li>
         <?php endfor;
         
@@ -1420,36 +1526,40 @@ table th{
         }
         ?>
 
-        <!-- Next page link -->
-        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-            </a>
-        </li>
-        
-        <!-- Last page link -->
-        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
-                <span aria-hidden="true">&raquo;&raquo;</span>
-            </a>
-        </li>
+        <?php if ($page < $total_pages): ?>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+        <?php else: ?>
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;&raquo;</span>
+            </li>
+        <?php endif; ?>
     </ul>
 </nav>
-
-<!-- Page number display -->
 <div class="text-center text-muted">
+    
     <?php echo t('page'); ?> <?php echo $page; ?> <?php echo t('page_of'); ?> <?php echo $total_pages; ?> 
+ 
 </div>
-<?php endif; ?>
-                
-            <?php else: ?>
-                <div class="alert alert-info"><?php echo t('no_items_found'); ?></div>
-            <?php endif; ?>
-        </div>
+<div class="mb-3">
+        <a href="deporty.php" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> <?php echo t('return'); ?>
+        </a>
     </div>
-</div>
 
-<!-- Image Gallery Modal (same as in items.php) -->
+
+<!-- Image Gallery Modal -->
 <div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -1473,112 +1583,77 @@ table th{
         </div>
     </div>
 </div>
-<!-- Edit Item Modal -->
-<div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title" id="editItemModalLabel"><?php echo t('edit_item'); ?></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" id="editItemForm">
-                <input type="hidden" name="id" id="editItemId">
-                <input type="hidden" name="update_item" value="1">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="editQuantity" class="form-label"><?php echo t('quantity'); ?></label>
-                        <input type="number" step="0.01" class="form-control" id="editQuantity" name="quantity" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="editPrice" class="form-label"><?php echo t('price'); ?></label>
-                        <input type="number" step="0.01" class="form-control" id="editPrice" name="price" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
-                    <button type="submit" class="btn btn-warning"><?php echo t('update_button'); ?></button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-<?php require_once '../includes/footer.php'; ?>
 
 <script>
-  // JavaScript for handling edit modal
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle edit button clicks
-    const editButtons = document.querySelectorAll('.edit-btn');
-    const editModal = new bootstrap.Modal(document.getElementById('editItemModal'));
-    const editForm = document.getElementById('editItemForm');
-    const editItemId = document.getElementById('editItemId');
-    const editQuantity = document.getElementById('editQuantity');
-    const editPrice = document.getElementById('editPrice');
-    
-    editButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const quantity = this.getAttribute('data-quantity');
-            const price = this.getAttribute('data-price');
-            
-            editItemId.value = id;
-            editQuantity.value = quantity;
-            editPrice.value = price;
-            
-            editModal.show();
-        });
-    });
+    document.addEventListener('DOMContentLoaded', function() {
+    // Handle entries per page change
     const perPageSelect = document.getElementById('per_page_select');
     if (perPageSelect) {
         perPageSelect.addEventListener('change', function() {
-            const url = new URL(window.location.href);
+            const url = new URL(window.location);
             url.searchParams.set('per_page', this.value);
-            url.searchParams.set('page', 1); // Reset to first page when changing per page
+            url.searchParams.set('page', '1'); // Reset to first page
             window.location.href = url.toString();
         });
     }
 });
-// Image gallery functionality (same as in items.php)
-document.addEventListener('DOMContentLoaded', function() {
-    const imageGalleryModal = document.getElementById('imageGalleryModal');
-    
-    if (imageGalleryModal) {
-        imageGalleryModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget; // Button that triggered the modal
-            const itemId = button.getAttribute('data-item-id');
-            const carouselInner = document.getElementById('carousel-inner');
-            
-            // Clear previous content
-            carouselInner.innerHTML = '';
-            
-            // Check if there's an image ID (from your PHP code)
-            const imageId = button.closest('td').querySelector('img')?.getAttribute('src')?.split('=')[1];
-            
-            if (imageId) {
-                // Create carousel item with the single image
-                const item = document.createElement('div');
-                item.className = 'carousel-item active';
+// Image Gallery functionality
+document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
+    img.addEventListener('click', function() {
+        const itemId = this.getAttribute('data-item-id');
+        fetch(`get_item_images.php?id=${itemId}`)
+            .then(response => response.json())
+            .then(images => {
+                const carouselInner = document.getElementById('carousel-inner');
+                carouselInner.innerHTML = '';
                 
-                const imgElement = document.createElement('img');
-                imgElement.src = `display_image.php?id=${imageId}`;
-                imgElement.className = 'd-block w-100';
-                imgElement.alt = 'Item Image';
-                imgElement.style.maxHeight = '70vh';
-                imgElement.style.objectFit = 'contain';
-                
-                item.appendChild(imgElement);
-                carouselInner.appendChild(item);
-            } else {
-                // No image available
-                carouselInner.innerHTML = `
-                    <div class="carousel-item active">
-                        <div class="d-flex align-items-center justify-content-center" style="height: 400px;">
-                            <p class="text-muted">${t('no_image')}</p>
+                if (images.length > 0) {
+                    images.forEach((image, index) => {
+                        const item = document.createElement('div');
+                        item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+                        
+                        const imgElement = document.createElement('img');
+                        imgElement.src = `display_image.php?id=${image.id}`;
+                        imgElement.className = 'd-block w-100';
+                        imgElement.alt = 'Item Image';
+                        imgElement.style.maxHeight = '70vh';
+                        imgElement.style.objectFit = 'contain';
+                        
+                        item.appendChild(imgElement);
+                        carouselInner.appendChild(item);
+                    });
+                } else {
+                    carouselInner.innerHTML = `
+                        <div class="carousel-item active">
+                            <img src="assets/images/no-image.png" 
+                                 class="d-block w-100" 
+                                 alt="No image"
+                                 style="max-height: 70vh; object-fit: contain;">
                         </div>
-                    </div>
-                `;
-            }
-        });
-    }
+                    `;
+                }
+            });
+    });
+});
+
+// Auto-hide success messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const successMessages = document.querySelectorAll('.alert-success');
+    
+    successMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.5s ease';
+            message.style.opacity = '0';
+            
+            // Remove the element after fade out
+            setTimeout(() => {
+                message.remove();
+            }, 500);
+        }, 5000); // 5000 milliseconds = 5 seconds
+    });
 });
 </script>
+
+<?php
+require_once '../includes/footer.php';
+?>

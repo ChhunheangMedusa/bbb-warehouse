@@ -1777,7 +1777,7 @@ table th{
     <!-- Data Card -->
     <div class="card mb-4">
         <div class="card-header text-white" style="background-color:#674ea7;">
-           
+
             <h5 class="mb-0"><?php echo t('item_list');?></h5>
         </div>
         <div class="card-body">
@@ -1835,8 +1835,9 @@ table th{
                             <th><?php echo t('item_size');?></th>
                             <th><?php echo t('item_location');?></th>
                             <th><?php echo t('item_remark');?></th>
+                           
                             <th><?php echo t('item_photo');?></th>
-
+                            <th><?php echo t('column_action');?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1889,7 +1890,21 @@ table th{
                                             <span class="badge bg-secondary">No image</span>
                                         <?php endif; ?>
                                     </td>
-                                  
+                                    <td>
+                                        <button class="btn btn-sm btn-info view-item" 
+                                                data-id="<?php echo $item['id']; ?>">
+                                            <i class="bi bi-eye"></i> <?php echo t('view_button');?>
+                                        </button>
+                                      
+                                        <?php if (isAdmin()): ?>
+                                            <a href="#" class="btn btn-sm btn-danger delete-item" 
+                                               data-id="<?php echo $item['id']; ?>"
+                                               data-name="<?php echo htmlspecialchars($item['name']); ?>"
+                                               data-location="<?php echo htmlspecialchars($item['location_name']); ?>">
+                                                <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>

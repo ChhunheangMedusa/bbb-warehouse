@@ -1781,9 +1781,7 @@ table th{
     <!-- Data Card -->
     <div class="card mb-4">
         <div class="card-header text-white" style="background-color:#674ea7;">
-            <button class="btn btn-light btn-sm float-end" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                <i class="bi bi-plus-circle"></i> <?php echo t('add_new_item');?>
-            </button>
+
             <h5 class="mb-0"><?php echo t('item_list');?></h5>
         </div>
         <div class="card-body">

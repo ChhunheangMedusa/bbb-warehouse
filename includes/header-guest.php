@@ -190,7 +190,7 @@ $hasAvatar = ($userPicture !== null);
     
         <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Guest/remaining.php' ? 'active' : ''; ?>" href="../Guest/remaining.php">
-                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('remaining'); ?>
+                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('item'); ?>
                                 </a>
                             </li>
            

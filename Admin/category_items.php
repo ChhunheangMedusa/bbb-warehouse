@@ -932,7 +932,7 @@ body {
     <!-- Data Card -->
     <div class="card mb-4">
         <div class="card-header text-white" style="background-color:#674ea7;">
-            <h5 class="mb-0"><?php echo t('item_list'); ?>: <?php echo htmlspecialchars($category['name']); ?></h5>
+            <h5 class="mb-0"><?php echo t('item_list'); ?></h5>
         </div>
         <div class="card-body">
             <?php if (!empty($search_query) || $location_filter || $month_filter || $year_filter): ?>

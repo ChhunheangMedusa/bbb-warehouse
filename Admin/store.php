@@ -10,7 +10,43 @@ if (!isAdmin()) {
     header('Location: dashboard-staff.php');
     exit();
 }
-
+// Handle update request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_item'])) {
+  $id = (int)$_POST['id'];
+  $quantity = (float)$_POST['quantity'];
+  $price = (float)$_POST['price'];
+  $price_upt=t('price_upt');
+  try {
+      $update_stmt = $pdo->prepare("UPDATE store_items SET quantity = :quantity, price = :price WHERE id = :id");
+      $update_stmt->execute([
+          ':quantity' => $quantity,
+          ':price' => $price,
+          ':id' => $id
+      ]);
+      
+      $_SESSION['success'] = "$price_upt";
+      
+      // Check if headers have been sent
+      if (!headers_sent()) {
+          header('Location: store.php?' . http_build_query($_GET));
+          exit();
+      } else {
+          echo '<script>window.location.href = "store.php?' . http_build_query($_GET) . '";</script>';
+          exit();
+      }
+  } catch (PDOException $e) {
+      $_SESSION['error'] = "Error updating item: " . $e->getMessage();
+      
+      // Check if headers have been sent
+      if (!headers_sent()) {
+          header('Location: store.php?' . http_build_query($_GET));
+          exit();
+      } else {
+          echo '<script>window.location.href = "store.php?' . http_build_query($_GET) . '";</script>';
+          exit();
+      }
+  }
+}
 // Get filter parameters
 $name_filter = isset($_GET['name']) ? sanitizeInput($_GET['name']) : '';
 $category_filter = isset($_GET['category']) ? (int)$_GET['category'] : null;
@@ -1296,6 +1332,7 @@ table th{
                             <th><?php echo t('location'); ?></th>
                             <th><?php echo t('item_remark'); ?></th>
                             <th><?php echo t('item_photo'); ?></th>
+                            <th><?php echo t('action'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1328,6 +1365,14 @@ table th{
                                         <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
                                     <?php endif; ?>
                                 </td>
+                                <td>
+                                        <button class="btn btn-sm btn-warning edit-btn" 
+                                                data-id="<?php echo $item['id']; ?>"
+                                                data-quantity="<?php echo $item['quantity']; ?>"
+                                                data-price="<?php echo $item['price']; ?>">
+                                            <i class="fas fa-edit"></i> <?php echo t('update_button'); ?>
+                                        </button>
+                                    </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -1428,52 +1473,112 @@ table th{
         </div>
     </div>
 </div>
-
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="editItemModalLabel"><?php echo t('edit_item'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="editItemForm">
+                <input type="hidden" name="id" id="editItemId">
+                <input type="hidden" name="update_item" value="1">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editQuantity" class="form-label"><?php echo t('quantity'); ?></label>
+                        <input type="number" step="0.01" class="form-control" id="editQuantity" name="quantity" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPrice" class="form-label"><?php echo t('price'); ?></label>
+                        <input type="number" step="0.01" class="form-control" id="editPrice" name="price" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
+                    <button type="submit" class="btn btn-warning"><?php echo t('update_button'); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <?php require_once '../includes/footer.php'; ?>
 
 <script>
-    document.getElementById('per_page_select').addEventListener('change', function() {
-    const url = new URL(window.location);
-    url.searchParams.set('per_page', this.value);
-    url.searchParams.set('page', '1'); // Reset to first page
-    window.location.href = url.toString();
+  // JavaScript for handling edit modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle edit button clicks
+    const editButtons = document.querySelectorAll('.edit-btn');
+    const editModal = new bootstrap.Modal(document.getElementById('editItemModal'));
+    const editForm = document.getElementById('editItemForm');
+    const editItemId = document.getElementById('editItemId');
+    const editQuantity = document.getElementById('editQuantity');
+    const editPrice = document.getElementById('editPrice');
+    
+    editButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const quantity = this.getAttribute('data-quantity');
+            const price = this.getAttribute('data-price');
+            
+            editItemId.value = id;
+            editQuantity.value = quantity;
+            editPrice.value = price;
+            
+            editModal.show();
+        });
+    });
+    const perPageSelect = document.getElementById('per_page_select');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('per_page', this.value);
+            url.searchParams.set('page', 1); // Reset to first page when changing per page
+            window.location.href = url.toString();
+        });
+    }
 });
 // Image gallery functionality (same as in items.php)
-document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
-    img.addEventListener('click', function() {
-        const itemId = this.getAttribute('data-item-id');
-        fetch(`get_item_images.php?id=${itemId}`)
-            .then(response => response.json())
-            .then(images => {
-                const carouselInner = document.getElementById('carousel-inner');
-                carouselInner.innerHTML = '';
+document.addEventListener('DOMContentLoaded', function() {
+    const imageGalleryModal = document.getElementById('imageGalleryModal');
+    
+    if (imageGalleryModal) {
+        imageGalleryModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget; // Button that triggered the modal
+            const itemId = button.getAttribute('data-item-id');
+            const carouselInner = document.getElementById('carousel-inner');
+            
+            // Clear previous content
+            carouselInner.innerHTML = '';
+            
+            // Check if there's an image ID (from your PHP code)
+            const imageId = button.closest('td').querySelector('img')?.getAttribute('src')?.split('=')[1];
+            
+            if (imageId) {
+                // Create carousel item with the single image
+                const item = document.createElement('div');
+                item.className = 'carousel-item active';
                 
-                if (images.length > 0) {
-                    images.forEach((image, index) => {
-                        const item = document.createElement('div');
-                        item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-                        
-                        const imgElement = document.createElement('img');
-                        imgElement.src = `display_image.php?id=${image.id}`;
-                        imgElement.className = 'd-block w-100';
-                        imgElement.alt = 'Item Image';
-                        imgElement.style.maxHeight = '70vh';
-                        imgElement.style.objectFit = 'contain';
-                        
-                        item.appendChild(imgElement);
-                        carouselInner.appendChild(item);
-                    });
-                } else {
-                    carouselInner.innerHTML = `
-                        <div class="carousel-item active">
-                            <img src="assets/images/no-image.png" 
-                                 class="d-block w-100" 
-                                 alt="No image"
-                                 style="max-height: 70vh; object-fit: contain;">
+                const imgElement = document.createElement('img');
+                imgElement.src = `display_image.php?id=${imageId}`;
+                imgElement.className = 'd-block w-100';
+                imgElement.alt = 'Item Image';
+                imgElement.style.maxHeight = '70vh';
+                imgElement.style.objectFit = 'contain';
+                
+                item.appendChild(imgElement);
+                carouselInner.appendChild(item);
+            } else {
+                // No image available
+                carouselInner.innerHTML = `
+                    <div class="carousel-item active">
+                        <div class="d-flex align-items-center justify-content-center" style="height: 400px;">
+                            <p class="text-muted">${t('no_image')}</p>
                         </div>
-                    `;
-                }
-            });
-    });
+                    </div>
+                `;
+            }
+        });
+    }
 });
 </script>

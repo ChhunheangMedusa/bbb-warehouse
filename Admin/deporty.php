@@ -1297,15 +1297,20 @@ input[name="invoice_no"] {
                             <?php foreach ($deporties as $index => $deporty): ?>
                                 <tr>
                                     <td><?php echo $deporty['id']; ?></td>
-                                    <td><?php echo $deporty['name']; ?></td>
+                                    <td>
+    <a href="deporty_items.php?deporty_id=<?php echo $deporty['id']; ?>" 
+       class="text-dark text-decoration-none">
+        <?php echo $deporty['name']; ?>
+    </a>
+</td>
                                     <td>
                                         <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editDeportyModal" 
                                                 data-id="<?php echo $deporty['id']; ?>" data-name="<?php echo $deporty['name']; ?>">
-                                            <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
+                                            <i class="bi bi-pencil"></i> <?php echo t('update_button'); ?>
                                         </button>
                                         <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDeportyModal" 
                                                 data-id="<?php echo $deporty['id']; ?>" data-name="<?php echo $deporty['name']; ?>">
-                                            <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+                                            <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
                                         </button>
                                     </td>
                                 </tr>
@@ -1412,7 +1417,7 @@ input[name="invoice_no"] {
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="name" class="form-label"><?php echo t('name'); ?></label>
+                        <label for="name" class="form-label"><?php echo t('name_deport'); ?></label>
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
                 </div>
@@ -1437,13 +1442,13 @@ input[name="invoice_no"] {
                 <div class="modal-body">
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
-                        <label for="edit_name" class="form-label"><?php echo t('name'); ?></label>
+                        <label for="edit_name" class="form-label"><?php echo t('name_deport'); ?></label>
                         <input type="text" class="form-control" id="edit_name" name="name" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="update_deporty" class="btn btn-primary"><?php echo t('update'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
+                    <button type="submit" name="update_deporty" class="btn btn-warning"><?php echo t('form_update'); ?></button>
                 </div>
             </form>
         </div>
@@ -1451,27 +1456,37 @@ input[name="invoice_no"] {
 </div>
 
 <!-- Delete Deporty Modal -->
-<div class="modal fade" id="deleteDeportyModal" tabindex="-1" aria-labelledby="deleteDeportyModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="deleteDeportyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="deleteDeportyModalLabel"><?php echo t('delete_deporty'); ?></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('delete_deporty'); ?>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-trash-fill text-danger" style="font-size: 2.5rem;"></i>
                 </div>
-                <div class="modal-body">
+                <h4 class="text-danger mb-2" style="font-size: 1.25rem;"><?php echo t('confirm_delete_deporty'); ?></h4>
+                <p class="mb-3"><?php echo t('del_usr2'); ?></p>
+                <div id="deleteDeportyInfo" class="alert alert-light mb-0"></div>
+            </div>
+            <div class="modal-footer d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
+                </button>
+                <form method="POST" class="d-inline">
                     <input type="hidden" name="id" id="delete_id">
-                    <p><?php echo t('confirm_delete_deporty'); ?>: <strong id="delete_name"></strong>?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="delete_deporty" class="btn btn-danger"><?php echo t('delete'); ?></button>
-                </div>
-            </form>
+                    <button type="submit" name="delete_deporty" class="btn btn-danger flex-grow-1 flex-md-grow-0">
+                        <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
-
 <script>
 // Handle edit modal
 document.getElementById('editDeportyModal').addEventListener('show.bs.modal', function (event) {
@@ -1485,6 +1500,7 @@ document.getElementById('editDeportyModal').addEventListener('show.bs.modal', fu
 });
 
 // Handle delete modal
+// Handle delete modal
 document.getElementById('deleteDeportyModal').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     const id = button.getAttribute('data-id');
@@ -1492,7 +1508,11 @@ document.getElementById('deleteDeportyModal').addEventListener('show.bs.modal', 
     
     const modal = this;
     modal.querySelector('#delete_id').value = id;
-    modal.querySelector('#delete_name').textContent = name;
+    
+    // Update modal content
+    document.getElementById('deleteDeportyInfo').innerHTML = `
+        <strong><?php echo t('name'); ?>:</strong> ${name}
+    `;
 });
 
 // Handle entries per page change

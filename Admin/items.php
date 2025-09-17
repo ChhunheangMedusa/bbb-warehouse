@@ -2379,6 +2379,10 @@ input[name="invoice_no"] {
                                 </div>
                             </div>
                             <div class="row">
+                            <div class="col-md-4">
+                                    <label class="form-label"><?php echo t('item_size'); ?></label>
+                                    <input type="text" class="form-control" name="size[]">
+                                </div>
                                 <div class="col-md-4">
                                     <label class="form-label"><?php echo t('price'); ?></label>
                                     <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
@@ -2387,10 +2391,7 @@ input[name="invoice_no"] {
                                     <label class="form-label"><?php echo t('low_stock_title'); ?></label>
                                     <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label"><?php echo t('item_size'); ?></label>
-                                    <input type="text" class="form-control" name="size[]">
-                                </div>
+                              
                             </div>
                             <div class="row">
                                 <div class="col-md-12">
@@ -2481,6 +2482,10 @@ input[name="invoice_no"] {
                                 </div>
                             </div>
                             <div class="row">
+                            <div class="col-md-4 mb-3">
+                                    <label class="form-label"><?php echo t('item_code'); ?></label>
+                                    <input type="text" class="form-control item-code-input" name="item_code[]">
+                                </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label"><?php echo t('deporty'); ?></label>
                                     <select class="form-select deporty-select" name="deporty_id[]" >
@@ -2494,15 +2499,12 @@ input[name="invoice_no"] {
                                     <label class="form-label"><?php echo t('item_qty'); ?></label>
                                     <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label"><?php echo t('price'); ?></label>
-                                    <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
-                                </div>
+                              
                             </div>
                             <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label"><?php echo t('item_code'); ?></label>
-                                    <input type="text" class="form-control item-code-input" name="item_code[]">
+                            <div class="col-md-4 mb-3">
+                                    <label class="form-label"><?php echo t('price'); ?></label>
+                                    <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label"><?php echo t('item_size'); ?></label>
@@ -2875,6 +2877,10 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
             </div>
         </div>
         <div class="row">
+             <div class="col-md-4 mb-3">
+                <label class="form-label"><?php echo t('item_code'); ?></label>
+                <input type="text" class="form-control item-code-input" name="item_code[]">
+            </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('deporty'); ?></label>
                 <select class="form-select deporty-select" name="deporty_id[]" >
@@ -2888,15 +2894,12 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
                 <label class="form-label"><?php echo t('item_qty'); ?></label>
                 <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
             </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label"><?php echo t('price'); ?></label>
-                <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
-            </div>
+           
         </div>
         <div class="row">
-            <div class="col-md-4 mb-3">
-                <label class="form-label"><?php echo t('item_code'); ?></label>
-                <input type="text" class="form-control item-code-input" name="item_code[]">
+        <div class="col-md-4 mb-3">
+                <label class="form-label"><?php echo t('price'); ?></label>
+                <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('item_size'); ?></label>
@@ -3090,6 +3093,10 @@ document.getElementById('add-more-row').addEventListener('click', function() {
             </div>
         </div>
         <div class="row">
+          <div class="col-md-4">
+                <label class="form-label"><?php echo t('item_size'); ?></label>
+                <input type="text" class="form-control" name="size[]">
+            </div>
             <div class="col-md-4">
                 <label class="form-label"><?php echo t('price'); ?></label>
                 <input type="number" class="form-control" name="price[]" step="0.0001" min="0" value="0">
@@ -3098,10 +3105,7 @@ document.getElementById('add-more-row').addEventListener('click', function() {
                 <label class="form-label"><?php echo t('low_stock_title'); ?></label>
                 <input type="number" class="form-control" name="alert_quantity[]" min="0" value="10" required>
             </div>
-            <div class="col-md-4">
-                <label class="form-label"><?php echo t('item_size'); ?></label>
-                <input type="text" class="form-control" name="size[]">
-            </div>
+          
         </div>
         <div class="row">
             <div class="col-md-12">
