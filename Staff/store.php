@@ -1350,7 +1350,7 @@ table th{
                             <th><?php echo t('location'); ?></th>
                             <th><?php echo t('item_remark'); ?></th>
                             <th><?php echo t('item_photo'); ?></th>
-                            <th><?php echo t('action'); ?></th>
+                          
                         </tr>
                     </thead>
                     <tbody>
@@ -1383,14 +1383,7 @@ table th{
                                         <span class="badge bg-secondary"><?php echo t('no_image'); ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                        <button class="btn btn-sm btn-warning edit-btn" 
-                                                data-id="<?php echo $item['id']; ?>"
-                                                data-quantity="<?php echo $item['quantity']; ?>"
-                                                data-price="<?php echo $item['price']; ?>">
-                                            <i class="fas fa-edit"></i> <?php echo t('update_button'); ?>
-                                        </button>
-                                    </td>
+                           
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
