@@ -207,7 +207,7 @@ if (isset($_POST['download'])) {
                         $used = t('used');
                         $broken = t('broken');
                         $ending = t('ending_period');
-                        $date_col = t('item_date');
+                       
                         
                         if ($report_type === 'stock_in'): ?>
                             <th><?= $no ?></th>
@@ -222,7 +222,7 @@ if (isset($_POST['download'])) {
                             <th><?= $broken ?></th>
                             <th><?= $ending ?></th>
                             <th><?= $remark ?></th>
-                            <th><?= $date_col ?></th>
+                           
                         <?php elseif ($report_type === 'stock_out'): ?>
                             <!-- Add stock_out columns if needed -->
                         <?php elseif ($report_type === 'stock_transfer'): ?>
@@ -248,7 +248,7 @@ if (isset($_POST['download'])) {
                                 <td><?= $item['broken_quantity'] ?></td>
                                 <td><?= $item['ending_quantity'] ?></td>
                                 <td><?= $item['remark'] ?></td>
-                                <td><?= date('d/m/Y', strtotime($item['date'])) ?></td>
+                               
                             <?php elseif ($report_type === 'stock_out'): ?>
                                 <!-- Add stock_out data if needed -->
                             <?php elseif ($report_type === 'stock_transfer'): ?>

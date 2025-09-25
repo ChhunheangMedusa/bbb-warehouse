@@ -1808,12 +1808,12 @@ input[name="invoice_no"] {
     <ul class="nav nav-tabs mb-4" id="itemTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link <?php echo $active_tab === 'in' ? 'active' : ''; ?>" id="in-tab" data-bs-toggle="tab" data-bs-target="#in-tab-pane" type="button" role="tab" aria-controls="in-tab-pane" aria-selected="<?php echo $active_tab === 'in' ? 'true' : 'false'; ?>">
-                <?php echo t('stock_in_history'); ?>
+                <?php echo t('stockin'); ?>
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link <?php echo $active_tab === 'out' ? 'active' : ''; ?>" id="out-tab" data-bs-toggle="tab" data-bs-target="#out-tab-pane" type="button" role="tab" aria-controls="out-tab-pane" aria-selected="<?php echo $active_tab === 'out' ? 'true' : 'false'; ?>">
-                <?php echo t('stock_out_history'); ?>
+                <?php echo t('stockout'); ?>
             </button>
         </li>
     </ul>

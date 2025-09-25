@@ -2503,13 +2503,11 @@ table th{
                         </div>
                     </div>
                     
-                    <button type="button" id="return-repair-more-row" class="btn btn-secondary btn-sm mb-3">
-                        <i class="bi bi-plus-circle"></i> <?php echo t('add_transfer_row'); ?>
-                    </button>
+                  
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
-                    <button type="submit" name="return_from_repair" class="btn btn-success"><?php echo t('return'); ?></button>
+                    <button type="submit" name="return_from_repair" class="btn btn-success"><?php echo t('return_button'); ?></button>
                 </div>
             </form>
         </div>
@@ -2772,76 +2770,7 @@ document.getElementById('return_from_location_id').addEventListener('change', fu
     });
 });
 
-// Handle add more row for return repair modal
-document.getElementById('return-repair-more-row').addEventListener('click', function() {
-    const container = document.getElementById('return_repair_items_container');
-    const locationId = document.getElementById('return_from_location_id').value;
-    const rowCount = container.querySelectorAll('.return-repair-item-row').length;
-    
-    if (!locationId) {
-        const locationAlertModal = new bootstrap.Modal(document.getElementById('selectLocationModal'));
-        locationAlertModal.show();
-        return;
-    }
-    
-    const newRow = document.createElement('div');
-    newRow.className = 'return-repair-item-row mb-3 border p-3';
-    newRow.innerHTML = `
-        <div class="row">
-            <div class="col-md-8 mb-3">
-                <label class="form-label"><?php echo t('item_name'); ?></label>
-                <div class="dropdown item-dropdown">
-                    <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php echo t('select_item'); ?>
-                    </button>
-                    <input type="hidden" name="repair_item_id[]" class="repair-item-id-input" value="">
-                    <ul class="dropdown-menu custom-dropdown-menu p-2">
-                        <li>
-                            <div class="px-2 mb-2">
-                                <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
-                            </div>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <div class="dropdown-item-container">
-                            <!-- Items will be populated here -->
-                        </div>
-                    </ul>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label"><?php echo t('item_qty'); ?></label>
-                <input type="number" class="form-control" name="quantity[]" step="0.5" min="0.5" required>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label"><?php echo t('unit'); ?></label>
-                <input type="text" class="form-control" name="size[]" readonly>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label"><?php echo t('item_remark'); ?></label>
-                <input type="text" class="form-control" name="remark[]">
-            </div>
-        </div>
-        <button type="button" class="btn btn-danger btn-sm remove-row">
-            <i class="bi bi-trash"></i> <?php echo t('del_row'); ?>
-        </button>
-    `;
-    
-    container.appendChild(newRow);
-    
-    // Initialize the dropdown for the new row
-    const dropdown = newRow.querySelector('.item-dropdown');
-    populateItemDropdown(dropdown, locationId, true);
-    
-    // Initialize Bootstrap dropdown
-    new bootstrap.Dropdown(newRow.querySelector('.dropdown-toggle'));
-    
-    // Add event listener for the remove button
-    newRow.querySelector('.remove-row').addEventListener('click', function() {
-        newRow.remove();
-    });
-});
+
 
 // Set today's date when modals are shown
 document.getElementById('sendForRepairModal').addEventListener('shown.bs.modal', function() {

@@ -22,18 +22,18 @@ $translations = [
         'stock_out'=>'សម្ភារៈចេញពីស្តុក',
         'repair'=>'សម្ភារៈជួសជុល',
         'transfer'=>'សម្ភារៈផ្ទេរចេញ',
-        'item'=>'សម្ភារៈ',
+        'item'=>'ស្តុក',
         'category_management'=>'គ្រប់គ្រងប្រភេទសម្ភារៈ',
-        'remaining'=>'សម្ភារៈនៅសល់',
+        'remaining'=>'សម្ភារៈ',
         'store_inventory'=>'តារាងតម្លៃសម្ភារៈ',
         'broken_items'=>'សម្ភារៈខូច',
-        'deporty_management'=>'គ្រប់គ្រងដេប៉ូ',
+        'deporty_management'=>'គ្រប់គ្រងអ្នកផ្គត់ផ្គង់',
     ],
     'en' => [
-        'deporty_management'=>'Deporty Management',
+        'deporty_management'=>'Supplier Management',
         'broken_items'=>'Broken Item',
         'store_inventory'=>'Price List',
-        'remaining'=>'Remaining',
+        'remaining'=>'Item',
         'category_management'=>'Category Management',
         'dashboard' => 'Dashboard',
         'user_management' => 'User Management',
@@ -46,11 +46,11 @@ $translations = [
         'logout' => 'Logout',
         'profile' => 'Profile',
         'system_title' => 'Stock Management System',
-        'stock_in'=>'Stock In',
-        'stock_out'=>'Stock Out',
+        'stock_in'=>'In',
+        'stock_out'=>'Out',
         'repair'=>'Repair',
         'transfer'=>'Transfer',
-        'item'=>'Item'
+        'item'=>'Stock'
     ]
 ];
 

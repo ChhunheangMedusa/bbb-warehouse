@@ -503,7 +503,7 @@ $category_filter = isset($_GET['category']) && $_GET['category'] != '' ? (int)$_
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 
 // Get sort parameters
-$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'name_asc';
 
 // Validate and parse sort option
 $sort_mapping = [

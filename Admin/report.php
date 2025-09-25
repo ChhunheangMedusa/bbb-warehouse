@@ -34,7 +34,7 @@ $non_repair_location_ids = array_column($non_repair_locations, 'id');
 // Handle report generation
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['generate_report']) || isset($_POST['preview_report'])) {
-        $report_type = sanitizeInput($_POST['report_type']);
+        $report_type = 'stock_in'; // Fixed to stock_in since we removed the selection
         $location_id = isset($_POST['location_id']) ? (int)$_POST['location_id'] : null;
         $period = sanitizeInput($_POST['period']);
         $start_date = sanitizeInput($_POST['start_date']);
@@ -351,8 +351,8 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
     $stock_in_report=t('stock_in_report');
 
     if ($report_type === 'stock_in') {
-        $filename = "stock_in_report_" . date('Ymd') . ".xls";
-        $title = "$stock_in_report";
+        $filename = "Items " . date('d/m/yy') . ".xls";
+        $title = "Items";
         $header_color = "#4e73df";
     }
     
@@ -465,11 +465,11 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
             }
             /* Add styles for alternating row colors */
             .row-odd {
-                background-color:#83E28E;
-                color: #ffffff;
+                background-color:#ffffff;
+                color: #000000;
             }
             .row-even {
-                background-color: #ffffff;
+                background-color: #DDDDDD;
                 color: #000000;
             }
             /* Number formatting for Excel */
@@ -492,14 +492,14 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
             <thead>
                 <tr>
                     <th rowspan="2">No</th>
-                    <th rowspan="2">Date</th>
+                    
                     <th rowspan="2">Item Code</th>
                     <th rowspan="2">Category</th>
                     <th rowspan="2">Invoice No</th>
                     <th rowspan="2">Description</th>
                     <th rowspan="2">Unit</th>
                     <th colspan="5">Quantity</th>
-                    <th rowspan="2">Deporty</th>
+                    <th rowspan="2">Supplier</th>
                     <th rowspan="2">Location</th>
                     <th rowspan="2">Remarks</th>
                 </tr>
@@ -540,17 +540,16 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         
         echo '<tr class="'.$row_class.'">
                 <td class="text-center">'.($index + 1).'</td>
-                <td class="text-center">'.$item['date'].'</td>
                 <td class="text-center">'.$item['item_code'].'</td>
-                <td class="text-center">'.$item['category_name'].'</td>
+                <td class="text-left">'.$item['category_name'].'</td>
                 <td class="text-center" style="mso-number-format:\@">'.$item['invoice_no'].'</td>
                 <td class="text-left">'.$item['name'].'</td>
                 <td class="text-center">'.$item['size'].'</td>
-                <td class="number-cell" style="text-align:center;">'.formatQuantity($beginning).'</td>
-                <td class="number-cell" style="text-align:center;">'.formatQuantity($add).'</td>
-                <td class="number-cell" style="text-align:center;">'.formatQuantity($used).'</td>
-                <td class="number-cell" style="text-align:center;">'.formatQuantity($broken).'</td>
-                <td class="number-cell" style="text-align:center;">'.formatQuantity($ending).'</td>
+                <td class="number-cell" style="text-align:right;">'.formatQuantity($beginning).'</td>
+                <td class="number-cell" style="text-align:right;">'.formatQuantity($add).'</td>
+                <td class="number-cell" style="text-align:right;">'.formatQuantity($used).'</td>
+                <td class="number-cell" style="text-align:right;">'.formatQuantity($broken).'</td>
+                <td class="number-cell" style="text-align:right;">'.formatQuantity($ending).'</td>
                 <td class="text-center">'.($item['deporty_name'] ?: 'N/A').'</td>
                 <td class="text-center">'.$item['location_name'].'</td>
                 <td class="text-left">'.$item['remark'].'</td>
@@ -559,13 +558,13 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     
     // Add totals row (no special background color)
     echo '<tr class="bold">
-            <td colspan="7" class="text-right">'.$total_label.':</td>
-            <td class="number-cell">'.formatQuantity($total_beginning).'</td>
-            <td class="number-cell">'.formatQuantity($total_add).'</td>
-            <td class="number-cell">'.formatQuantity($total_used).'</td>
-            <td class="number-cell">'.formatQuantity($total_broken).'</td>
-            <td class="number-cell">'.formatQuantity($total_ending).'</td>
-            <td colspan="3"></td>
+            <td colspan="6" class="text-center"rowspan="2"  style="background-color:yellow;font-size:22px;">'.$total_label.':</td>
+            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_beginning).'</td>
+            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_add).'</td>
+            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_used).'</td>
+            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_broken).'</td>
+            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_ending).'</td>
+            <td colspan="3" rowspan="2" style="background-color:yellow;"></td>
         </tr>';
     
     echo '</tbody>
@@ -604,11 +603,12 @@ function getHeaderTextColor($report_type) {
 
 function getRowColor($report_type, $is_even) {
     switch ($report_type) {
-        case 'stock_in': return $is_even ? '#b1dcc8' : '#FAFAFA';
+        case 'stock_in': return $is_even ? '#9ea3a1' : '#FAFAFA';
         default: return $is_even ? '#f8f9fc' : '#FAFAFA';
     }
 }
 ?>
+
 
 <style>
     /* Your existing CSS remains unchanged */
@@ -1106,13 +1106,6 @@ body {
             <form method="POST" id="reportForm">
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label for="report_type" class="form-label"><?php echo t('report_type');?></label>
-                        <select class="form-select" id="report_type" name="report_type" required>
-                            <option value="stock_in"><?php echo t('todays_stock_in');?></option>
-                          
-                        </select>
-                    </div>
-                    <div class="col-md-6">
                         <label for="location_id" class="form-label"><?php echo t('location_column');?></label>
                         <select class="form-select" id="location_id" name="location_id">
                             <option value=""><?php echo t('report_all_location');?></option>
@@ -1121,9 +1114,6 @@ body {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                </div>
-
-                <div class="row mb-3">
                     <div class="col-md-6">
                         <label for="period" class="form-label"><?php echo t('report_time');?></label>
                         <select class="form-select" id="period" name="period" required>
@@ -1132,6 +1122,9 @@ body {
                             <option value="custom"><?php echo t('report_range');?></option>
                         </select>
                     </div>
+                </div>
+
+                <div class="row mb-3">
                     <div class="col-md-3 custom-date" style="display: none;">
                         <label for="start_date" class="form-label"><?php echo t('report_from');?></label>
                         <input type="date" class="form-control" id="start_date" name="start_date">
@@ -1186,8 +1179,6 @@ body {
                 }
             }
         });
-        
-     
         
         // Sidebar toggle functionality for mobile
         const sidebarToggle = document.getElementById('sidebarToggle');

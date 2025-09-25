@@ -1313,64 +1313,9 @@ body {
         </div>
     </div>
 </div>
-<div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><?php echo t('recent_activities_title');?></h5>
-            </div>
-            <div class="card-body">
-                <!-- Desktop Table -->
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th><?php echo t('user_column');?></th>
-                                <th><?php echo t('activity_type_column');?></th>
-                                <th><?php echo t('activity_column');?></th>
-                                <th><?php echo t('time_column');?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($recent_logs as $log): ?>
-                                <tr>
-                                    <td data-label="<?php echo t('user_column');?>"><?php echo $log['username'] ?? 'System'; ?></td>
-                                    <td data-label="<?php echo t('activity_type_column');?>"><?php echo $log['activity_type']; ?></td>
-                                    <td data-label="<?php echo t('activity_column');?>"><?php echo $log['activity_detail']; ?></td>
-                                    <td data-label="<?php echo t('time_column');?>"><?php echo date('H:i', strtotime($log['created_at'])); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Mobile Cards -->
-                <div class="table-cards">
-                    <?php foreach ($recent_logs as $log): ?>
-                        <div class="table-card activity-card">
-                            <div class="card-row">
-                                <span class="card-label"><?php echo t('user_column');?>:</span>
-                                <span class="card-value"><?php echo $log['username'] ?? 'System'; ?></span>
-                            </div>
-                            <div class="card-row">
-                                <span class="card-label"><?php echo t('activity_type_column');?>:</span>
-                                <span class="card-value"><?php echo $log['activity_type']; ?></span>
-                            </div>
-                            <div class="card-row">
-                                <span class="card-label"><?php echo t('activity_column');?>:</span>
-                                <span class="card-value"><?php echo $log['activity_detail']; ?></span>
-                            </div>
-                            <div class="card-row">
-                                <span class="card-label"><?php echo t('time_column');?>:</span>
-                                <span class="card-value"><?php echo date('H:i', strtotime($log['created_at'])); ?></span>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-    </div>
+
     
-    <div class="col-md-6">
+    <div class="col-md-12">
         <div class="card mb-4">
             <div class="card-header bg-danger text-white">
                 <h5 class="mb-0"><?php echo t('low_stock_title');?></h5>
