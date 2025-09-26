@@ -78,6 +78,46 @@ $stmt = $pdo->prepare("SELECT al.activity_type, al.activity_detail, al.created_a
 $stmt->execute();
 $recent_logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+
+// Get recent stock in history for the carousel
+$stmt = $pdo->prepare("SELECT 
+    si.id,
+    si.item_id,
+    si.item_code, 
+    si.category_id,
+    c.name as category_name,
+    si.invoice_no,
+    si.date,
+    si.name,
+    si.action_quantity,
+    si.action_type,
+    si.size,
+    si.location_id,
+    l.name as location_name,
+    si.remark,
+    si.action_by,
+    u.username as action_by_name,
+    si.action_at,
+    si.deporty_id,
+    d.name as deporty_name,
+    (SELECT id FROM item_images WHERE item_id = si.item_id ORDER BY id DESC LIMIT 1) as image_id
+FROM 
+    stock_in_history si
+LEFT JOIN 
+    categories c ON si.category_id = c.id
+LEFT JOIN 
+    deporty d ON si.deporty_id = d.id
+JOIN 
+    locations l ON si.location_id = l.id
+JOIN
+    users u ON si.action_by = u.id
+WHERE si.action_type != 'broken'
+ORDER BY si.action_at DESC 
+LIMIT 10");
+$stmt->execute();
+$recent_stock_in = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
 // Get low stock items
 $stmt = $pdo->prepare("SELECT i.name, i.quantity, i.size, l.name as location 
                       FROM items i 
@@ -1197,11 +1237,208 @@ body {
             display: block;
         } 
     }
+    /* Carousel Styles */
+    .stock-carousel {
+        background-color: var(--white);
+        border-radius: 0.35rem;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .stock-carousel .carousel-header {
+        background-color: var(--primary);
+        color: var(--white);
+        padding: 1rem 1.35rem;
+        font-weight: 600;
+        border-radius: 0.35rem 0.35rem 0 0;
+    }
+    
+    .stock-carousel .carousel-item {
+        padding: 1.5rem;
+        min-height: 200px;
+    }
+    
+    .stock-carousel .carousel-caption {
+        position: relative;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 0.35rem;
+        color: var(--dark);
+        text-align: left;
+    }
+    
+    .stock-carousel .carousel-indicators {
+        bottom: -40px;
+    }
+    
+    .stock-carousel .carousel-indicators button {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: var(--secondary);
+    }
+    
+    .stock-carousel .carousel-indicators button.active {
+        background-color: var(--primary);
+    }
+    
+    .stock-carousel .carousel-control-prev,
+    .stock-carousel .carousel-control-next {
+        width: 5%;
+        opacity: 0.7;
+    }
+    
+    .stock-carousel .carousel-control-prev:hover,
+    .stock-carousel .carousel-control-next:hover {
+        opacity: 1;
+    }
+    
+    .stock-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .stock-item-image {
+        flex: 0 0 100px;
+        margin-right: 1rem;
+    }
+    
+    .stock-item-image img {
+        width: 200px;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 0.35rem;
+    }
+    
+    .stock-item-details {
+        flex: 1;
+    }
+    
+    .stock-item-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stock-item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stock-item-meta span {
+        background-color: var(--light);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.85rem;
+    }
+    
+    .stock-item-quantity {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--success);
+    }
+    
+    .stock-item-action {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--secondary);
+    }
+    
+
+  
 </style>
 
 <div class="container-fluid">
 <h2 class="mb-4"><?php echo t('dashboard_title'); ?></h2>
-    
+    <!-- Recent Stock In Carousel -->
+    <div class="stock-carousel">
+     <!--    <div class="carousel-header">
+            <h5 class="mb-0"><?php echo t('recent_stock_in'); ?></h5>
+        </div>-->
+        <div id="recentStockCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-indicators">
+                <?php for ($i = 0; $i < count($recent_stock_in); $i++): ?>
+                    <button type="button" data-bs-target="#recentStockCarousel" data-bs-slide-to="<?php echo $i; ?>" 
+                            class="<?php echo $i === 0 ? 'active' : ''; ?>" 
+                            aria-current="<?php echo $i === 0 ? 'true' : 'false'; ?>" 
+                            aria-label="Slide <?php echo $i + 1; ?>"></button>
+                <?php endfor; ?>
+            </div>
+            <div class="carousel-inner">
+                <?php if (empty($recent_stock_in)): ?>
+                    <div class="carousel-item active">
+                        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+                            <p class="text-muted"><?php echo t('no_recent_stock'); ?></p>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($recent_stock_in as $index => $item): ?>
+                        <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
+                            <div class="stock-item">
+                                <div class="stock-item-image">
+                                    <?php if ($item['image_id']): ?>
+                                        <img src="display_image.php?id=<?php echo $item['image_id']; ?>" 
+                                             alt="<?php echo $item['name']; ?>">
+                                    <?php else: ?>
+                                        <div class="d-flex justify-content-center align-items-center bg-light rounded" 
+                                             style="width: 200px; height: 200px;">
+                                            <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="stock-item-details">
+                                    <div class="stock-item-name"><?php echo $item['name']; ?>
+                                    </br>
+                                    
+                                  
+                                  </div>
+                                    <div class="stock-item-meta " style="margin-top:50px;">
+                                        <span><?php echo t('invoice'); ?>: <?php echo $item['invoice_no']?: 'N/A'; ?></span>
+                                        <span><?php echo t('category'); ?>: <?php echo $item['category_name'] ?: 'N/A'; ?></span>
+                                        <span><?php echo t('location'); ?>: <?php echo $item['location_name']; ?></span>
+                                        <span><?php echo t('size'); ?>: <?php echo $item['size'] ?: 'N/A'; ?></span>
+                                    </div>
+                                    <div class="stock-item-quantity"style="margin-top:50px;">
+                                        +<?php echo $item['action_quantity']; ?> 
+                                        <span class="badge bg-<?php echo $item['action_type'] === 'new' ? 'primary' : 'success'; ?>">
+                                            <?php 
+                                            if ($item['action_type'] === 'new') {
+                                                echo t('status_new');
+                                            } elseif ($item['action_type'] === 'add') {
+                                                echo t('status_add');
+                                            } else {
+                                                echo ucfirst($item['action_type']);
+                                            }
+                                            ?>
+                                        </span>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#recentStockCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden"><?php echo t('previous'); ?></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#recentStockCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden"><?php echo t('next'); ?></span>
+            </button>
+        </div>
+    </div>
     <div class="row mb-2">
     <div class="col-md-3">
     <a href="today_items.php" style="text-decoration: none;">

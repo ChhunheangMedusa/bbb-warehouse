@@ -10,7 +10,7 @@ require_once  'translate.php';
 
 checkAuth();
 
-// Only admin can access item control
+
 
 // Handle reset request
 if (isset($_GET['reset'])) {
@@ -499,7 +499,7 @@ $category_filter = isset($_GET['category']) && $_GET['category'] != '' ? (int)$_
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 
 // Get sort parameters
-$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
+$sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'name_asc';
 
 // Validate and parse sort option
 $sort_mapping = [
@@ -1837,7 +1837,7 @@ table th{
                             <th><?php echo t('item_remark');?></th>
                            
                             <th><?php echo t('item_photo');?></th>
-                            <th><?php echo t('column_action');?></th>
+                            
                         </tr>
                     </thead>
                     <tbody>
@@ -1890,21 +1890,7 @@ table th{
                                             <span class="badge bg-secondary">No image</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-info view-item" 
-                                                data-id="<?php echo $item['id']; ?>">
-                                            <i class="bi bi-eye"></i> <?php echo t('view_button');?>
-                                        </button>
-                                      
-                                        <?php if (isAdmin()): ?>
-                                            <a href="#" class="btn btn-sm btn-danger delete-item" 
-                                               data-id="<?php echo $item['id']; ?>"
-                                               data-name="<?php echo htmlspecialchars($item['name']); ?>"
-                                               data-location="<?php echo htmlspecialchars($item['location_name']); ?>">
-                                                <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
-                                            </a>
-                                        <?php endif; ?>
-                                    </td>
+                                    
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
