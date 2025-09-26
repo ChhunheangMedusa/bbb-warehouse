@@ -78,9 +78,6 @@ $stmt = $pdo->prepare("SELECT al.activity_type, al.activity_detail, al.created_a
 $stmt->execute();
 $recent_logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-
-
-
 // Get low stock items
 $stmt = $pdo->prepare("SELECT i.name, i.quantity, i.size, l.name as location 
                       FROM items i 
@@ -1200,23 +1197,11 @@ body {
             display: block;
         } 
     }
-    
-  
 </style>
 
 <div class="container-fluid">
 <h2 class="mb-4"><?php echo t('dashboard_title'); ?></h2>
-   
-            <button class="carousel-control-prev" type="button" data-bs-target="#recentStockCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden"><?php echo t('previous'); ?></span>
-            </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#recentStockCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden"><?php echo t('next'); ?></span>
-            </button>
-        </div>
-    </div>
+    
     <div class="row mb-2">
     <div class="col-md-3">
     <a href="today_items.php" style="text-decoration: none;">
