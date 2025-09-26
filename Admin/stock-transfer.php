@@ -12,7 +12,7 @@ if (!isAdmin()) {
     $_SESSION['error'] = "You don't have permission to access this page";
     header('Location: dashboard-staff.php');
     exit();
-  }
+}
 checkAuth();
 
 // Handle form submission
@@ -1356,7 +1356,7 @@ body {
                     <div class="mb-3">
                         <label for="from_location_id" class="form-label"><?php echo t('from_location'); ?></label>
                         <select class="form-select" id="from_location_id" name="from_location_id" required>
-                            <option value=""><?php echo t('select_location'); ?></option>
+                            <option value=""><?php echo t(''); ?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                             <?php endforeach; ?>
@@ -1367,7 +1367,7 @@ body {
                     <div class="mb-3">
                         <label for="to_location_id" class="form-label"><?php echo t('to_location'); ?></label>
                         <select class="form-select" id="to_location_id" name="to_location_id" required>
-                            <option value=""><?php echo t('select_location'); ?></option>
+                            <option value=""><?php echo t(''); ?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                             <?php endforeach; ?>
@@ -1383,7 +1383,7 @@ body {
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <?php echo t('select_item'); ?>
+                                            <?php echo t(''); ?>
                                         </button>
                                         <input type="hidden" name="item_id[]" class="item-id-input" value="">
                                         <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -1392,9 +1392,9 @@ body {
                                                     <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
                                                 </div>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
+                                           
                                             <div class="dropdown-item-container">
-                                                <div class="px-2 py-1 text-muted"><?php echo t('select_from_location_first'); ?></div>
+                                                <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                                             </div>
                                         </ul>
                                     </div>
@@ -1629,7 +1629,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php echo t('select_item'); ?>
+                        <?php echo t(''); ?>
                     </button>
                     <input type="hidden" name="item_id[]" class="item-id-input" value="">
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -1638,9 +1638,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                             </div>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
+                       
                         <div class="dropdown-item-container">
-                            <div class="px-2 py-1 text-muted"><?php echo t('select_from_location_first'); ?></div>
+                            <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                         </div>
                     </ul>
                 </div>

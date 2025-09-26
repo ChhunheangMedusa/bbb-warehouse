@@ -157,7 +157,7 @@ $translations = [
         'select_location'=>'សូមជ្រើសរើសទីតាំងដើមជាមុនសិន',
         'select_to_location'=>'ជ្រើសរើសទីតាំងគោលដៅ',
         'add_transfer_row'=>'បន្ថែមសម្ភារៈ',
-        'search_item'=>'ស្វែងរកសម្ភារៈ',
+        'search_item'=>'ស្វែងរក',
         'del_row'=>'លុបជួរ',
         'no_item'=>'រកមិនឃើញសម្ភារៈ',
         'no_itm'=>'សម្ភារៈមិនមាននៅទីតាំងដើម',
@@ -459,11 +459,12 @@ $translations = [
 'form_guest'=>'អ្នកទស្សនា',
 'stockin'=>'ស្តុកចូល',
 'stockout'=>'ស្តុកចេញ',
-
+'deporty_deleted_success'=>'អ្នកផ្គត់ផ្គង់ត្រូវបានលុបដោយជោគជ័យ'
     ],
 
 
     'en' => [
+        'deporty_deleted_success'=>'Supplier deleted successfully',
         'stockin'=>'In',
 'stockout'=>'Out',
         'form_guest'=>'Guest',
@@ -503,7 +504,7 @@ $translations = [
         // Add these to your translation array
 'back_to_categories' => 'Back to Categories',
 'items_in_category' => 'Category',
-'search_items' => 'Search Items',
+'search_items' => 'Search',
 'search_placeholder' => 'Search by name or description',
 'items_list' => 'Items List',
 'quantity' => 'Quantity',
@@ -547,7 +548,7 @@ $translations = [
         'confirm_delete'=>'Delete Repair Item',
 'confirm_delete_question'=>'Are you sure want to permanently delete this repair item?',
         'repair_return_success'=>'The items have been successfully returned to their main location',
-        'return_back'=>'Send Back',
+        'return_back'=>'Send To',
         'send'=>'Send',
         'send_for_repair'=>'Send for repair',
         'no_repair_items'=>'There is no repair records',
@@ -831,7 +832,7 @@ $translations = [
         'select_location'=>'A from location must be selected!',
         'select_to_location'=>'Select To Location',
         'add_transfer_row'=>'Add More',
-        'search_item'=>'Search Item',
+        'search_item'=>'Search',
         'del_row'=>'Delete Row',
         'no_item'=>'No items found',
         'no_itm'=>'The items is not available at the location you are trying to transfer from',

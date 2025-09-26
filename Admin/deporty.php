@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $_SESSION['success'] = t('deporty_added_success');
             }
+            logActivity($_SESSION['user_id'], 'Add Supplier', "Added new supplier: $name");
             redirect('deporty.php');
         } catch (PDOException $e) {
             $_SESSION['error'] = t('deporty_added_error');
@@ -61,7 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['update_deporty'])) {
         $id = (int)$_POST['id'];
         $name = sanitizeInput($_POST['name']);
-        
+        $stmt = $pdo->prepare("SELECT name FROM deporty WHERE id = ?");
+        $stmt->execute([$id]);
+        $old_supplier = $stmt->fetch(PDO::FETCH_ASSOC);
         try {
             // Check for duplicate deporty name (excluding current record)
             $stmt = $pdo->prepare("SELECT id FROM deporty WHERE name = ? AND id != ?");
@@ -72,7 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $stmt = $pdo->prepare("UPDATE deporty SET name = ? WHERE id = ?");
                 $stmt->execute([$name, $id]);
-                
+                $changes = [];
+            if ($old_supplier['name'] != $name) $changes[] = "Updated name ({$old_supplier['name']}) : {$old_supplier['name']} →  $name";
+            if (!empty($changes)) {
+              $change_log = "" . implode(" ", $changes);
+              logActivity($_SESSION['user_id'], 'Edit Supplier', $change_log);
+          }
                 $_SESSION['success'] = t('deporty_updated_success');
             }
             redirect('deporty.php');
@@ -89,12 +97,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             $count = $stmt->fetchColumn();
             
+            $stmt = $pdo->prepare("SELECT name FROM deporty WHERE id = ?");
+            $stmt->execute([$id]);
+            $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+
             if ($count > 0) {
                 $_SESSION['error'] = t('deporty_in_use_error');
             } else {
                 $stmt = $pdo->prepare("DELETE FROM deporty WHERE id = ?");
                 $stmt->execute([$id]);
-                
+
+                logActivity($_SESSION['user_id'], 'Delete Supplier', "Removed supplier: {$supplier['name']}");
                 $_SESSION['success'] = t('deporty_deleted_success');
             }
             redirect('deporty.php');
@@ -1477,7 +1490,7 @@ input[name="invoice_no"] {
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer d-flex justify-content-center gap-2">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
                     <button type="submit" name="add_deporty" class="btn btn-primary"><?php echo t('form_save'); ?></button>
                 </div>
@@ -1502,7 +1515,7 @@ input[name="invoice_no"] {
                         <input type="text" class="form-control" id="edit_name" name="name" required>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer d-flex justify-content-center gap-2">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
                     <button type="submit" name="update_deporty" class="btn btn-warning"><?php echo t('form_update'); ?></button>
                 </div>
@@ -1529,7 +1542,7 @@ input[name="invoice_no"] {
                 <p class="mb-3"><?php echo t('del_usr2'); ?></p>
                 <div id="deleteDeportyInfo" class="alert alert-light mb-0"></div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer d-flex justify-content-center gap-2">
                 <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
                 </button>

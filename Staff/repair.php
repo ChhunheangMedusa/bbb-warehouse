@@ -2319,7 +2319,7 @@ table th{
                         <div class="col-md-6">
                             <label for="send_from_location_id" class="form-label"><?php echo t('from_location'); ?></label>
                             <select class="form-select" id="send_from_location_id" name="from_location_id" required>
-                                <option value=""><?php echo t('select_location'); ?></option>
+                                <option value=""><?php echo t(''); ?></option>
                                 <?php foreach ($non_repair_locations as $location): ?>
                                     <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                 <?php endforeach; ?>
@@ -2328,7 +2328,7 @@ table th{
                         <div class="col-md-6">
                             <label for="send_to_location_id" class="form-label"><?php echo t('to_location'); ?></label>
                             <select class="form-select" id="send_to_location_id" name="to_location_id" required>
-                                <option value=""><?php echo t('select_location'); ?></option>
+                                <option value=""><?php echo t(''); ?></option>
                                 <?php foreach ($repair_locations as $location): ?>
                                     <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                 <?php endforeach; ?>
@@ -2345,7 +2345,7 @@ table th{
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <?php echo t('select_item'); ?>
+                                            <?php echo t(''); ?>
                                         </button>
                                         <input type="hidden" name="item_id[]" class="item-id-input" value="">
                                         <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -2354,9 +2354,9 @@ table th{
                                                     <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                                                 </div>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
+                                           
                                             <div class="dropdown-item-container">
-                                                <div class="px-2 py-1 text-muted"><?php echo t('select_location_first'); ?></div>
+                                                <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                                             </div>
                                         </ul>
                                     </div>
@@ -2443,7 +2443,7 @@ table th{
                         <div class="col-md-6">
                             <label for="return_from_location_id" class="form-label"><?php echo t('from_location'); ?></label>
                             <select class="form-select" id="return_from_location_id" name="from_location_id" required>
-                                <option value=""><?php echo t('select_location'); ?></option>
+                                <option value=""><?php echo t(''); ?></option>
                                 <?php foreach ($repair_locations as $location): ?>
                                     <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                 <?php endforeach; ?>
@@ -2478,9 +2478,9 @@ table th{
                                                     <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                                                 </div>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
+                                            
                                             <div class="dropdown-item-container">
-                                                <div class="px-2 py-1 text-muted"><?php echo t('select_location_first'); ?></div>
+                                                <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                                             </div>
                                         </ul>
                                     </div>
@@ -2709,7 +2709,7 @@ document.getElementById('send-repair-more-row').addEventListener('click', functi
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php echo t('select_item'); ?>
+                        <?php echo t(''); ?>
                     </button>
                     <input type="hidden" name="item_id[]" class="item-id-input" value="">
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -2718,7 +2718,7 @@ document.getElementById('send-repair-more-row').addEventListener('click', functi
                                 <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                             </div>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
+                       
                         <div class="dropdown-item-container">
                             <!-- Items will be populated here -->
                         </div>

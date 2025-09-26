@@ -1605,7 +1605,7 @@ table th{
                     <div class="mb-3">
                         <label for="broken_location_id" class="form-label"><?php echo t('location_column'); ?></label>
                         <select class="form-select" id="broken_location_id" name="location_id" required>
-                            <option value=""><?php echo t('item_locations'); ?></option>
+                            <option value=""><?php echo t(''); ?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                             <?php endforeach; ?>
@@ -1621,7 +1621,7 @@ table th{
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <?php echo t('select_item'); ?>
+                                            <?php echo t(''); ?>
                                         </button>
                                         <input type="hidden" name="item_id[]" class="item-id-input" value="">
                                         <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -1630,9 +1630,9 @@ table th{
                                                     <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
                                                 </div>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
+                                           
                                             <div class="dropdown-item-container">
-                                                <div class="px-2 py-1 text-muted"><?php echo t('warning_location1'); ?></div>
+                                                <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                                             </div>
                                         </ul>
                                     </div>
@@ -1685,7 +1685,7 @@ table th{
                 <div class="mb-3">
                     <i class="bi bi-geo-alt-fill text-warning" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-dark mb-3"><?php echo t('warning_location1'); ?></h4>
+                <h4 class="text-dark mb-3"><?php echo t(''); ?></h4>
                 <p><?php echo t('warn_loc'); ?></p>
             </div>
             <div class="modal-footer justify-content-center">
@@ -1750,7 +1750,7 @@ function populateBrokenItemDropdown(dropdownElement, locationId) {
     itemContainer.innerHTML = '';
     
     if (!locationId) {
-        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted"><?php echo t('warning_location1'); ?></div>';
+        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>';
         return;
     }
     
@@ -1854,7 +1854,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const newRow = firstRow.cloneNode(true);
             
             // Clear values in the new row
-            newRow.querySelector('.dropdown-toggle').textContent = '<?php echo t('select_item'); ?>';
+            newRow.querySelector('.dropdown-toggle').textContent = '<?php echo t(''); ?>';
             newRow.querySelector('.item-id-input').value = '';
             newRow.querySelector('.available-quantity').value = '';
             newRow.querySelector('input[name="broken_quantity[]"]').value = '';

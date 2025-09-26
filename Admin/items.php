@@ -2393,7 +2393,7 @@ input[name="invoice_no"] {
                                 <div class="col-md-4">
                                     <label for="location_id" class="form-label"><?php echo t('location_column'); ?></label>
                                     <select class="form-select" id="location_id" name="location_id[]" required>
-                                        <option value=""><?php echo t('item_locations'); ?></option>
+                                       
                                         <?php foreach ($locations as $location): ?>
                                             <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                         <?php endforeach; ?>
@@ -2406,7 +2406,7 @@ input[name="invoice_no"] {
                                 <div class="col-md-4">
                                     <label class="form-label"><?php echo t('category'); ?></label>
                                     <select class="form-select" name="category_id[]" required>
-                                        <option value=""><?php echo t('select_category'); ?></option>
+                                        <option value=""><?php echo t(''); ?></option>
                                         <?php foreach ($categories as $category): ?>
                                             <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
                                         <?php endforeach; ?>
@@ -2417,7 +2417,7 @@ input[name="invoice_no"] {
                                 <div class="col-md-4">
                                     <label class="form-label"><?php echo t('deporty'); ?></label>
                                     <select class="form-select" name="deporty_id[]" >
-                                        <option value=""><?php echo t('select_deporty'); ?></option>
+                                        <option value=""><?php echo t(''); ?></option>
                                         <?php foreach ($deporties as $deporty): ?>
                                             <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
                                         <?php endforeach; ?>
@@ -2502,7 +2502,7 @@ input[name="invoice_no"] {
                     <div class="mb-3">
                         <label for="add_location_id" class="form-label"><?php echo t('location_column'); ?></label>
                         <select class="form-select" id="add_location_id" name="location_id" required>
-                            <option value=""><?php echo t('item_locations'); ?></option>
+                        <option value=""><?php echo t(''); ?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                             <?php endforeach; ?>
@@ -2518,7 +2518,7 @@ input[name="invoice_no"] {
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <?php echo t('select_item'); ?>
+                                            <?php echo t(''); ?>
                                         </button>
                                         <input type="hidden" name="item_id[]" class="item-id-input" value="">
                                         <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -2527,9 +2527,9 @@ input[name="invoice_no"] {
                                                     <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
                                                 </div>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
+                                            
                                             <div class="dropdown-item-container">
-                                                <div class="px-2 py-1 text-muted"><?php echo t('warning_location1'); ?></div>
+                                                <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                                             </div>
                                         </ul>
                                     </div>
@@ -2543,7 +2543,7 @@ input[name="invoice_no"] {
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label"><?php echo t('deporty'); ?></label>
                                     <select class="form-select deporty-select" name="deporty_id[]" >
-                                        <option value=""><?php echo t('select_deporty'); ?></option>
+                                        <option value=""><?php echo t(''); ?></option>
                                         <?php foreach ($deporties as $deporty): ?>
                                             <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
                                         <?php endforeach; ?>
@@ -2636,7 +2636,7 @@ input[name="invoice_no"] {
                     <div class="mb-3">
                         <label for="deduct_location_id" class="form-label"><?php echo t('location_column'); ?></label>
                         <select class="form-select" id="deduct_location_id" name="location_id" required>
-                            <option value=""><?php echo t('item_locations'); ?></option>
+                        <option value=""><?php echo t(''); ?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                             <?php endforeach; ?>
@@ -2652,7 +2652,7 @@ input[name="invoice_no"] {
                                     <label class="form-label"><?php echo t('item_name'); ?></label>
                                     <div class="dropdown item-dropdown">
                                         <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <?php echo t('select_item'); ?>
+                                        <?php echo t(''); ?>
                                         </button>
                                         <input type="hidden" name="item_id[]" class="item-id-input" value="">
                                         <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -2661,9 +2661,9 @@ input[name="invoice_no"] {
                                                     <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
                                                 </div>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
+                                          
                                             <div class="dropdown-item-container">
-                                                <div class="px-2 py-1 text-muted"><?php echo t('warning_location1'); ?></div>
+                                                <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                                             </div>
                                         </ul>
                                     </div>
@@ -2739,7 +2739,7 @@ input[name="invoice_no"] {
                 <div class="mb-3">
                     <i class="bi bi-geo-alt-fill text-warning" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-dark mb-3"><?php echo t('warning_location1'); ?></h4>
+                <h4 class="text-dark mb-3"><?php echo t(''); ?></h4>
                 <p><?php echo t('warn_loc'); ?></p>
             </div>
             <div class="modal-footer justify-content-center">
@@ -2791,7 +2791,7 @@ function populateItemDropdown(dropdownElement, locationId) {
     itemContainer.innerHTML = '';
     
     if (!locationId) {
-        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted"><?php echo t('warning_location1'); ?></div>';
+        itemContainer.innerHTML = '<div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>';
         return;
     }
     
@@ -2913,7 +2913,7 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php echo t('select_item'); ?>
+                        <?php echo t(''); ?>
                     </button>
                     <input type="hidden" name="item_id[]" class="item-id-input" value="">
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -2922,7 +2922,7 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
                                 <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
                             </div>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
+                       
                         <div class="dropdown-item-container">
                             <!-- Items will be populated here -->
                         </div>
@@ -2938,7 +2938,7 @@ document.getElementById('add-qty-more-row').addEventListener('click', function()
             <div class="col-md-4 mb-3">
                 <label class="form-label"><?php echo t('deporty'); ?></label>
                 <select class="form-select deporty-select" name="deporty_id[]" >
-                    <option value=""><?php echo t('select_deporty'); ?></option>
+                    <option value=""><?php echo t(''); ?></option>
                     <?php foreach ($deporties as $deporty): ?>
                         <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
                     <?php endforeach; ?>
@@ -3107,7 +3107,7 @@ document.getElementById('add-more-row').addEventListener('click', function() {
             <div class="col-md-4">
                 <label for="location_id" class="form-label"><?php echo t('location_column'); ?></label>
                 <select class="form-select" name="location_id[]" required>
-                    <option value=""><?php echo t('item_locations'); ?></option>
+                    <option value=""><?php echo t(''); ?></option>
                     <?php foreach ($locations as $location): ?>
                         <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                     <?php endforeach; ?>
@@ -3120,7 +3120,7 @@ document.getElementById('add-more-row').addEventListener('click', function() {
             <div class="col-md-4">
                 <label class="form-label"><?php echo t('category'); ?></label>
                 <select class="form-select" name="category_id[]" required>
-                    <option value=""><?php echo t('select_category'); ?></option>
+                    <option value=""><?php echo t(''); ?></option>
                     <?php foreach ($categories as $category): ?>
                         <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
                     <?php endforeach; ?>
@@ -3131,7 +3131,7 @@ document.getElementById('add-more-row').addEventListener('click', function() {
             <div class="col-md-4">
                 <label class="form-label"><?php echo t('deporty'); ?></label>
                 <select class="form-select" name="deporty_id[]" >
-                    <option value=""><?php echo t('select_deporty'); ?></option>
+                    <option value=""><?php echo t(''); ?></option>
                     <?php foreach ($deporties as $deporty): ?>
                         <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
                     <?php endforeach; ?>
@@ -3253,7 +3253,7 @@ document.getElementById('deduct-qty-more-row').addEventListener('click', functio
                 <label class="form-label"><?php echo t('item_name'); ?></label>
                 <div class="dropdown item-dropdown">
                     <button class="form-select text-start dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <?php echo t('select_item'); ?>
+                    <?php echo t(''); ?>
                     </button>
                     <input type="hidden" name="item_id[]" class="item-id-input" value="">
                     <ul class="dropdown-menu custom-dropdown-menu p-2">
@@ -3262,7 +3262,7 @@ document.getElementById('deduct-qty-more-row').addEventListener('click', functio
                                 <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
                             </div>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
+             
                         <div class="dropdown-item-container">
                             <!-- Items will be populated here -->
                         </div>
