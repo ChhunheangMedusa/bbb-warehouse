@@ -46,6 +46,28 @@ if (isset($_POST['download'])) {
     generateExcelReport($report_type, $report_data, $criteria['start_date'], $criteria['end_date'], $criteria['location_id']);
     exit();
 }
+
+// Calculate totals
+$total_beginning = 0;
+$total_add = 0;
+$total_used = 0;
+$total_broken = 0;
+$total_ending = 0;
+
+foreach ($report_data as $item) {
+    $total_beginning += $item['beginning_quantity'];
+    $total_add += $item['add_quantity'];
+    $total_used += $item['used_quantity'];
+    $total_broken += $item['broken_quantity'];
+    $total_ending += $item['ending_quantity'];
+}
+
+// Helper function to format numbers (same as in report.php)
+// Helper function to format numbers with decimal places
+function formatQuantity($number) {
+    // Format as float with 1 decimal place
+    return number_format((int)$number);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -77,195 +99,167 @@ if (isset($_POST['download'])) {
             font-family: var(--font-family);
             background-color: var(--light);
             color: var(--dark);
+            margin: 0;
+            padding: 20px;
         }
 
-        .report-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        .report-title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 5px;
             text-align: center;
         }
-
-        .report-title {
-            font-size: 24px;
+        
+        .report-info { 
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        
+        .info-line {
+            margin-bottom: 3px;
+        }
+        
+        table { 
+            border-collapse: collapse; 
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        th { 
+            background-color: #ffffff;
+            padding: 5px;
+            text-align: center;
             font-weight: bold;
-            margin-bottom: 5px;
+            border: 1px solid #000;
+            font-size: 14px;
+            color: #000000;
         }
-
-        .report-info {
-            background-color: #f8f9fc;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 4px solid var(--primary);
-        }
-
-        .table-card {
-            background-color: var(--white);
-            border-radius: 8px;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-
-        .table-card-header {
-            background-color: var(--light);
-            padding: 15px 20px;
-            border-bottom: 1px solid #e3e6f0;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .table-card-body {
-            padding: 0;
-        }
-
-        .table th {
-            background-color: var(--light);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-            padding: 12px 15px;
-        }
-
-        .table td {
-            padding: 12px 15px;
+        
+        td { 
+            padding: 4px;
+            border: 1px solid #000;
             vertical-align: middle;
+            font-size: 16px;
         }
-
+        
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .no-border { border: none; }
+        
+        /* Add styles for alternating row colors */
+        .row-odd {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        
+        .row-even {
+            background-color: #DDDDDD;
+            color: #000000;
+        }
+        
+        .number-cell {
+            text-align: right;
+            padding-right: 8px;
+        }
+        
         .action-buttons {
             margin-bottom: 20px;
+        }
+        
+        .container-fluid {
+            max-width: 100%;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid py-4">
-        <div class="row">
-            <div class="col-12">
-                <div class="action-buttons">
-                    <a href="report.php" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left me-2"></i><?php echo t('return'); ?>
-                    </a>
-                    <form method="POST" class="d-inline">
-                        <button type="submit" name="download" class="btn btn-success ms-2">
-                            <i class="bi bi-download me-2"></i><?php echo t('download_excel'); ?>
-                        </button>
-                    </form>
-                </div>
+    <div class="container-fluid">
+        <div class="action-buttons">
+            <a href="report.php" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i><?php echo t('return'); ?>
+            </a>
+            <form method="POST" class="d-inline">
+                <button type="submit" name="download" class="btn btn-success ms-2">
+                    <i class="bi bi-download me-2"></i><?php echo t('download_excel'); ?>
+                </button>
+            </form>
+        </div>
 
-                <div class="report-header">
-                    <div class="report-title"><?php echo t('report_preview'); ?></div>
-                    <div class="report-subtitle"><?php echo t('stock_system'); ?></div>
-                </div>
-
-                <div class="report-info">
-                    <p><strong><?php echo t('report_type'); ?>:</strong> 
-                        <?php 
-                        switch($report_type) {
-                            case 'stock_in': echo t('todays_stock_in'); break;
-                            case 'stock_out': echo t('todays_stock_out'); break;
-                            case 'stock_transfer': echo t('todays_transfers'); break;
-                            case 'repair': echo t('todays_repair_records'); break;
-                        }
-                        ?>
-                    </p>
-                    <p><strong><?php echo t('report_froms'); ?>:</strong> <?php echo date('d/m/Y', strtotime($criteria['start_date'])); ?></p>
-                    <p><strong><?php echo t('report_tos'); ?>:</strong> <?php echo date('d/m/Y', strtotime($criteria['end_date'])); ?></p>
-                    <p><strong><?php echo t('location_column'); ?>:</strong> <?php echo $location_name; ?></p>
-                </div>
-
-                <!-- White background card for the table -->
-                <div class="table-card">
-    <div class="table-card-header">
-        <?php 
-        switch($report_type) {
-            case 'stock_in': echo t('todays_stock_in'); break;
-            case 'stock_out': echo t('todays_stock_out'); break;
-            case 'stock_transfer': echo t('todays_transfers'); break;
-            case 'repair': echo t('todays_repair_records'); break;
-        }
-        ?> 
-    </div>
-    <div class="table-card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped mb-0">
-                <thead>
-                    <tr>
-                        <?php 
-                        $no = t('item_no');
-                        $code = t('item_code');
-                        $category = t('category');
-                        $name = t('item_name');
-                        $size = t('item_size');
-                        $location = t('item_location');
-                        $remark = t('item_remark');
-                        $beginning = t('beginning_period');
-                        $add = t('add');
-                        $used = t('used');
-                        $broken = t('broken');
-                        $ending = t('ending_period');
-                       
-                        
-                        if ($report_type === 'stock_in'): ?>
-                            <th><?= $no ?></th>
-                            <th><?= $code ?></th>
-                            <th><?= $category ?></th>
-                            <th><?= $name ?></th>
-                            <th><?= $size ?></th>
-                            <th><?= $location ?></th>
-                            <th><?= $beginning ?></th>
-                            <th><?= $add ?></th>
-                            <th><?= $used ?></th>
-                            <th><?= $broken ?></th>
-                            <th><?= $ending ?></th>
-                            <th><?= $remark ?></th>
-                           
-                        <?php elseif ($report_type === 'stock_out'): ?>
-                            <!-- Add stock_out columns if needed -->
-                        <?php elseif ($report_type === 'stock_transfer'): ?>
-                            <!-- Add stock_transfer columns if needed -->
-                        <?php elseif ($report_type === 'repair'): ?>
-                            <!-- Add repair columns if needed -->
-                        <?php endif; ?>
+        <div class="report-title">Reports</div>
+        
+        <div class="report-info">
+            <div class="info-line"><span class="bold">Site Location:</span> <?php echo $location_name; ?></div>
+            <div class="info-line"><span class="bold">Period:</span> <?php echo date('d/m/Y', strtotime($criteria['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($criteria['end_date'])); ?></div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2">No</th>
+                    <th rowspan="2">Item Code</th>
+                    <th rowspan="2">Category</th>
+                    <th rowspan="2">Invoice No</th>
+                    <th rowspan="2">Description</th>
+                    <th rowspan="2">Unit</th>
+                    <th colspan="5">Quantity</th>
+                    <th rowspan="2">Supplier</th>
+                    <th rowspan="2">Location</th>
+                    <th rowspan="2">Remark</th>
+                </tr>
+                <tr>
+                    <th>(Beginning Period)</th>
+                    <th>(Add)</th>
+                    <th>(Used)</th>
+                    <th>(Broken)</th>
+                    <th>(Ending Period)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($report_data as $index => $item): ?>
+                    <?php 
+                    // Determine row class for alternating colors
+                    $row_class = ($index % 2 == 0) ? 'row-even' : 'row-odd';
+                    
+                    // Get quantities from the query results
+                    $beginning = $item['beginning_quantity'];
+                    $add = $item['add_quantity'];
+                    $used = $item['used_quantity'];
+                    $broken = $item['broken_quantity'];
+                    $ending = $item['ending_quantity'];
+                    ?>
+                    
+                    <tr class="<?php echo $row_class; ?>">
+                        <td class="text-center"><?php echo $index + 1; ?></td>
+                        <td class="text-center"><?php echo $item['item_code']; ?></td>
+                        <td class="text-left"><?php echo $item['category_name']; ?></td>
+                        <td class="text-center"><?php echo $item['invoice_no']; ?></td>
+                        <td class="text-left"><?php echo $item['name']; ?></td>
+                        <td class="text-center"><?php echo $item['size']; ?></td>
+                        <td class="number-cell"><?php echo formatQuantity($beginning); ?></td>
+                        <td class="number-cell"><?php echo formatQuantity($add); ?></td>
+                        <td class="number-cell"><?php echo formatQuantity($used); ?></td>
+                        <td class="number-cell"><?php echo formatQuantity($broken); ?></td>
+                        <td class="number-cell"><?php echo formatQuantity($ending); ?></td>
+                        <td class="text-center"><?php echo ($item['deporty_name'] ?: 'N/A'); ?></td>
+                        <td class="text-center"><?php echo $item['location_name']; ?></td>
+                        <td class="text-left"><?php echo $item['remark']; ?></td>
                     </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($report_data as $index => $item): ?>
-                        <tr>
-                            <?php if ($report_type === 'stock_in'): ?>
-                                <td><?= $index + 1 ?></td>
-                                <td><?= $item['item_code'] ?></td>
-                                <td><?= $item['category_name'] ?></td>
-                                <td><?= $item['name'] ?></td>
-                                <td><?= $item['size'] ?></td>
-                                <td><?= $item['location_name'] ?></td>
-                                <td><?= $item['beginning_quantity'] ?></td>
-                                <td><?= $item['add_quantity'] ?></td>
-                                <td><?= $item['used_quantity'] ?></td>
-                                <td><?= $item['broken_quantity'] ?></td>
-                                <td><?= $item['ending_quantity'] ?></td>
-                                <td><?= $item['remark'] ?></td>
-                               
-                            <?php elseif ($report_type === 'stock_out'): ?>
-                                <!-- Add stock_out data if needed -->
-                            <?php elseif ($report_type === 'stock_transfer'): ?>
-                                <!-- Add stock_transfer data if needed -->
-                            <?php elseif ($report_type === 'repair'): ?>
-                                <!-- Add repair data if needed -->
-                            <?php endif; ?>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-                <!-- End of white background card -->
-            </div>
-        </div>
+                <?php endforeach; ?>
+                
+                <!-- Totals row -->
+                <tr class="bold">
+                    <td colspan="6" class="text-center" rowspan="2" style="background-color:yellow;font-size:22px;"><?php echo t('total'); ?>:</td>
+                    <td class="number-cell" rowspan="2" style="background-color:yellow;"><?php echo formatQuantity($total_beginning); ?></td>
+                    <td class="number-cell" rowspan="2" style="background-color:yellow;"><?php echo formatQuantity($total_add); ?></td>
+                    <td class="number-cell" rowspan="2" style="background-color:yellow;"><?php echo formatQuantity($total_used); ?></td>
+                    <td class="number-cell" rowspan="2" style="background-color:yellow;"><?php echo formatQuantity($total_broken); ?></td>
+                    <td class="number-cell" rowspan="2" style="background-color:yellow;"><?php echo formatQuantity($total_ending); ?></td>
+                    <td colspan="3" rowspan="2" style="background-color:yellow;"></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

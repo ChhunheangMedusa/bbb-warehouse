@@ -1184,6 +1184,7 @@ body {
     min-width: 140px;
     max-width: 160px; /* Reduced maximum width */
     margin: 0 0.1rem; /* Minimal margin */
+    margin-left:100px;
 }
 
 .quick-action-card .btn {
@@ -1202,12 +1203,14 @@ body {
   .quick-actions-container {
                 flex-direction: column;
                 align-items: center;
+                overflow:hidden;
             }
             
             .quick-action-card {
                 width: 100%;
                 max-width: 100%;
                 margin-bottom: 1rem;
+                margin-left:1.5px;
             }
     
 
@@ -1303,7 +1306,7 @@ body {
                     </a>
                 </div>
 
-                <div class="quick-action-card">
+                <div class="quick-action-card" >
                     <a href="low-stock-alert.php" class="btn btn-outline-danger btn-lg w-100 py-3">
                         <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
                         <?php echo t('low_stock_button');?>
