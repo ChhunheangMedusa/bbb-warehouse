@@ -179,8 +179,8 @@ $sort_mapping = [
     'name_desc' => ['field' => 't.name', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
     'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 't.date', 'direction' => 'ASC'],
-    'date_desc' => ['field' => 't.date', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 't.date, t.action_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 't.date DESC, t.action_at', 'direction' => 'DESC'],
     'quantity_asc' => ['field' => 't.quantity', 'direction' => 'ASC'],
     'quantity_desc' => ['field' => 't.quantity', 'direction' => 'DESC'],
     'location_asc' => ['field' => 'fl.name', 'direction' => 'ASC'],
@@ -1031,21 +1031,7 @@ body {
 </button>
 <div class="container-fluid">
         <h2 class="mb-4"><?php echo t('transfer_items'); ?></h2>
-        <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+
         <!-- Filter Card -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
@@ -1055,7 +1041,7 @@ body {
                 <form method="GET" class="filter-form">
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label class="filter-label"><?php echo t('search'); ?></label>
+                            <label class="filter-label"><?php echo t('names'); ?></label>
                             <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_filter); ?>" placeholder="<?php echo t('search'); ?>">
                         </div>
                         
@@ -1131,14 +1117,25 @@ body {
 
                             </select>
                         </div>
+                        <div class="col-md-2">
+                        <label class="filter-label"><?php echo t('show_entries'); ?></label>
+                   
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+                        </div>
                     </div>
                     
                     <div class="action-buttons">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                           <?php echo t('search'); ?>
                         </button>
-                        <a href="stock-transfer.php" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                        <a href="stock-transfer.php" class="btn btn-secondary">
+                          <?php echo t('reset'); ?>
                         </a>
                     </div>
                     
@@ -1392,7 +1389,7 @@ body {
                                                     <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search_item'); ?>...">
                                                 </div>
                                             </li>
-                                            
+                                           
                                             <div class="dropdown-item-container">
                                                 <div class="px-2 py-1 text-muted"><?php echo t(''); ?></div>
                                             </div>

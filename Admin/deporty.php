@@ -1293,15 +1293,7 @@ input[name="invoice_no"] {
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="d-flex align-items-center entries-per-page">
-                <span class="me-2"><?php echo t('show_entries'); ?></span>
-                <select class="form-select form-select-sm" id="per_page_select">
-                    <?php foreach ($limit_options as $option): ?>
-                        <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                            <?php echo $option; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <span class="ms-2"><?php echo t('entries'); ?></span>
+                
             </div>
         </div>
     </div>
@@ -1315,23 +1307,42 @@ input[name="invoice_no"] {
                 <div class="col-md-12">
                     <form method="GET" class="row g-2">
                         <div class="col-md-4">
+                        <label for="search" class="form-label"><?php echo t('name'); ?></label>
                             <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
                         </div>
                         <div class="col-md-4">
+                        <label for="sort" class="form-label"><?php echo t('sort'); ?></label>
                             <select name="sort_option" class="form-select">
                                 <option value="name_asc" <?php echo $sort_option === 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
                                 <option value="name_desc" <?php echo $sort_option === 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
-                                <option value="date_asc" <?php echo $sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
-                                <option value="date_desc" <?php echo $sort_option === 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
                             </select>
                         </div>
+
+                        <div class="col-md-4">
+                        <label for="search" class="form-label"><?php echo t('show_entries').' '.t('entries'); ?></label>
+                 
+                <select class="form-select " id="per_page_select">
+                    <?php foreach ($limit_options as $option): ?>
+                        <option value="<?php  ?> <?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+             
+                        </div>
+
+
+                       
+
+                
                         <div class="col-md-4 action-buttons">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                               <?php echo t('search'); ?>
                             </button>
-                            <a href="deporty.php" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                            <a href="deporty.php" class="btn btn-secondary">
+                            <?php echo t('reset'); ?>
                             </a>
+                            
                         </div>
                     </form>
                 </div>

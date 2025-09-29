@@ -19,6 +19,7 @@ ini_set('display_errors', 1);
 $type_filter = isset($_GET['type']) ? sanitizeInput($_GET['type']) : '';
 $month_filter = isset($_GET['month']) ? sanitizeInput($_GET['month']) : '';
 $year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
+$user_filter = isset($_GET['user']) ? sanitizeInput($_GET['user']) : '';
 $sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'date_desc';
 
 // Validate and parse sort option
@@ -84,6 +85,14 @@ try {
         $params[':year'] = $year_filter;
     }
 
+    // Add user filter condition
+    if ($user_filter) {
+        $query .= " AND (u.username LIKE :user OR al.user_id = :user_id)";
+        $count_query .= " AND (u.username LIKE :user OR al.user_id = :user_id)";
+        $params[':user'] = '%' . $user_filter . '%';
+        $params[':user_id'] = is_numeric($user_filter) ? $user_filter : -1; // -1 will never match if not numeric
+    }
+
     // Get total count
     $stmt = $pdo->prepare($count_query);
     foreach ($params as $key => $value) {
@@ -121,6 +130,13 @@ try {
     // Get available years from the logs
     $stmt = $pdo->query("SELECT DISTINCT YEAR(created_at) as year FROM access_logs ORDER BY year DESC");
     $available_years = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Get distinct users for filter (users who have activity logs)
+    $stmt = $pdo->query("SELECT DISTINCT u.id, u.username 
+                         FROM users u 
+                         INNER JOIN access_logs al ON u.id = al.user_id 
+                         ORDER BY u.username");
+    $available_users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
@@ -741,21 +757,7 @@ body {
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('logs_button');?></h2>
-    <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+ 
 <!-- Filter Card -->
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
@@ -777,24 +779,12 @@ body {
                 </div>
                 
                 <div class="filter-group">
-                    <label class="filter-label"><?php echo t('month');?></label>
-                    <select name="month" class="form-select">
-                        <option value="all"><?php echo t('all_months');?></option>
-                        <?php foreach ($months as $num => $name): ?>
-                            <option value="<?php echo $num; ?>" <?php echo $month_filter == $num ? 'selected' : ''; ?>>
-                                <?php echo t(strtolower($name)); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="filter-group">
-                    <label class="filter-label"><?php echo t('year');?></label>
-                    <select name="year" class="form-select">
-                        <option value="all"><?php echo t('all_years');?></option>
-                        <?php foreach ($available_years as $year): ?>
-                            <option value="<?php echo $year; ?>" <?php echo $year_filter == $year ? 'selected' : ''; ?>>
-                                <?php echo $year; ?>
+                    <label class="filter-label"><?php echo t('users_button');?></label>
+                    <select name="user" class="form-select">
+                        <option value=""><?php echo t('');?></option>
+                        <?php foreach ($available_users as $user): ?>
+                            <option value="<?php echo $user['username']; ?>" <?php echo $user_filter == $user['username'] ? 'selected' : ''; ?>>
+                                <?php echo $user['username']; ?> (ID: <?php echo $user['id']; ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -810,33 +800,27 @@ body {
                             <?php echo t('date_oldest_first'); ?>
                         </option>
                         <option value="user_asc" <?php echo $sort_option == 'user_asc' ? 'selected' : ''; ?>>
-                            <?php echo t('user_asc'); ?>
+                            <?php echo t('users_button'); ?>
                         </option>
-                        <option value="user_desc" <?php echo $sort_option == 'user_desc' ? 'selected' : ''; ?>>
-                            <?php echo t('user_desc'); ?>
-                        </option>
+                       
                         <option value="activity_asc" <?php echo $sort_option == 'activity_asc' ? 'selected' : ''; ?>>
-                            <?php echo t('activity_asc'); ?>
+                            <?php echo t('activity_column'); ?>
                         </option>
-                        <option value="activity_desc" <?php echo $sort_option == 'activity_desc' ? 'selected' : ''; ?>>
-                            <?php echo t('activity_desc'); ?>
-                        </option>
+                       
                         <option value="type_asc" <?php echo $sort_option == 'type_asc' ? 'selected' : ''; ?>>
-                            <?php echo t('type_asc'); ?>
+                            <?php echo t('activity_type_column'); ?>
                         </option>
-                        <option value="type_desc" <?php echo $sort_option == 'type_desc' ? 'selected' : ''; ?>>
-                            <?php echo t('type_desc'); ?>
-                        </option>
+                        
                     </select>
                 </div>
             </div>
             
             <div class="action-buttons">
                 <button type="submit" class="btn btn-primary">
-                <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                <?php echo t('search'); ?>
                 </button>
-                <a href="access-log.php" class="btn btn-outline-secondary">
-                <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                <a href="access-log.php" class="btn btn-secondary">
+                 <?php echo t('reset'); ?>
                 </a>
             </div>
             
@@ -851,12 +835,15 @@ body {
             <h5 class="mb-0"><?php echo t('log_list');?></h5>
         </div>
         <div class="card-body">
-            <?php if (!empty($type_filter) || ($month_filter && $month_filter !== 'all') || ($year_filter && $year_filter !== 'all')): ?>
+            <?php if (!empty($type_filter) || !empty($user_filter) || ($month_filter && $month_filter !== 'all') || ($year_filter && $year_filter !== 'all')): ?>
                 <div class="alert alert-info mb-3">
                     <i class="fas fa-info-circle"></i> 
                     <?php echo t('showing_filtered_results');?>
                     <?php if (!empty($type_filter)): ?>
                         <span class="badge bg-secondary"><?php echo t('type');?>: <?php echo htmlspecialchars($type_filter); ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($user_filter)): ?>
+                        <span class="badge bg-secondary"><?php echo t('user');?>: <?php echo htmlspecialchars($user_filter); ?></span>
                     <?php endif; ?>
                     <?php if ($month_filter && $month_filter !== 'all'): ?>
                         <span class="badge bg-secondary"><?php echo t('month');?>: <?php echo $months[$month_filter]; ?></span>
@@ -881,7 +868,7 @@ body {
                     <tbody>
                         <?php if (empty($logs)): ?>
                             <tr>
-                                <td colspan="4" class="text-center"><?php echo t('acc_n_rec');?></td>
+                                <td colspan="5" class="text-center"><?php echo t('acc_n_rec');?></td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($logs as $index => $log): ?>

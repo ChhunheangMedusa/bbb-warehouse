@@ -15,6 +15,9 @@ if (!isStaff()) {
   }
 checkAuth();
 
+// Get active tab from request or default to 'current'
+$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'current';
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['send_for_repair'])) {
@@ -96,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pdo->commit();
             $_SESSION['success'] = t('repair_sent_success');
-            redirect('repair.php');
+            redirect('repair.php?tab=' . $active_tab);
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
@@ -128,14 +131,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception("Cannot return more than was sent for repair");
                 }
                 
-                // Record history BEFORE deleting
+                // Record history with CORRECT locations
+                // FROM location should be the repair location (to_location_id from original repair)
+                // TO location should be the destination we're returning to
                 $stmt = $pdo->prepare("INSERT INTO repair_history 
                 (repair_item_id, item_code, category_id, invoice_no, date, item_name, quantity, 
                 action_type, size, from_location_id, to_location_id, remark, action_by, history_action)
                 SELECT id, item_code, category_id, invoice_no, date, item_name, quantity, 
-                'return_from_repair', size, from_location_id, to_location_id, remark, action_by, 'updated'
+                'return_from_repair', size, to_location_id, ?, remark, action_by, 'updated'
                 FROM repair_items WHERE id = ?");
-                $stmt->execute([$repair_item_id]);
+                $stmt->execute([$to_location_id, $repair_item_id]);
                 
                 // Find original item and update quantity
                 $stmt = $pdo->prepare("SELECT id, quantity FROM items 
@@ -171,11 +176,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Log activity
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
-                $stmt->execute([$repair_item['from_location_id']]);
+                $stmt->execute([$repair_item['to_location_id']]); // FROM repair location
                 $from_location = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
-                $stmt->execute([$to_location_id]);
+                $stmt->execute([$to_location_id]); // TO destination location
                 $to_location = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 $log_message = "Returned from repair and deleted repair record: {$repair_item['item_name']} ($quantity {$repair_item['size']}) from {$from_location['name']} to {$to_location['name']}";
@@ -184,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pdo->commit();
             $_SESSION['success'] = t('repair_return_success');
-            redirect('repair.php');
+            redirect('repair.php?tab=' . $active_tab);
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
@@ -210,15 +215,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pdo->commit();
             $_SESSION['success'] = t('repair_item_deleted');
-            redirect('repair.php');
+            redirect('repair.php?tab=' . $active_tab);
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
         }
     }
 }
-// Get active tab from request or default to 'current'
-$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'current';
+// Get the repair item details for quick return
+$quick_return_item = null;
+if (isset($_GET['quick_return_id'])) {
+    $quick_return_id = (int)$_GET['quick_return_id'];
+    $stmt = $pdo->prepare("SELECT r.*, fl.name as from_location_name, tl.name as to_location_name 
+                          FROM repair_items r
+                          JOIN locations fl ON r.from_location_id = fl.id
+                          JOIN locations tl ON r.to_location_id = tl.id
+                          WHERE r.id = ?");
+    $stmt->execute([$quick_return_id]);
+    $quick_return_item = $stmt->fetch(PDO::FETCH_ASSOC);
+}
 // Get all repair locations (locations with type 'repair')
 $repair_locations = $pdo->query("SELECT * FROM locations WHERE type = 'repair' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -254,8 +269,8 @@ $sort_mapping = [
     'name_desc' => ['field' => 'r.item_name', 'direction' => 'DESC'],
     'location_asc' => ['field' => 'fl.name', 'direction' => 'ASC'],
     'location_desc' => ['field' => 'fl.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'r.date', 'direction' => 'ASC'],
-    'date_desc' => ['field' => 'r.date', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'r.date,r.action_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'r.date DESC,r.action_at', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
     'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
     'action_by_asc' => ['field' => 'u.username', 'direction' => 'ASC'],
@@ -426,8 +441,8 @@ $history_sort_mapping = [
     'name_desc' => ['field' => 'rh.item_name', 'direction' => 'DESC'],
     'location_asc' => ['field' => 'fl.name', 'direction' => 'ASC'],
     'location_desc' => ['field' => 'fl.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'rh.date', 'direction' => 'ASC'],
-    'date_desc' => ['field' => 'rh.date', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'rh.date,rh.history_action_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'rh.date DESC,rh.history_action_at', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
     'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
     'action_by_asc' => ['field' => 'u.username', 'direction' => 'ASC'],
@@ -1599,38 +1614,41 @@ table th{
     
     <!-- Tab Navigation -->
     <ul class="nav nav-tabs mb-4" id="repairTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link <?php echo $active_tab === 'current' ? 'active' : ''; ?>" id="current-tab" data-bs-toggle="tab" data-bs-target="#current-repairs" type="button" role="tab" aria-controls="current-repairs" aria-selected="<?php echo $active_tab === 'current' ? 'true' : 'false'; ?>">
-                <?php echo t('current_repairs'); ?>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link <?php echo $active_tab === 'history' ? 'active' : ''; ?>" id="history-tab" data-bs-toggle="tab" data-bs-target="#repair-history" type="button" role="tab" aria-controls="repair-history" aria-selected="<?php echo $active_tab === 'history' ? 'true' : 'false'; ?>">
-                <?php echo t('repair_history'); ?>
-            </button>
-        </li>
-    </ul>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link <?php echo $active_tab === 'current' ? 'active' : ''; ?>" 
+                id="current-tab" 
+                data-bs-toggle="tab" 
+                data-bs-target="#current-repairs" 
+                type="button" 
+                role="tab" 
+                aria-controls="current-repairs" 
+                aria-selected="<?php echo $active_tab === 'current' ? 'true' : 'false'; ?>">
+            <?php echo t('current_repairs'); ?>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link <?php echo $active_tab === 'history' ? 'active' : ''; ?>" 
+                id="history-tab" 
+                data-bs-toggle="tab" 
+                data-bs-target="#repair-history" 
+                type="button" 
+                role="tab" 
+                aria-controls="repair-history" 
+                aria-selected="<?php echo $active_tab === 'history' ? 'true' : 'false'; ?>">
+            <?php echo t('repair_history'); ?>
+        </button>
+    </li>
+</ul>
     
     <!-- Tab Content -->
     <div class="tab-content" id="repairTabsContent">
         
         <!-- Current Repairs Tab -->
-        <div class="tab-pane fade <?php echo $active_tab === 'current' ? 'show active' : ''; ?>" id="current-repairs" role="tabpanel" aria-labelledby="current-tab">
-        <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="current_per_page_select">
-                <?php foreach ($current_limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $current_per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+        <div class="tab-pane fade <?php echo $active_tab === 'current' ? 'show active' : ''; ?>" 
+         id="current-repairs" 
+         role="tabpanel" 
+         aria-labelledby="current-tab">
+ 
         <!-- Filter Card -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
@@ -1642,7 +1660,7 @@ table th{
                         <input type="hidden" name="tab" value="current">
                         <div class="row mb-3">
                             <div class="col-md-2">
-                                <label class="form-label"><?php echo t('search'); ?></label>
+                                <label class="form-label"><?php echo t('names'); ?></label>
                                 <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
                             </div>
                             <div class="col-md-2">
@@ -1727,14 +1745,26 @@ table th{
                                     </option>
                                 </select>
                             </div>
+                            <div class="col-md-4">
+                            <label class="form-label"><?php echo t('show_entries'); ?></label>
+                    
+            <select class="form-select form-select-sm" id="current_per_page_select">
+                <?php foreach ($current_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $current_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+          
                         </div>
-                        
+                        </div>
+                     
                         <div class="action-buttons">
                             <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                           <?php echo t('search'); ?>
                             </button>
-                            <a href="repair.php?tab=current" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                            <a href="repair.php?tab=current" class="btn btn-secondary">
+                            <?php echo t('reset'); ?>
                             </a>
                         </div>
                         
@@ -1866,13 +1896,14 @@ table th{
                                             <td class="action-buttons">
                                                 <?php if ($item['action_type'] == 'send_for_repair'): ?>
                                                     <button class="btn btn-success btn-sm return-btn" 
-                                                            data-id="<?php echo $item['id']; ?>"
-                                                            data-name="<?php echo $item['item_name']; ?>"
-                                                            data-quantity="<?php echo $item['quantity']; ?>"
-                                                            data-size="<?php echo $item['size']; ?>"
-                                                            data-from-location="<?php echo $item['from_location_id']; ?>">
-                                                        <i class="bi bi-arrow-return-left"></i> <?php echo t('return_back'); ?>
-                                                    </button>
+                data-id="<?php echo $item['id']; ?>"
+                data-name="<?php echo $item['item_name']; ?>"
+                data-quantity="<?php echo $item['quantity']; ?>"
+                data-size="<?php echo $item['size']; ?>"
+                data-from-location="<?php echo $item['to_location_id']; ?>"
+                data-original-location="<?php echo $item['from_location_id']; ?>">
+            <i class="bi bi-arrow-return-left"></i> <?php echo t('return_back'); ?>
+        </button>
                                                 <?php endif; ?>
                                                 <button class="btn btn-danger btn-sm delete-btn" 
                                                         data-id="<?php echo $item['id']; ?>"
@@ -1961,22 +1992,12 @@ table th{
         </div>
         
         <!-- Repair History Tab -->
-        <div class="tab-pane fade <?php echo $active_tab === 'history' ? 'show active' : ''; ?>" id="repair-history" role="tabpanel" aria-labelledby="history-tab">
+        <div class="tab-pane fade <?php echo $active_tab === 'history' ? 'show active' : ''; ?>" 
+         id="repair-history" 
+         role="tabpanel" 
+         aria-labelledby="history-tab">
         <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="history_per_page_select">
-                <?php foreach ($history_limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $history_per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+ 
         <!-- Filter Card for History -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
@@ -1987,7 +2008,7 @@ table th{
                         <input type="hidden" name="tab" value="history">
                         <div class="row mb-3">
                             <div class="col-md-2">
-                                <label class="form-label"><?php echo t('search'); ?></label>
+                                <label class="form-label"><?php echo t('names'); ?></label>
                                 <input type="text" name="history_search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $history_search_query; ?>">
                             </div>
                             <div class="col-md-2">
@@ -2043,7 +2064,7 @@ table th{
                                         <option value="<?php echo $y; ?>" <?php echo $history_year_filter == $y ? 'selected' : ''; ?>>
                                             <?php echo $y; ?>
                                         </option>
-                                    <?php endfor; ?>
+                                        <?php endfor; ?>
                                 </select>
                             </div>
                         </div>
@@ -2071,14 +2092,25 @@ table th{
                                     </option>
                                 </select>
                             </div>
+                            <div class="col-md-4">
+                            <label class="form-label"><?php echo t('show_entries'); ?></label>
+                         
+            <select class="form-select form-select-sm" id="history_per_page_select">
+                <?php foreach ($history_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $history_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+                            </div>
                         </div>
                         
                         <div class="action-buttons">
                             <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                          <?php echo t('search'); ?>
                             </button>
-                            <a href="repair.php?tab=history" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                            <a href="repair.php?tab=history" class="btn btn-secondary">
+                            <?php echo t('reset'); ?>
                             </a>
                         </div>
                         
@@ -2292,11 +2324,13 @@ table th{
         </div>
     </div>
 </div>
+
 <!-- Send for Repair Modal -->
 <div class="modal fade" id="sendForRepairModal" tabindex="-1" aria-labelledby="sendForRepairModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="tab" value="<?php echo $active_tab; ?>">
                 <div class="modal-header bg-warning text-dark">
                     <h5 class="modal-title" id="sendForRepairModalLabel"><?php echo t('send_for_repair'); ?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -2391,6 +2425,7 @@ table th{
         </div>
     </div>
 </div>
+
 <!-- Select Location Modal -->
 <div class="modal fade" id="selectLocationModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -2416,11 +2451,13 @@ table th{
         </div>
     </div>
 </div>
+
 <!-- Return from Repair Modal -->
 <div class="modal fade" id="returnFromRepairModal" tabindex="-1" aria-labelledby="returnFromRepairModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="POST">
+                <input type="hidden" name="tab" value="<?php echo $active_tab; ?>">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="returnFromRepairModalLabel"><?php echo t('return_back'); ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -2502,8 +2539,6 @@ table th{
                             </div>
                         </div>
                     </div>
-                    
-                  
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
@@ -2534,6 +2569,7 @@ table th{
             </div>
             <div class="modal-footer justify-content-center">
                 <form method="POST" id="deleteForm">
+                    <input type="hidden" name="tab" value="<?php echo $active_tab; ?>">
                     <input type="hidden" name="delete_id" id="delete_id">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
@@ -2573,6 +2609,29 @@ table th{
 </div>
 
 <script>
+    // Tab persistence on page refresh
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the active tab from URL parameter or default to 'current'
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab') || 'current';
+    
+    // Show the correct tab
+    const tabButton = document.querySelector(`[data-bs-target="#${activeTab === 'current' ? 'current-repairs' : 'repair-history'}"]`);
+    if (tabButton) {
+        const tab = new bootstrap.Tab(tabButton);
+        tab.show();
+    }
+    
+    // Update URL when tabs are clicked
+    document.querySelectorAll('#repairTabs button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            const tabName = event.target.id === 'current-tab' ? 'current' : 'history';
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tabName);
+            window.history.replaceState({}, '', url);
+        });
+    });
+});
 document.addEventListener('DOMContentLoaded', function() {
     // Handle entries per page change for current repairs
     const currentPerPageSelect = document.getElementById('current_per_page_select');
@@ -2597,6 +2656,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
 // Store items by location data
 const itemsByLocation = <?php echo json_encode($items_by_location); ?>;
 const itemsInRepair = <?php echo json_encode($items_in_repair); ?>;
@@ -2718,7 +2778,7 @@ document.getElementById('send-repair-more-row').addEventListener('click', functi
                                 <input type="text" class="form-control form-control-sm search-item-input" placeholder="<?php echo t('search'); ?>...">
                             </div>
                         </li>
-                       
+                        
                         <div class="dropdown-item-container">
                             <!-- Items will be populated here -->
                         </div>
@@ -2760,7 +2820,7 @@ document.getElementById('send-repair-more-row').addEventListener('click', functi
     });
 });
 
-// Handle location change for return repair modal
+// Enhanced location change handler for return modal
 document.getElementById('return_from_location_id').addEventListener('change', function() {
     const locationId = this.value;
     const dropdowns = document.querySelectorAll('#return_repair_items_container .item-dropdown');
@@ -2768,9 +2828,26 @@ document.getElementById('return_from_location_id').addEventListener('change', fu
     dropdowns.forEach(dropdown => {
         populateItemDropdown(dropdown, locationId, true);
     });
+    
+    // Auto-select the most logical destination
+    autoSelectReturnDestination(locationId);
 });
-
-
+// Function to auto-select the return destination
+function autoSelectReturnDestination(fromLocationId) {
+    const toLocationSelect = document.getElementById('return_to_location_id');
+    
+    // If it's a repair location, try to find the most common destination
+    // You can customize this logic based on your business rules
+    if (fromLocationId) {
+        // Example: Select the first non-repair location as default
+        const nonRepairOptions = Array.from(toLocationSelect.options)
+            .filter(option => option.value && option.value !== '');
+        
+        if (nonRepairOptions.length > 0) {
+            toLocationSelect.value = nonRepairOptions[0].value;
+        }
+    }
+}
 
 // Set today's date when modals are shown
 document.getElementById('sendForRepairModal').addEventListener('shown.bs.modal', function() {
@@ -2778,19 +2855,38 @@ document.getElementById('sendForRepairModal').addEventListener('shown.bs.modal',
 });
 
 document.getElementById('returnFromRepairModal').addEventListener('shown.bs.modal', function() {
+  // Reset form
+  document.getElementById('return_invoice_no').value = '';
     document.getElementById('return_date').valueAsDate = new Date();
+    
+    // If we have a quick return item from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const quickReturnId = urlParams.get('quick_return_id');
+    
+    if (quickReturnId) {
+        // You might want to fetch the item details via AJAX here
+        // and auto-populate the form
+        fetch(`get_repair_item.php?id=${quickReturnId}`)
+            .then(response => response.json())
+            .then(item => {
+                if (item) {
+                    document.getElementById('return_from_location_id').value = item.to_location_id;
+                    document.getElementById('return_to_location_id').value = item.from_location_id;
+                    document.getElementById('return_from_location_id').dispatchEvent(new Event('change'));
+                }
+            });
+    }
 });
 
 // Delete confirmation
 document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-      
+        const id = this.getAttribute('data-id');
         const name = this.getAttribute('data-name');
         
-       
+        document.getElementById('delete_id').value = id;
         document.getElementById('deleteItemInfo').innerHTML = `
             <p><strong><?php echo t('item_name'); ?>:</strong> ${name}</p>
-        
         `;
         
         const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
@@ -2798,7 +2894,7 @@ document.querySelectorAll('.delete-btn').forEach(btn => {
     });
 });
 
-// Quick return button
+// Quick return button with auto-location detection
 document.querySelectorAll('.return-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const id = this.getAttribute('data-id');
@@ -2806,12 +2902,18 @@ document.querySelectorAll('.return-btn').forEach(btn => {
         const quantity = this.getAttribute('data-quantity');
         const size = this.getAttribute('data-size');
         const fromLocation = this.getAttribute('data-from-location');
-        
-        // Set the modal values
+        const originalLocation = this.getAttribute('data-original-location');
+        // Auto-detect and set locations
         document.getElementById('return_invoice_no').value = '';
         document.getElementById('return_date').valueAsDate = new Date();
-        document.getElementById('return_from_location_id').value = '';
-        document.getElementById('return_to_location_id').value = fromLocation;
+        
+        // Auto-select from location (repair location)
+        document.getElementById('return_from_location_id').value = fromLocation;
+         // Auto-select to location (original location)
+         document.getElementById('return_to_location_id').value = originalLocation;
+ 
+        // Trigger location change to populate items
+        document.getElementById('return_from_location_id').dispatchEvent(new Event('change'));
         
         // Clear and add one row with the item
         const container = document.getElementById('return_repair_items_container');

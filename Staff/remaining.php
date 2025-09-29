@@ -533,7 +533,7 @@ $sort_order = $sort_mapping[$sort_option]['direction'];
 // Replace the CASE statement in remaining.php with this:
 $query = "SELECT i.*, l.name as location_name, c.name as category_name,
           CASE 
-            WHEN EXISTS (SELECT 1 FROM broken_items bi WHERE bi.item_id = i.id) THEN 'broken'
+           
             WHEN EXISTS (SELECT 1 FROM addnewitems ani WHERE ani.item_id = i.id) 
                  AND NOT EXISTS (SELECT 1 FROM addqtyitems aqi WHERE aqi.item_id = i.id) THEN 'new'
             WHEN EXISTS (SELECT 1 FROM addqtyitems aqi WHERE aqi.item_id = i.id) THEN 'add'
@@ -1662,21 +1662,7 @@ table th{
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('item_management');?></h2>
-    <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
@@ -1686,7 +1672,7 @@ table th{
             <form method="GET" class="filter-form">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label class="filter-label"><?php echo t('search');?></label>
+                        <label class="filter-label"><?php echo t('names');?></label>
                         <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_query); ?>" placeholder="<?php echo t('search');?>...">
                     </div>
                     
@@ -1762,14 +1748,26 @@ table th{
                             
                         </select>
                     </div>
+                    <div class="col-md-2">
+                    <label class="filter-label"><?php echo t('show_entries');?></label>
+                  
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+           
+                    </div>
                 </div>
                 
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                  <?php echo t('search'); ?>
                     </button>
-                    <a href="remaining.php?reset=1" class="btn btn-outline-secondary">
-    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                    <a href="remaining.php?reset=1" class="btn btn-secondary">
+  <?php echo t('reset'); ?>
 </a>
                 </div>
                 

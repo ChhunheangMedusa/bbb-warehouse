@@ -144,8 +144,8 @@ $months = [
 ?>
 <style>
     :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
+  --primary: #0D63FD;
+  --primary-dark: #0D63FD;
   --primary-light: #f8f9fc;
   --secondary: #858796;
   --success: #1cc88a;
@@ -640,21 +640,7 @@ body {
 </style>
 <div class="container-fluid" >
     <h2 class="mb-4"><?php echo t('location');?>: <?php echo htmlspecialchars($location['name']); ?></h2>
-    <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
@@ -666,33 +652,11 @@ body {
                 
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label class="filter-label"><?php echo t('search');?></label>
+                        <label class="filter-label"><?php echo t('location_name');?></label>
                         <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_filter); ?>" placeholder="<?php echo t('search');?>">
                     </div>
                     
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('month');?></label>
-                        <select name="month" class="form-select">
-                            <option value="all"><?php echo t('all_months');?></option>
-                            <?php foreach ($months as $num => $name): ?>
-                                <option value="<?php echo $num; ?>" <?php echo $month_filter == $num ? 'selected' : ''; ?>>
-                                    <?php echo $name; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('year');?></label>
-                        <select name="year" class="form-select">
-                            <option value="all"><?php echo t('all_years');?></option>
-                            <?php foreach ($available_years as $year): ?>
-                                <option value="<?php echo $year; ?>" <?php echo $year_filter == $year ? 'selected' : ''; ?>>
-                                    <?php echo $year; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                   
                     
                     <div class="filter-group">
                         <label class="filter-label"><?php echo t('sort');?></label>
@@ -721,10 +685,10 @@ body {
                 
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> <?php echo t('search');?>
+                      <?php echo t('search');?>
                     </button>
-                    <a href="location-items.php?location_id=<?php echo $location_id; ?>" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> <?php echo t('reset');?>
+                    <a href="location-items.php?location_id=<?php echo $location_id; ?>" class="btn btn-secondary">
+                    <?php echo t('reset');?>
                     </a>
                 </div>
                 

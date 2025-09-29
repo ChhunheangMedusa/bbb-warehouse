@@ -27,11 +27,12 @@ $year_filter = isset($_GET['year']) ? sanitizeInput($_GET['year']) : '';
 $sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option']) : 'username_asc';
 
 // Validate and parse sort option
+// Update your sort mapping
 $sort_mapping = [
     'username_asc' => ['field' => 'username', 'direction' => 'ASC'],
     'username_desc' => ['field' => 'username', 'direction' => 'DESC'],
-    'type_asc' => ['field' => 'user_type', 'direction' => 'ASC'],
-    'type_desc' => ['field' => 'user_type', 'direction' => 'DESC'],
+    'type_asc' => ['field' => "CASE WHEN user_type = 'admin' THEN 1 WHEN user_type = 'guest' THEN 2 WHEN user_type = 'staff' THEN 3 ELSE 4 END", 'direction' => 'ASC'],
+    'type_desc' => ['field' => "CASE WHEN user_type = 'admin' THEN 1 WHEN user_type = 'guest' THEN 2 WHEN user_type = 'staff' THEN 3 ELSE 4 END", 'direction' => 'DESC'],
     'date_asc' => ['field' => 'created_at', 'direction' => 'ASC'],
     'date_desc' => ['field' => 'created_at', 'direction' => 'DESC']
 ];
@@ -417,8 +418,8 @@ $months = [
 ?>
 <style>
     :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
+  --primary: #4E73DF;
+  --primary-dark: #0D63FD;
   --primary-light: #f8f9fc;
   --secondary: #858796;
   --success: #1cc88a;
@@ -554,8 +555,8 @@ body {
 }
 
 .btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 .btn-primary:hover {
@@ -764,7 +765,7 @@ body {
 
     :root {
   --primary: #4e73df;
-  --primary-dark: #2e59d9;
+  --primary-dark: #0D63FD;
   --primary-light: #f8f9fc;
   --secondary: #858796;
   --success: #1cc88a;
@@ -902,8 +903,8 @@ body {
 }
 
 .btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary);
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 .btn-primary:hover {
@@ -1332,6 +1333,44 @@ body {
         flex: 1;
     }
 }
+.edit-user-click {
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+/* Validation styles */
+.is-valid {
+    border-color: #198754 !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 3.6.4.4.4-.4'/%3e%3cpath d='M6 7v2'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+.valid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #198754;
+}
+
 </style>
 
 <div class="container-fluid">
@@ -1362,30 +1401,7 @@ body {
                         </select>
                     </div>
                     
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('month');?></label>
-                        <select name="month" class="form-select">
-                            <option value="all"><?php echo t('all_months');?></option>
-                            <?php foreach ($months as $num => $name): ?>
-                                <option value="<?php echo $num; ?>" <?php echo $month_filter == $num ? 'selected' : ''; ?>>
-                                    <?php echo $name; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('year');?></label>
-                        <select name="year" class="form-select">
-                            <option value="all"><?php echo t('all_years');?></option>
-                            <?php foreach ($available_years as $year): ?>
-                                <option value="<?php echo $year; ?>" <?php echo $year_filter == $year ? 'selected' : ''; ?>>
-                                    <?php echo $year; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
+                   
                     <div class="filter-group">
                         <label class="filter-label"><?php echo t('sort');?></label>
                         <select name="sort_option" class="form-select">
@@ -1396,17 +1412,10 @@ body {
                                 <?php echo t('name_z_to_a'); ?>
                             </option>
                             <option value="type_asc" <?php echo $sort_option == 'type_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('type_az'); ?>
+                                <?php echo t('type'); ?>
                             </option>
-                            <option value="type_desc" <?php echo $sort_option == 'type_desc' ? 'selected' : ''; ?>>
-                                <?php echo t('type_za'); ?>
-                            </option>
-                            <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('date_oldest_first'); ?>
-                            </option>
-                            <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>>
-                                <?php echo t('date_newest_first'); ?>
-                            </option>
+                            
+                            
                         </select>
                     </div>
                 </div>
@@ -1415,7 +1424,7 @@ body {
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-filter"></i> <?php echo t('search');?>
                     </button>
-                    <a href="user-control.php" class="btn btn-outline-secondary">
+                    <a href="user-control.php" class="btn btn-secondary">
                         <i class="fas fa-times"></i> <?php echo t('reset');?>
                     </a>
                 </div>
@@ -1487,7 +1496,17 @@ body {
                                              style="object-fit: cover;"
                                              onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2250%22%20height%3D%2250%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2050%2050%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_18a5f8a8b0a%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_18a5f8a8b0a%22%3E%3Crect%20width%3D%2250%22%20height%3D%2250%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2210%22%20y%3D%2227%22%3E50x50%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'">
                                     </td>
-                                    <td><?php echo $user['username']; ?></td>
+                                    <td>
+    <a href="#" class="text-black text-decoration-none edit-user-click" 
+       data-id="<?php echo $user['id']; ?>"
+       data-username="<?php echo $user['username']; ?>"
+       data-user_type="<?php echo $user['user_type']; ?>"
+       data-phone_number="<?php echo $user['phone_number']; ?>"
+       data-email="<?php echo $user['email']; ?>"
+       data-picture="<?php echo isset($user['picture']) ? '1' : '0'; ?>">
+        <?php echo $user['username']; ?>
+    </a>
+</td>
                                     <td><?php echo $user['user_type']; ?></td>
                                     <td><?php echo $user['phone_number'] ?? 'N/A'; ?></td>
                                     <td><?php echo $user['email']; ?></td>
@@ -1855,27 +1874,7 @@ body {
 
 
 
-function toggleFieldsByUserType(modalType = 'add') {
-    const prefix = modalType === 'edit' ? 'edit_' : '';
-    const userType = document.getElementById(`${prefix}user_type`).value;
-    const isGuest = userType === 'guest';
-    
-    // Fields to show/hide
-    const fieldsToToggle = ['phone_number', 'email', 'picture'];
-    
-    fieldsToToggle.forEach(fieldId => {
-        const fieldGroup = document.getElementById(`${prefix}${fieldId}`)?.closest('.mb-3');
-        if (fieldGroup) {
-            fieldGroup.style.display = isGuest ? 'none' : 'block';
-        }
-    });
-    
-    // Handle preview image
-    const previewImage = document.getElementById(`${prefix}PreviewImage`);
-    if (previewImage) {
-        previewImage.style.display = isGuest ? 'none' : 'block';
-    }
-}
+
 
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', function() {
@@ -1886,6 +1885,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Edit User Modal
     document.getElementById('edit_user_type').addEventListener('change', () => toggleFieldsByUserType('edit'));
     document.getElementById('editUserModal').addEventListener('shown.bs.modal', () => toggleFieldsByUserType('edit'));
+    
+    // Initialize on page load for add modal (in case it's pre-opened)
+    toggleFieldsByUserType('add');
 });
   // Add this to your existing JavaScript
 document.addEventListener('DOMContentLoaded', function() {
@@ -2024,26 +2026,34 @@ document.getElementById('editUserModal').addEventListener('hidden.bs.modal', fun
 // Password confirmation validation
 
 document.querySelector('#addUserModal form').addEventListener('submit', async function(e) {
-    // Check password match first
-    const password = document.getElementById('password').value;
-    const confirm_password = document.getElementById('confirm_password').value;
+    const userType = document.getElementById('user_type').value;
+    const isGuest = userType === 'guest';
     
-    if (password !== confirm_password) {
-        e.preventDefault();
-        const mismatchModal = new bootstrap.Modal(document.getElementById('passwordMismatchModal'));
-        mismatchModal.show();
-        return;
+    // Only check password match for non-guest users
+    if (!isGuest) {
+        const password = document.getElementById('password').value;
+        const confirm_password = document.getElementById('confirm_password').value;
+        
+        if (password !== confirm_password) {
+            e.preventDefault();
+            const mismatchModal = new bootstrap.Modal(document.getElementById('passwordMismatchModal'));
+            mismatchModal.show();
+            return;
+        }
     }
 
-    // Validate username and email
+    // Validate username and email (email only for non-guest)
     const username = document.getElementById('username').value.trim();
     const email = document.getElementById('email').value.trim();
     
     try {
-        const [usernameValid, emailValid] = await Promise.all([
-            validateUsername(username),
-            validateEmail(email)
-        ]);
+        const usernameValid = await validateUsername(username);
+        let emailValid = true;
+        
+        // Only validate email for non-guest users
+        if (!isGuest && email) {
+            emailValid = await validateEmail(email);
+        }
         
         if (!usernameValid || !emailValid) {
             e.preventDefault();
@@ -2056,17 +2066,22 @@ document.querySelector('#addUserModal form').addEventListener('submit', async fu
         e.preventDefault();
     }
 });
-// Update the toggleFieldsByUserType function to remove password field references
 function toggleFieldsByUserType(modalType = 'add') {
     const prefix = modalType === 'edit' ? 'edit_' : '';
     const userType = document.getElementById(`${prefix}user_type`).value;
     const isGuest = userType === 'guest';
     
-    // Fields to show/hide
+    // Fields to show/hide - including password fields for add modal
     const fieldsToToggle = ['phone_number', 'email', 'picture'];
     
+    // For add modal only, also hide password fields
+    if (modalType === 'add') {
+        fieldsToToggle.push('password', 'confirm_password');
+    }
+    
     fieldsToToggle.forEach(fieldId => {
-        const fieldGroup = document.getElementById(`${prefix}${fieldId}`)?.closest('.mb-3');
+        const fieldGroup = document.getElementById(`${prefix}${fieldId}_field`) || 
+                          document.getElementById(`${prefix}${fieldId}`)?.closest('.mb-3');
         if (fieldGroup) {
             fieldGroup.style.display = isGuest ? 'none' : 'block';
         }
@@ -2076,6 +2091,22 @@ function toggleFieldsByUserType(modalType = 'add') {
     const previewImage = document.getElementById(`${prefix}PreviewImage`);
     if (previewImage) {
         previewImage.style.display = isGuest ? 'none' : 'block';
+    }
+    
+    // Make password fields optional for guest users in add modal
+    if (modalType === 'add') {
+        const passwordField = document.getElementById('password');
+        const confirmPasswordField = document.getElementById('confirm_password');
+        
+        if (isGuest) {
+            passwordField.removeAttribute('required');
+            confirmPasswordField.removeAttribute('required');
+            passwordField.value = '';
+            confirmPasswordField.value = '';
+        } else {
+            passwordField.setAttribute('required', 'required');
+            confirmPasswordField.setAttribute('required', 'required');
+        }
     }
 }
 
@@ -2224,6 +2255,115 @@ function previewEditImage(input) {
         preview.src = preview.getAttribute('data-original-src');
     }
 }
+// Handle username click to open edit modal
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-user-click').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const id = this.getAttribute('data-id');
+            const username = this.getAttribute('data-username');
+            const user_type = this.getAttribute('data-user_type');
+            const phone_number = this.getAttribute('data-phone_number');
+            const email = this.getAttribute('data-email');
+            const has_picture = this.getAttribute('data-picture') === '1';
+            
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_username').value = username;
+            document.getElementById('edit_user_type').value = user_type;
+            document.getElementById('edit_phone_number').value = phone_number || '';
+            document.getElementById('edit_email').value = email;
+            
+            // Set the preview image
+            const imgElement = document.getElementById('editPreviewImage');
+            if (has_picture) {
+                imgElement.src = 'get_user_image.php?id=' + id;
+                imgElement.setAttribute('data-original-src', 'get_user_image.php?id=' + id);
+            } else {
+                imgElement.src = '../assets/images/users/default.png';
+                imgElement.setAttribute('data-original-src', '../assets/images/users/default.png');
+            }
+            
+            const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            editModal.show();
+        });
+    });
+});
+// Prevent spaces in username field for Add User Modal
+document.getElementById('username').addEventListener('input', function(e) {
+    this.value = this.value.replace(/\s/g, '');
+});
+
+// Prevent spaces in username field for Edit User Modal
+document.getElementById('edit_username').addEventListener('input', function(e) {
+    this.value = this.value.replace(/\s/g, '');
+});
+// Add validation feedback for username fields
+function validateUsernameNoSpaces(inputField) {
+    const value = inputField.value;
+    const hasSpaces = /\s/.test(value);
+    
+    if (hasSpaces) {
+        inputField.classList.add('is-invalid');
+        inputField.classList.remove('is-valid');
+        showUsernameError(inputField, 'Spaces are not allowed in username');
+        return false;
+    } else if (value.length > 0) {
+        inputField.classList.remove('is-invalid');
+        inputField.classList.add('is-valid');
+        return true;
+    } else {
+        inputField.classList.remove('is-invalid');
+        inputField.classList.remove('is-valid');
+        return false;
+    }
+}
+
+function showUsernameError(inputField, message) {
+    // Remove existing error message
+    let existingError = inputField.parentNode.querySelector('.invalid-feedback');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    // Add new error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback';
+    errorDiv.textContent = message;
+    inputField.parentNode.appendChild(errorDiv);
+}
+
+// Add event listeners for real-time validation
+document.getElementById('username').addEventListener('input', function() {
+    validateUsernameNoSpaces(this);
+});
+
+document.getElementById('edit_username').addEventListener('input', function() {
+    validateUsernameNoSpaces(this);
+});
+// Add User Modal form submission validation
+document.querySelector('#addUserModal form').addEventListener('submit', function(e) {
+    const usernameField = document.getElementById('username');
+    
+    if (/\s/.test(usernameField.value)) {
+        e.preventDefault();
+        usernameField.classList.add('is-invalid');
+        showUsernameError(usernameField, 'Please remove spaces from username before submitting');
+        usernameField.focus();
+    }
+});
+
+// Edit User Modal form submission validation
+document.querySelector('#editUserModal form').addEventListener('submit', function(e) {
+    const usernameField = document.getElementById('edit_username');
+    
+    if (/\s/.test(usernameField.value)) {
+        e.preventDefault();
+        usernameField.classList.add('is-invalid');
+        showUsernameError(usernameField, 'Please remove spaces from username before submitting');
+        usernameField.focus();
+    }
+});
 </script>
 
 <?php

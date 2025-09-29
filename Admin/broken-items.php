@@ -1333,22 +1333,7 @@ table th{
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('broken_items_history'); ?></h2>
     
-    <!-- Filter Card -->
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <div class="d-flex align-items-center entries-per-page">
-                <span class="me-2"><?php echo t('show_entries'); ?></span>
-                <select class="form-select form-select-sm" id="per_page_select">
-                    <?php foreach ($limit_options as $option): ?>
-                        <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                            <?php echo $option; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <span class="ms-2"><?php echo t('entries'); ?></span>
-            </div>
-        </div>
-    </div>
+  
     
     <div class="card mb-4">
         <div class="card-header bg-danger text-white">
@@ -1360,9 +1345,11 @@ table th{
                     <form method="GET" class="row g-2">
                         <input type="hidden" name="tab" value="broken">
                         <div class="col-md-2">
+                        <label ><?php echo t('name');?></label>
                             <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
                         </div>
                         <div class="col-md-2">
+                        <label ><?php echo t('location');?></label>
                             <select name="location" class="form-select">
                                 <option value=""><?php echo t('report_all_location'); ?></option>
                                 <?php foreach ($locations as $location): ?>
@@ -1373,6 +1360,7 @@ table th{
                             </select>
                         </div>
                         <div class="col-md-2">
+                        <label ><?php echo t('category');?></label>
                             <select name="category" class="form-select">
                                 <option value=""><?php echo t('all_categories'); ?></option>
                                 <?php foreach ($categories as $category): ?>
@@ -1383,6 +1371,7 @@ table th{
                             </select>
                         </div>
                         <div class="col-md-2">
+                        <label ><?php echo t('month');?></label>
                             <select name="month" class="form-select">
                                 <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
                                 <?php for ($m = 1; $m <= 12; $m++): ?>
@@ -1393,6 +1382,7 @@ table th{
                             </select>
                         </div>
                         <div class="col-md-2">
+                        <label ><?php echo t('year');?></label>
                             <select name="year" class="form-select">
                                 <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
                                 <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
@@ -1403,6 +1393,7 @@ table th{
                             </select>
                         </div>
                         <div class="col-md-2">
+                        <label ><?php echo t('sort');?></label>
                             <select name="sort_option" class="form-select">
                                 <option value="date_desc" <?php echo $sort_option === 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
                                 <option value="date_asc" <?php echo $sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
@@ -1412,12 +1403,22 @@ table th{
                                 <option value="quantity_desc" <?php echo $sort_option === 'quantity_desc' ? 'selected' : ''; ?>><?php echo t('quantity_high_to_low'); ?></option>
                             </select>
                         </div>
+                        <div class="col-md-2">
+                            <label ><?php echo t('show_entries');?></label>
+                        <select class="form-select form-select-sm" id="per_page_select">
+                    <?php foreach ($limit_options as $option): ?>
+                        <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                            <?php echo $option; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                        </div>
                         <div class="action-buttons">
                             <button type="submit" class="btn btn-danger">
-                                <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                               <?php echo t('search'); ?>
                             </button>
                             <a href="broken-items.php" class="btn btn-secondary">
-                                <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                               <?php echo t('reset'); ?>
                             </a>
                         </div>
                     </form>
@@ -1642,7 +1643,7 @@ table th{
                                     <input type="number" class="form-control available-quantity" readonly>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label class="form-label"><?php echo t('item_qty'); ?></label>
+                                    <label class="form-label"><?php echo t('broken_qty'); ?></label>
                                     <input type="number" class="form-control" name="broken_quantity[]" step="0.5" min="0.5" required>
                                 </div>
                             </div>

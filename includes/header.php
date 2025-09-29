@@ -47,6 +47,7 @@ $hasAvatar = ($userPicture !== null);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
 </head>
 <style>
     body {
@@ -89,7 +90,7 @@ $hasAvatar = ($userPicture !== null);
     }
     
     .main-content {
-        margin-left: 250px; /* Adjust this based on your sidebar width */
+        margin-left: 221.5px; /* Adjust this based on your sidebar width */
         width: calc(100% - 250px);
     }
     
@@ -249,36 +250,41 @@ $hasAvatar = ($userPicture !== null);
                     <div class="collapse" id="itemManagementCollapse">
                         <ul class="nav flex-column ps-4">
                         <li class="nav-item">
-                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/store.php' ? 'active' : ''; ?>" href="../Admin/store.php">
-                                    <i class="bi bi-currency-dollar me-2"></i><?php echo t('store_inventory'); ?>
-                                </a>
-                            </li>
-                            <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/items.php' ? 'active' : ''; ?>" href="../Admin/items.php">
                                     <i class="bi bi-box-seam me-2"></i><?php echo t('item'); ?>
                                 </a>
                             </li>
-                       
-                            <li class="nav-item">
-                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/repair.php' ? 'active' : ''; ?>" href="../Admin/repair.php">
-                                    <i class="bi bi-tools me-2"></i><?php echo t('repair'); ?>
-                                </a>
-                            </li>
+
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/stock-transfer.php' ? 'active' : ''; ?>" href="../Admin/stock-transfer.php">
                                     <i class="bi bi-arrow-left-right me-2"></i><?php echo t('transfer'); ?>
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/remaining.php' ? 'active' : ''; ?>" href="../Admin/remaining.php">
+                                  <i class="bi bi-archive me-2"></i><?php echo t('remaining'); ?>
+                                </a>
+                            </li>
+
+                        <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/store.php' ? 'active' : ''; ?>" href="../Admin/store.php">
+                                    <i class="bi bi-currency-dollar me-2"></i><?php echo t('store_inventory'); ?>
+                                </a>
+                            </li>
+                          
+                       
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/repair.php' ? 'active' : ''; ?>" href="../Admin/repair.php">
+                                    <i class="bi bi-tools me-2"></i><?php echo t('repair'); ?>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/broken-items.php' ? 'active' : ''; ?>" href="../Admin/broken-items.php">
                                     <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('broken_items'); ?>
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/remaining.php' ? 'active' : ''; ?>" href="../Admin/remaining.php">
-                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('remaining'); ?>
-                                </a>
-                            </li>
+                           
                         </ul>
                     </div>
                 </li>

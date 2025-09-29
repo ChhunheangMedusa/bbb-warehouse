@@ -48,8 +48,8 @@ $sort_mapping = [
     'name_desc' => ['field' => 'si.name', 'direction' => 'DESC'],
     'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
     'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'si.date', 'direction' => 'ASC'],
-    'date_desc' => ['field' => 'si.date', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'si.date, si.action_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'si.date DESC, si.action_at', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
     'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
     'action_asc' => ['field' => 'si.action_type', 'direction' => 'ASC'],
@@ -591,8 +591,8 @@ $out_sort_mapping = [
     'name_desc' => ['field' => 'so.name', 'direction' => 'DESC'],
     'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
     'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'so.date', 'direction' => 'ASC'],
-    'date_desc' => ['field' => 'so.date', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'so.date, so.action_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'so.date DESC, so.action_at', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
     'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
     'action_asc' => ['field' => 'so.action_type', 'direction' => 'ASC'],
@@ -1824,19 +1824,7 @@ input[name="invoice_no"] {
       <div class="tab-pane fade <?php echo $active_tab === 'in' ? 'show active' : ''; ?>" id="in-tab-pane" role="tabpanel" aria-labelledby="in-tab" tabindex="0">
           <!-- Filter Card -->
           <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="in_per_page_select">
-                <?php foreach ($in_limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $in_per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
+  
 </div>
           <div class="card mb-4">
               <div class="card-header bg-primary text-white">
@@ -1848,9 +1836,11 @@ input[name="invoice_no"] {
                           <form method="GET" class="row g-2">
                               <input type="hidden" name="tab" value="in">
                               <div class="col-md-2">
+                              <label for="search" class="form-label"><?php echo t('name'); ?></label>
                                   <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $in_search_query; ?>">
                               </div>
                               <div class="col-md-2">
+                              <label for="location" class="form-label"><?php echo t('location'); ?></label>
                                   <select name="location" class="form-select">
                                       <option value=""><?php echo t('report_all_location'); ?></option>
                                       <?php foreach ($locations as $location): ?>
@@ -1861,6 +1851,7 @@ input[name="invoice_no"] {
                                   </select>
                               </div>
                               <div class="col-md-2">
+                              <label for="category" class="form-label"><?php echo t('category'); ?></label>
                                   <select name="category" class="form-select">
                                       <option value=""><?php echo t('all_categories'); ?></option>
                                       <?php foreach ($categories as $category): ?>
@@ -1872,6 +1863,7 @@ input[name="invoice_no"] {
                               </div>
                      
                               <div class="col-md-2">
+                              <label for="month" class="form-label"><?php echo t('month'); ?></label>
                                   <select name="month" class="form-select">
                                       <option value="0" <?php echo $in_month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
                                       <?php for ($m = 1; $m <= 12; $m++): ?>
@@ -1882,6 +1874,7 @@ input[name="invoice_no"] {
                                   </select>
                               </div>
                               <div class="col-md-2">
+                              <label for="year" class="form-label"><?php echo t('year'); ?></label>
                                   <select name="year" class="form-select">
                                       <option value="0" <?php echo $in_year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
                                       <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
@@ -1892,6 +1885,7 @@ input[name="invoice_no"] {
                                   </select>
                               </div>
                               <div class="col-md-2">
+                              <label for="sort" class="form-label"><?php echo t('item_date'); ?></label>
                                   <select name="sort_option" class="form-select">
                                       <option value="date_desc" <?php echo $in_sort_option === 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
                                       <option value="date_asc" <?php echo $in_sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
@@ -1901,13 +1895,24 @@ input[name="invoice_no"] {
                                       <option value="category_desc" <?php echo $in_sort_option === 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
                                   </select>
                               </div>
-                             
+                             <div class="col-md-2">
+                             <label for="search" class="form-label"><?php echo t('show_entries'); ?></label>
+                        
+            <select class="form-select form-select-sm" id="in_per_page_select">
+                <?php foreach ($in_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $in_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+          
+                             </div>
                               <div class="action-buttons">
                                   <button type="submit" class="btn btn-primary">
-                                  <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                                   <?php echo t('search'); ?>
                                   </button>
-                                  <a href="items.php?tab=in" class="btn btn-outline-secondary">
-                                  <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                                  <a href="items.php?tab=in" class="btn btn-secondary">
+                                 <?php echo t('reset'); ?>
                                   </a>
                               </div>
                           </form>
@@ -2096,19 +2101,7 @@ input[name="invoice_no"] {
       <div class="tab-pane fade <?php echo $active_tab === 'out' ? 'show active' : ''; ?>" id="out-tab-pane" role="tabpanel" aria-labelledby="out-tab" tabindex="0">
           <!-- Filter Card for Stock Out -->
           <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="out_per_page_select">
-                <?php foreach ($out_limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $out_per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
+ 
 </div>
           <div class="card mb-4">
               <div class="card-header bg-primary text-white">
@@ -2122,9 +2115,11 @@ input[name="invoice_no"] {
                           <form method="GET" class="row g-2">
                               <input type="hidden" name="tab" value="out">
                               <div class="col-md-2">
+                              <label for="search" class="form-label"><?php echo t('name'); ?></label>
                                   <input type="text" name="out_search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $out_search_query; ?>">
                               </div>
                               <div class="col-md-2">
+                              <label for="location" class="form-label"><?php echo t('location'); ?></label>
                                   <select name="out_location" class="form-select">
                                       <option value=""><?php echo t('report_all_location'); ?></option>
                                       <?php foreach ($locations as $location): ?>
@@ -2135,6 +2130,7 @@ input[name="invoice_no"] {
                                   </select>
                               </div>
                               <div class="col-md-2">
+                              <label for="category" class="form-label"><?php echo t('category'); ?></label>
                                   <select name="out_category" class="form-select">
                                       <option value=""><?php echo t('all_categories'); ?></option>
                                       <?php foreach ($categories as $category): ?>
@@ -2146,6 +2142,7 @@ input[name="invoice_no"] {
                               </div>
                           
                               <div class="col-md-2">
+                              <label for="month" class="form-label"><?php echo t('month'); ?></label>
                                   <select name="out_month" class="form-select">
                                       <option value="0" <?php echo $out_month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_month'); ?></option>
                                       <?php for ($m = 1; $m <= 12; $m++): ?>
@@ -2156,6 +2153,7 @@ input[name="invoice_no"] {
                                   </select>
                               </div>
                               <div class="col-md-2">
+                              <label for="year" class="form-label"><?php echo t('year'); ?></label>
                                   <select name="out_year" class="form-select">
                                       <option value="0" <?php echo $out_year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
                                       <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
@@ -2166,6 +2164,7 @@ input[name="invoice_no"] {
                                   </select>
                               </div>
                               <div class="col-md-2">
+                              <label for="sort" class="form-label"><?php echo t('sort'); ?></label>
                                   <select name="out_sort_option" class="form-select">
                                       <option value="date_desc" <?php echo $out_sort_option === 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
                                       <option value="date_asc" <?php echo $out_sort_option === 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
@@ -2175,13 +2174,23 @@ input[name="invoice_no"] {
                                       <option value="category_desc" <?php echo $out_sort_option === 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
                                   </select>
                               </div>
-                             
+                             <div class="col-md-2">
+                             <label for="search" class="form-label"><?php echo t('show_entries'); ?></label>
+                           
+            <select class="form-select form-select-sm" id="out_per_page_select">
+                <?php foreach ($out_limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $out_per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+                             </div>
                               <div class="action-buttons">
                                   <button type="submit" class="btn btn-primary">
-                                      <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                                    <?php echo t('search'); ?>
                                   </button>
-                                  <a href="items.php?tab=out" class="btn btn-outline-secondary">
-                                      <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                                  <a href="items.php?tab=out" class="btn btn-secondary">
+                                      <?php echo t('reset'); ?>
                                   </a>
                               </div>
                           </form>
@@ -2393,7 +2402,7 @@ input[name="invoice_no"] {
                                 <div class="col-md-4">
                                     <label for="location_id" class="form-label"><?php echo t('location_column'); ?></label>
                                     <select class="form-select" id="location_id" name="location_id[]" required>
-                                       
+                                    <option value=""><?php echo t(''); ?></option>
                                         <?php foreach ($locations as $location): ?>
                                             <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                         <?php endforeach; ?>

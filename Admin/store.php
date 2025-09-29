@@ -70,8 +70,8 @@ $sort_mapping = [
     'location_desc' => ['field' => 'l.name', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
     'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'si.date', 'direction' => 'ASC'],      // Added: Date Old-New
-    'date_desc' => ['field' => 'si.date', 'direction' => 'DESC']     // Added: Date New-Old
+    'date_asc' => ['field' => 'si.date,si.created_at', 'direction' => 'ASC'],      // Added: Date Old-New
+    'date_desc' => ['field' => 'si.date DESC,si.created_at', 'direction' => 'DESC']     // Added: Date New-Old
 ];
 
 // Default to name_asc if invalid option
@@ -1259,21 +1259,7 @@ table th{
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('store_inventory'); ?></h2>
     <!-- Show entries per page selection -->
-<div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
@@ -1283,9 +1269,11 @@ table th{
             <form method="GET" class="row g-2">
                 <input type="hidden" name="page" value="1">
                 <div class="col-md-3">
+                <label><?php echo t('name');?></label>
                     <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo safeOutput($search_query); ?>">
                 </div>
                 <div class="col-md-2">
+                <label><?php echo t('location');?></label>
                     <select name="location" class="form-select">
                         <option value=""><?php echo t('report_all_location'); ?></option>
                         <?php foreach ($locations as $location): ?>
@@ -1296,6 +1284,7 @@ table th{
                     </select>
                 </div>
                 <div class="col-md-2">
+                <label><?php echo t('category');?></label>
                     <select name="category" class="form-select">
                         <option value=""><?php echo t('all_categories'); ?></option>
                         <?php foreach ($categories as $category): ?>
@@ -1306,6 +1295,7 @@ table th{
                     </select>
                 </div>
                 <div class="col-md-2">
+                <label><?php echo t('sort');?></label>
                     <select name="sort_option" class="form-select">
                         <option value="date_desc" <?php echo $sort_option == 'date_desc' ? 'selected' : ''; ?>><?php echo t('date_newest_first'); ?></option>
                         <option value="date_asc" <?php echo $sort_option == 'date_asc' ? 'selected' : ''; ?>><?php echo t('date_oldest_first'); ?></option>
@@ -1316,6 +1306,18 @@ table th{
                         <option value="category_asc" <?php echo $sort_option == 'category_asc' ? 'selected' : ''; ?>><?php echo t('category_az'); ?></option>
                         <option value="category_desc" <?php echo $sort_option == 'category_desc' ? 'selected' : ''; ?>><?php echo t('category_za'); ?></option>
                     </select>
+                </div>
+                <div class="col-md-2">
+                <label><?php echo t('show_entries');?></label>
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+          
+           
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary"><?php echo t('search'); ?></button>

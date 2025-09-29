@@ -816,21 +816,7 @@ body {
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('items_in_category'); ?>: <?php echo htmlspecialchars($category['name']); ?></h2>
-    <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+ 
     <!-- Back button -->
 
     
@@ -844,7 +830,7 @@ body {
                 <input type="hidden" name="category_id" value="<?php echo $category_id; ?>">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label class="filter-label"><?php echo t('search'); ?></label>
+                        <label class="filter-label"><?php echo t('names'); ?></label>
                         <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_query); ?>" placeholder="<?php echo t('search'); ?>...">
                     </div>
                     
@@ -859,30 +845,7 @@ body {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('month'); ?></label>
-                        <select name="month" class="form-select">
-                            <option value="0" <?php echo $month_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_months'); ?></option>
-                            <?php for ($m = 1; $m <= 12; $m++): ?>
-                                <option value="<?php echo $m; ?>" <?php echo $month_filter == $m ? 'selected' : ''; ?>>
-                                    <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
-                                </option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('year'); ?></label>
-                        <select name="year" class="form-select">
-                            <option value="0" <?php echo $year_filter == 0 ? 'selected' : ''; ?>><?php echo t('all_years'); ?></option>
-                            <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-                                <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
-                                    <?php echo $y; ?>
-                                </option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
+                 
                     
                     <div class="filter-group">
                         <label class="filter-label"><?php echo t('sort'); ?></label>
@@ -900,10 +863,10 @@ body {
                                 <?php echo t('date_newest_first'); ?>
                             </option>
                             <option value="location_asc" <?php echo $sort_option == 'location_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('location_az'); ?>
+                                <?php echo t('location_a_to_z'); ?>
                             </option>
                             <option value="location_desc" <?php echo $sort_option == 'location_desc' ? 'selected' : ''; ?>>
-                                <?php echo t('location_za'); ?>
+                                <?php echo t('location_z_to_a'); ?>
                             </option>
                             <option value="quantity_asc" <?php echo $sort_option == 'quantity_asc' ? 'selected' : ''; ?>>
                                 <?php echo t('quantity_low_to_high'); ?>
@@ -913,14 +876,28 @@ body {
                             </option>
                         </select>
                     </div>
+
+                    <div class="filter-group">
+                    <label class="filter-label"><?php echo t('show_entries').' '.t('entries'); ?></label>
+        
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+     
+            </div>
+                    
                 </div>
                 
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                     <?php echo t('search'); ?>
                     </button>
                     <a href="category_items.php?category_id=<?php echo $category_id; ?>" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                     <?php echo t('reset'); ?>
                     </a>
                 </div>
                 
