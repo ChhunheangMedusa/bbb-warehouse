@@ -10,7 +10,7 @@ require_once  'translate.php';
 
 checkAuth();
 
-
+// Only admin can access item control
 
 // Handle reset request
 if (isset($_GET['reset'])) {
@@ -29,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Loop through each item
             foreach ($_POST['name'] as $index => $name) {
                 $item_code = sanitizeInput($_POST['item_code'][$index]);
-$category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
+                $category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'][$index] : null;
+                $deporty_id = !empty($_POST['deporty_id'][$index]) ? (int)$_POST['deporty_id'][$index] : null;
                 $location_id = (int)$_POST['location_id'][$index];
                 $name = sanitizeInput($name);
                 $quantity = (float)$_POST['quantity'][$index];
@@ -49,26 +50,26 @@ $category_id = !empty($_POST['category_id'][$index]) ? (int)$_POST['category_id'
                 throw new Exception("$dupli");
             }
                 // Insert the item into the database
-                $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
+                $stmt = $pdo->prepare("INSERT INTO items (item_code, category_id, deporty_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$item_code, $category_id, $deporty_id, $invoice_no, $date, $name, $quantity, $alert_quantity, $size, $location_id, $remark]);
                 $item_id = $pdo->lastInsertId();
                    // Also insert into addnewitems table
             $stmt = $pdo->prepare("INSERT INTO addnewitems 
             (item_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, added_by) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([
-$item_id,
-$invoice_no,
-$date,
-$name,
-$quantity,
-$alert_quantity,
-$size,
-$location_id,
-$remark,
-$_SESSION['user_id']
-]);
+            $stmt->execute([
+                $item_id,
+                $invoice_no,
+                $date,
+                $name,
+                $quantity,
+                $alert_quantity,
+                $size,
+                $location_id,
+                $remark,
+                $_SESSION['user_id']
+            ]);
          // Replace the file upload section with this:
          if (!empty($_FILES['images']['name'][$index][0])) {
             foreach ($_FILES['images']['tmp_name'][$index] as $key => $tmp_name) {
@@ -160,15 +161,15 @@ $_SESSION['user_id']
             $stmt = $pdo->prepare("INSERT INTO addqtyitems 
             (item_id, invoice_no, date, added_quantity, size, remark, added_by) 
             VALUES (?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([
-$item_id,
-$invoice_no,
-$date,
-$quantity,
-$size,
-$remark,
-$_SESSION['user_id']
-]);
+            $stmt->execute([
+                $item_id,
+                $invoice_no,
+                $date,
+                $quantity,
+                $size,
+                $remark,
+                $_SESSION['user_id']
+            ]);
                 // Get location name for log
                 $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
                 $stmt->execute([$location_id]);
@@ -275,14 +276,17 @@ $_SESSION['user_id']
         $location_id = (int)$_POST['location_id'];
         $remark = sanitizeInput($_POST['remark']);
         $item_code = sanitizeInput($_POST['item_code']);
-$category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
+        $category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
+        $deporty_id = !empty($_POST['deporty_id']) ? (int)$_POST['deporty_id'] : null;
+        
         try {
             $pdo->beginTransaction();
             
             // Get old item data for logging
-            $stmt = $pdo->prepare("SELECT i.*, l.name as location_name 
+            $stmt = $pdo->prepare("SELECT i.*, l.name as location_name, d.name as deporty_name 
                                   FROM items i 
                                   JOIN locations l ON i.location_id = l.id 
+                                  LEFT JOIN deporty d ON i.deporty_id = d.id
                                   WHERE i.id = ?");
             $stmt->execute([$id]);
             $old_item = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -328,10 +332,15 @@ $category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null
             $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
             $stmt->execute([$location_id]);
             $new_location = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Get new deporty name for comparison
+            $stmt = $pdo->prepare("SELECT name FROM deporty WHERE id = ?");
+            $stmt->execute([$deporty_id]);
+            $new_deporty = $stmt->fetch(PDO::FETCH_ASSOC);
     
             // Update item details
-            $stmt = $pdo->prepare("UPDATE items SET item_code=?, category_id=?, invoice_no=?, date=?, name=?, quantity=?, size=?, location_id=?, remark=? WHERE id=?");
-$stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, $size, $location_id, $remark, $id]);
+            $stmt = $pdo->prepare("UPDATE items SET item_code=?, category_id=?, deporty_id=?, invoice_no=?, date=?, name=?, quantity=?, size=?, location_id=?, remark=? WHERE id=?");
+            $stmt->execute([$item_code, $category_id, $deporty_id, $invoice_no, $date, $name, $quantity, $size, $location_id, $remark, $id]);
    
           
             
@@ -341,18 +350,23 @@ $stmt->execute([$item_code, $category_id, $invoice_no, $date, $name, $quantity, 
             $log_message = "";
             $changes = [];
             // In the changes array, add these checks:
-if ($old_item['item_code'] != $item_code) {
-    $old_code = $old_item['item_code'] ?: 'N/A';
-    $new_code = $item_code ?: 'N/A';
-    $changes[] = "Updated item code ($name) : $old_code → $new_code ";
-}
+            if ($old_item['item_code'] != $item_code) {
+                $old_code = $old_item['item_code'] ?: 'N/A';
+                $new_code = $item_code ?: 'N/A';
+                $changes[] = "Updated item code ($name) : $old_code → $new_code ";
+            }
 
-if ($old_item['category_id'] != $category_id) {
-    $old_category = $old_item['category_id'] ? getCategoryName($pdo, $old_item['category_id']) : 'N/A';
-    $new_category = $category_id ? getCategoryName($pdo, $category_id) : 'N/A';
-    $changes[] = "Updated item category ($name) : $old_category → $new_category";
-}
+            if ($old_item['category_id'] != $category_id) {
+                $old_category = $old_item['category_id'] ? getCategoryName($pdo, $old_item['category_id']) : 'N/A';
+                $new_category = $category_id ? getCategoryName($pdo, $category_id) : 'N/A';
+                $changes[] = "Updated item category ($name) : $old_category → $new_category";
+            }
 
+            if ($old_item['deporty_id'] != $deporty_id) {
+                $old_deporty = $old_item['deporty_name'] ?: 'N/A';
+                $new_deporty_name = $new_deporty ? $new_deporty['name'] : 'N/A';
+                $changes[] = "Updated item deporty ($name) : $old_deporty → $new_deporty_name";
+            }
 
             if ($old_item['invoice_no'] != $invoice_no) {
                 $old_invoice = $old_item['invoice_no'] ?: 'N/A';
@@ -505,8 +519,8 @@ $sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option'])
 $sort_mapping = [
     'name_asc' => ['field' => 'i.name', 'direction' => 'ASC'],
     'name_desc' => ['field' => 'i.name', 'direction' => 'DESC'],
-    'date_asc' => ['field' => 'i.date', 'direction' => 'ASC'],
-    'date_desc' => ['field' => 'i.date', 'direction' => 'DESC'],
+    'date_asc' => ['field' => 'i.date,i.updated_at', 'direction' => 'ASC'],
+    'date_desc' => ['field' => 'i.date DESC,i.updated_at', 'direction' => 'DESC'],
     'category_asc' => ['field' => 'c.name', 'direction' => 'ASC'],
     'category_desc' => ['field' => 'c.name', 'direction' => 'DESC'],
     'location_asc' => ['field' => 'l.name', 'direction' => 'ASC'],
@@ -527,9 +541,9 @@ $sort_order = $sort_mapping[$sort_option]['direction'];
 // Replace the existing query with this one:
 // Replace the existing query with this one:
 // Replace the CASE statement in remaining.php with this:
-$query = "SELECT i.*, l.name as location_name, c.name as category_name,
+// Build query for items with action type detection
+$query = "SELECT i.*, l.name as location_name, c.name as category_name, d.name as deporty_name,
           CASE 
-            WHEN EXISTS (SELECT 1 FROM broken_items bi WHERE bi.item_id = i.id) THEN 'broken'
             WHEN EXISTS (SELECT 1 FROM addnewitems ani WHERE ani.item_id = i.id) 
                  AND NOT EXISTS (SELECT 1 FROM addqtyitems aqi WHERE aqi.item_id = i.id) THEN 'new'
             WHEN EXISTS (SELECT 1 FROM addqtyitems aqi WHERE aqi.item_id = i.id) THEN 'add'
@@ -538,6 +552,7 @@ $query = "SELECT i.*, l.name as location_name, c.name as category_name,
           FROM items i 
           JOIN locations l ON i.location_id = l.id 
           LEFT JOIN categories c ON i.category_id = c.id
+          LEFT JOIN deporty d ON i.deporty_id = d.id
           WHERE 1=1";
 $params = [];
 
@@ -628,6 +643,10 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get all categories for filter dropdown
 $stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
 $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get all deporties for dropdown
+$stmt = $pdo->query("SELECT * FROM deporty ORDER BY name");
+$deporties = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get items by location for add/deduct quantity dropdowns
 $items_by_location = [];
@@ -1658,21 +1677,7 @@ table th{
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('item_management');?></h2>
-    <div class="row mb-3">
-    <div class="col-md-12">
-        <div class="d-flex align-items-center entries-per-page">
-            <span class="me-2"><?php echo t('show_entries'); ?></span>
-            <select class="form-select form-select-sm" id="per_page_select">
-                <?php foreach ($limit_options as $option): ?>
-                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="ms-2"><?php echo t('entries'); ?></span>
-        </div>
-    </div>
-</div>
+
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
@@ -1682,7 +1687,7 @@ table th{
             <form method="GET" class="filter-form">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label class="filter-label"><?php echo t('search');?></label>
+                        <label class="filter-label"><?php echo t('names');?></label>
                         <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search_query); ?>" placeholder="<?php echo t('search');?>...">
                     </div>
                     
@@ -1758,14 +1763,26 @@ table th{
                             
                         </select>
                     </div>
+                    <div class="col-md-2">
+                    <label class="filter-label"><?php echo t('show_entries');?></label>
+                  
+            <select class="form-select form-select-sm" id="per_page_select">
+                <?php foreach ($limit_options as $option): ?>
+                    <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                        <?php echo $option; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+           
+                    </div>
                 </div>
                 
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-filter"></i> <?php echo t('search'); ?>
+                  <?php echo t('search'); ?>
                     </button>
-                    <a href="remaining.php?reset=1" class="btn btn-outline-secondary">
-    <i class="bi bi-x-circle"></i> <?php echo t('reset'); ?>
+                    <a href="remaining.php?reset=1" class="btn btn-secondary">
+  <?php echo t('reset'); ?>
 </a>
                 </div>
                 
@@ -1833,11 +1850,12 @@ table th{
                             <th><?php echo t('item_name');?></th>
                             <th><?php echo t('item_qty');?></th>
                             <th><?php echo t('item_size');?></th>
+                            <th><?php echo t('deporty');?></th>
                             <th><?php echo t('item_location');?></th>
                             <th><?php echo t('item_remark');?></th>
                            
                             <th><?php echo t('item_photo');?></th>
-                            
+                          
                         </tr>
                     </thead>
                     <tbody>
@@ -1869,6 +1887,7 @@ table th{
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo $item['size']; ?></td>
+                                    <td><?php echo $item['deporty_name'] ?: 'N/A'; ?></td>
                                     <td><?php echo $item['location_name']; ?></td>
                                     <td><?php echo $item['remark']; ?></td>
                                    
@@ -1890,7 +1909,7 @@ table th{
                                             <span class="badge bg-secondary">No image</span>
                                         <?php endif; ?>
                                     </td>
-                                    
+                                
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -2201,8 +2220,10 @@ table th{
                             </select>
                         </div>
                     </div>
+                    
+                    <!-- Add Deporty Field Here -->
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <div class="col-md-6 mb-3">
                             <label for="edit_invoice_no" class="form-label"><?php echo t('item_invoice');?></label>
                             <input type="text" class="form-control" id="edit_invoice_no" name="invoice_no">
                         </div>
@@ -2210,23 +2231,32 @@ table th{
                             <label for="edit_date" class="form-label"><?php echo t('item_date');?></label>
                             <input type="date" class="form-control" id="edit_date" name="date" required>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                  
+                        <div class="col-md-4 mb-3">
                             <label for="edit_name" class="form-label"><?php echo t('item_name');?></label>
                             <input type="text" class="form-control" id="edit_name" name="name" required>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="edit_quantity" class="form-label"><?php echo t('item_qty');?></label>
                             <input type="number" class="form-control" id="edit_quantity" name="quantity" step="0.5" min="0.5" required>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="edit_size" class="form-label"><?php echo t('item_size');?></label>
                             <input type="text" class="form-control" id="edit_size" name="size">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_deporty_id" class="form-label"><?php echo t('deporty');?></label>
+                            <select class="form-select" id="edit_deporty_id" name="deporty_id">
+                                <option value=""><?php echo t('select_deporty');?></option>
+                                <?php 
+                                $stmt = $pdo->query("SELECT * FROM deporty ORDER BY name");
+                                $deporties = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                foreach ($deporties as $deporty): ?>
+                                    <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label for="edit_location_id" class="form-label"><?php echo t('location_column');?></label>
                             <select class="form-select" id="edit_location_id" name="location_id" required>
                                 <option value=""><?php echo t('item_locations');?></option>
@@ -2235,11 +2265,14 @@ table th{
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="edit_remark" class="form-label"><?php echo t('item_remark');?></label>
                             <input type="text" class="form-control" id="edit_remark" name="remark">
                         </div>
                     </div>
+                    
+                  
+                   
                     <div class="mb-3">
                         <label for="edit_images" class="form-label"><?php echo t('item_photo');?></label>
                         <div class="alert alert-info">
@@ -3296,11 +3329,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const remark = this.getAttribute('data-remark');
             const item_code = this.getAttribute('data-item_code');
             const category_id = this.getAttribute('data-category_id');
-            
+            const deporty_id = this.getAttribute('data-deporty_id'); 
             // Set basic form values
             document.getElementById('edit_id').value = id;
             document.getElementById('edit_item_code').value = item_code || '';
             document.getElementById('edit_category_id').value = category_id || '';
+            document.getElementById('edit_deporty_id').value = deporty_id || '';
             document.getElementById('edit_invoice_no').value = invoice_no;
             document.getElementById('edit_date').value = date;
             document.getElementById('edit_name').value = name;
