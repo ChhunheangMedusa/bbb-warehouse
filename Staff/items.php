@@ -421,8 +421,8 @@ JOIN
 WHERE 1=1";
 
 // Add this condition to exclude 'broken' records:
-$in_query .= " AND si.action_type != 'broken'";
-
+// Add this condition to include 'transfer' records:
+$in_query .= " AND si.action_type IN ('new', 'add', 'transfer')";
 $in_params = [];
 
 // Add filters for stock in
@@ -464,8 +464,9 @@ $in_count_query = "SELECT COUNT(*) as total FROM stock_in_history si
                 LEFT JOIN categories c ON si.category_id = c.id
                 JOIN locations l ON si.location_id = l.id
                 WHERE 1=1";
-// Add this condition to the count query too
-$in_count_query .= " AND si.action_type != 'broken'";
+// Add this condition to the count query too - INCLUDE transfers
+// Add this condition to the count query too - INCLUDE transfers
+$in_count_query .= " AND si.action_type IN ('new', 'add', 'transfer')";
 $in_count_params = [];
 
 if ($in_year_filter !== null) {
@@ -1800,7 +1801,6 @@ input[name="invoice_no"] {
     }
 }
 </style>
-
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('item_history'); ?></h2>
     
@@ -1970,18 +1970,30 @@ input[name="invoice_no"] {
                                             <td><?php echo $item['invoice_no']; ?></td>
                                             <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
                                             <td><?php echo $item['name']; ?>
-                                            <span class="badge bg-<?php echo $item['action_type'] === 'new' ? 'primary' : 'success'; ?>">
+<span class="badge bg-<?php 
+    if ($item['action_type'] === 'new') {
+        echo 'primary';
+    } elseif ($item['action_type'] === 'add') {
+        echo 'success';
+    } elseif ($item['action_type'] === 'transfer') {
+        echo 'info';  // Use info color for transfers
+    } else {
+        echo 'secondary';
+    }
+?>">
     <?php 
     if ($item['action_type'] === 'new') {
         echo t('status_new');
     } elseif ($item['action_type'] === 'add') {
         echo t('status_add');
+    } elseif ($item['action_type'] === 'transfer') {
+        echo t('status_transfer'); // Add translation for transfer
     } else {
         echo ucfirst($item['action_type']);
     }
     ?>
 </span>
-                                            </td>
+</td>
                                             <td class="text-success">+<?php echo $item['action_quantity']; ?></td>
                                             <td><?php echo $item['size']; ?></td>
                                             <td><?php echo $item['deporty_name'] ?: 'N/A'; ?></td>

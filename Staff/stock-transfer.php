@@ -15,6 +15,8 @@ if (!isStaff()) {
   }
 checkAuth();
 
+
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
     $invoice_no = sanitizeInput($_POST['invoice_no']);
@@ -66,24 +68,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
             $stmt->execute([$new_qty, $item_id]);
             
             // Check if item exists in destination location
-            $stmt = $pdo->prepare("SELECT id, quantity FROM items WHERE name = ? AND location_id = ?");// Update quantity in source location
-            $new_qty = $old_qty - $quantity;
-            $stmt = $pdo->prepare("UPDATE items SET quantity = ? WHERE id = ?");
-            $stmt->execute([$new_qty, $item_id]);
-            
-            // Check if item exists in destination location
             $stmt = $pdo->prepare("SELECT id, quantity FROM items WHERE name = ? AND location_id = ?");
             $stmt->execute([$item_name, $to_location_id]);
             $dest_item = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if ($dest_item) {
-                // Update quantity, invoice_no, remark, AND date in destination
+                // Item exists in destination - update it
+                $destination_item_id = $dest_item['id'];
                 $dest_new_qty = $dest_item['quantity'] + $quantity;
                 $stmt = $pdo->prepare("UPDATE items SET quantity = ?, invoice_no = ?, remark = ?, date = ? WHERE id = ?");
                 $stmt->execute([$dest_new_qty, $invoice_no, $remark, $date, $dest_item['id']]);
-                
-                $action_type = 'add'; // Item exists in destination
-             // Item exists in destination
             } else {
                 // Insert new item in destination
                 $stmt = $pdo->prepare("INSERT INTO items 
@@ -100,50 +94,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
                     $to_location_id,
                     $remark
                 ]);
-                
-                $action_type = 'new'; // New item in destination
+                $destination_item_id = $pdo->lastInsertId();
             }
-            
-            
-            // Record in transfer history - FIXED DATE FORMAT
+            // Record in stock_in_history for the destination location with transfer action type
+$destination_item_id = $dest_item ? $dest_item['id'] : $pdo->lastInsertId();
+$action_type = 'transfer';
+// Now record in stock_in_history with the CORRECT destination item ID
+$stmt = $pdo->prepare("INSERT INTO stock_in_history 
+    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, deporty_id, remark, action_type, action_quantity, action_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->execute([
+    $destination_item_id,  // This should now be correct
+    $item['item_code'],
+    $item['category_id'],
+    $invoice_no,
+    $date,
+    $item_name,
+    $dest_item ? ($dest_item['quantity'] + $quantity) : $quantity,
+    10,
+    $item['size'],
+    $to_location_id,
+    null,
+    "TRANSFER_FROM_" . $from_location_id,
+    'transfer',
+    $quantity,
+    $_SESSION['user_id']
+]);
+            // Record in transfer history
             $stmt = $pdo->prepare("INSERT INTO transfer_history 
-                (item_id, item_code, category_id, invoice_no, date, name, quantity, size, from_location_id, to_location_id, remark, action_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([
-                $item_id,
-                $item['item_code'],
-                $item['category_id'],
-                $invoice_no,
-                $date,
-                $item_name,
-                $quantity,
-                $item['size'],
-                $from_location_id,
-                $to_location_id,
-                $remark,
-                $_SESSION['user_id']
-            ]);
-            
-            // NEW: Record in stock_in_history table
-            $stmt = $pdo->prepare("INSERT INTO stock_in_history 
-                (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, remark, action_type, action_quantity, action_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([
-                $item_id,
-                $item['item_code'],
-                $item['category_id'],
-                $invoice_no,
-                $date,
-                $item_name,
-                $quantity, // This should be the destination quantity, but we'll use the transferred quantity for action_quantity
-                10, // Default alert quantity
-                $item['size'],
-                $to_location_id, // This ensures it shows up in the to_location column in items.php
-                $remark,
-                $action_type, // 'add' or 'new' based on whether item existed in destination
-                $quantity, // The quantity that was transferred
-                $_SESSION['user_id']
-            ]);
+            (item_id, item_code, category_id, invoice_no, date, name, quantity, size, from_location_id, to_location_id, remark, action_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $item_id,
+            $item['item_code'],
+            $item['category_id'],
+            $invoice_no,
+            $date,
+            $item_name,
+            $quantity,
+            $item['size'],
+            $from_location_id,
+            $to_location_id,
+            $remark,
+            $_SESSION['user_id']
+        ]);
+
+
+
+
             
             // Log activity
             $stmt = $pdo->prepare("SELECT name FROM locations WHERE id IN (?, ?)");
@@ -165,6 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
         $_SESSION['error'] = $e->getMessage();
     }
 }
+
 // Get filter parameters
 $search_filter = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 $category_filter = isset($_GET['category']) ? (int)$_GET['category'] : 0;
@@ -214,14 +213,16 @@ if ($locations) {
         $items_by_location[$location['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+
 $limit_options = [10, 25, 50, 100];
 $per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
 if (!in_array($per_page, $limit_options)) {
     $per_page = 10;
 }
+
 // Get transfer history with pagination and filtering
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = $per_page;; // Fixed limit of 10 items per page
+$limit = $per_page;
 $offset = ($page - 1) * $limit;
 
 // Build query with filters
@@ -307,7 +308,7 @@ if ($year_filter && $year_filter !== 'all') {
 // Add sorting
 $query .= " ORDER BY $sort_by $sort_order";
 
-// Add pagination - always limit to 10 items
+// Add pagination
 $query .= " LIMIT :limit OFFSET :offset";
 
 // Get total count
@@ -349,7 +350,6 @@ $months = [
     '12' => t('dec'),
 ];
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -358,7 +358,9 @@ $months = [
     <title><?php echo t('stock_transfer'); ?></title>
     <link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <style>
+    
+</head>
+<style>
        /* Your existing CSS remains unchanged */
     :root {
   --primary: #4e73df;
@@ -1023,7 +1025,6 @@ body {
     }
 }
     </style>
-</head>
 <body>
       <!-- Add this button to your navbar -->
 <button id="sidebarToggle" class="btn btn-primary d-md-none rounded-circle mr-3 no-print" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">

@@ -118,223 +118,519 @@ if (isset($_GET['download']) && $_GET['download'] === 'true' && isset($_SESSION[
     }
 }
 
-// Function to generate report data - FIXED DATE COLUMN TO USE ACTUAL DATES
+// Helper function to get stock in quantity (INCLUDE TRANSFERS)
+// Helper function to get stock in quantity (EXCLUDE TRANSFERS)
+function getStockInQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total_add
+              FROM stock_in_history 
+              WHERE item_id = :item_id 
+              AND location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date
+              AND action_type IN ('new', 'add')"; // EXCLUDED 'transfer' here
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_add'];
+}
+
+// Helper function to get stock out quantity
+function getStockOutQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total_used
+              FROM stock_out_history 
+              WHERE item_id = :item_id 
+              AND location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date
+              AND action_type = 'deduct'";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_used'];
+}
+
+// Helper function to get broken quantity
+function getBrokenQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total_broken
+              FROM broken_items_history 
+              WHERE item_id = :item_id 
+              AND location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date
+              AND action_type = 'broken'";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_broken'];
+}
+
+// Helper function to get transfer out quantity - FIXED VERSION
+function getTransferOutQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(quantity), 0) as total_transfer_out
+              FROM transfer_history 
+              WHERE item_id = :item_id 
+              AND from_location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_transfer_out'];
+}
+// Helper function to get ADD quantity (only new items and quantity additions - NO transfers)
+function getAddQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total_add
+              FROM stock_in_history 
+              WHERE item_id = :item_id 
+              AND location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date
+              AND action_type IN ('new', 'add')"; // Only new and add, NOT transfer
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_add'];
+}
+
+// NEW function to get TRANSFER IN quantity from stock_in_history
+// Helper function to get TRANSFER IN quantity from stock_in_history
+function getTransferInFromHistory($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total_transfer
+              FROM stock_in_history 
+              WHERE item_id = :item_id 
+              AND location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date
+              AND action_type = 'transfer'"; // Only transfer action type
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_transfer'];
+}
+
+// Helper function to get USED quantity (from stock_out_history table - only 'deduct' actions)
+function getUsedQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total_used
+              FROM stock_out_history 
+              WHERE item_id = :item_id 
+              AND location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date
+              AND action_type = 'deduct'"; // Only count usage deductions
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_used'];
+}
+// In calculateBeginningQuantity() function, EXCLUDE all transfers:
+function calculateBeginningQuantity($pdo, $item_id, $location_id, $current_start_date) {
+    // Calculate previous period (month before current period)
+    $prev_month_start = date('Y-m-01', strtotime($current_start_date . ' -1 month'));
+    $prev_month_end = date('Y-m-t', strtotime($prev_month_start));
+    
+    // If we're at the earliest possible date, start with 0
+    if (strtotime($prev_month_start) < strtotime('2020-01-01')) {
+        return 0;
+    }
+    
+    // Get the item's ending quantity from the previous month
+    $prev_beginning = getPreviousMonthEndingQuantity($pdo, $item_id, $location_id, $prev_month_start, $prev_month_end);
+    
+    return $prev_beginning;
+}
+function getPreviousMonthEndingQuantity($pdo, $item_id, $location_id, $prev_start_date, $prev_end_date) {
+    // Check if item exists in items table for this location
+    $query = "SELECT quantity FROM items WHERE id = :item_id AND location_id = :location_id";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([':item_id' => $item_id, ':location_id' => $location_id]);
+    $item = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$item) {
+        return 0; // Item doesn't exist at this location
+    }
+    
+    // Get quantities for the previous month
+    $prev_regular_add = getStockInQuantityByType($pdo, $item_id, $location_id, $prev_start_date, $prev_end_date, ['new', 'add']);
+    $prev_transfer_in = getTransferInQuantityForReport($pdo, $item_id, $location_id, $prev_start_date, $prev_end_date);
+    $prev_transfer_out = getTransferOutQuantityForReport($pdo, $item_id, $location_id, $prev_start_date, $prev_end_date);
+    $prev_used = getUsedQuantity($pdo, $item_id, $location_id, $prev_start_date, $prev_end_date);
+    $prev_broken = getBrokenQuantity($pdo, $item_id, $location_id, $prev_start_date, $prev_end_date);
+    
+    // Calculate beginning of previous month (recursive call with boundary check)
+    $prev_prev_start = date('Y-m-01', strtotime($prev_start_date . ' -1 month'));
+    if (strtotime($prev_prev_start) < strtotime('2020-01-01')) {
+        $prev_beginning = 0;
+    } else {
+        $prev_beginning = getPreviousMonthEndingQuantity($pdo, $item_id, $location_id, 
+            $prev_prev_start, date('Y-m-t', strtotime($prev_prev_start)));
+    }
+    
+    // Calculate ending quantity for previous month
+    $prev_ending = max(0, $prev_beginning + $prev_regular_add + $prev_transfer_in - $prev_transfer_out - $prev_used - $prev_broken);
+    
+    return $prev_ending;
+}
+
+// Helper function to get transfer in quantity
+function getTransferInQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(quantity), 0) as total_transfer_in
+              FROM transfer_history 
+              WHERE item_id = :item_id 
+              AND to_location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_transfer_in'];
+}
+// Helper function to get transfer in quantity by item name (for destination-only items)
+function getTransferInQuantityByName($pdo, $item_name, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(quantity), 0) as total_transfer_in
+              FROM transfer_history 
+              WHERE name = :item_name 
+              AND to_location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_name' => $item_name,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_transfer_in'];
+}
+// Helper function to get transfer out quantity for source location
+function getTransferOutQuantityForReport($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(quantity), 0) as total_transfer_out
+              FROM transfer_history 
+              WHERE item_id = :item_id 
+              AND from_location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_transfer_out'];
+}
+
+// Helper function to get TRANSFER IN quantity for destination location  
+function getTransferInQuantityForReport($pdo, $item_id, $location_id, $start_date, $end_date) {
+    // Method 1: Check stock_in_history for transfer records
+    $query1 = "SELECT COALESCE(SUM(action_quantity), 0) as total_transfer_in
+    FROM stock_in_history 
+    WHERE item_id = :item_id 
+    AND location_id = :location_id
+    AND date BETWEEN :start_date AND :end_date
+    AND action_type = 'transfer'"; // Look for transfer action type
+    
+    $stmt = $pdo->prepare($query1);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result1 = $stmt->fetch(PDO::FETCH_ASSOC);
+    $transfer_from_history = $result1['total_transfer_in'];
+    
+    // Method 2: Also check transfer_history table for items transferred TO this location
+    $query2 = "SELECT COALESCE(SUM(quantity), 0) as total_transfer_in
+              FROM transfer_history 
+              WHERE item_id = :item_id 
+              AND to_location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date";
+    
+    $stmt = $pdo->prepare($query2);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result2 = $stmt->fetch(PDO::FETCH_ASSOC);
+    $transfer_from_table = $result2['total_transfer_in'];
+    
+    // Return the larger value (should be the same, but this handles any discrepancies)
+    return max($transfer_from_history, $transfer_from_table);
+}
+function getRegularAddQuantity($pdo, $item_id, $location_id, $start_date, $end_date) {
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total_add
+              FROM stock_in_history 
+              WHERE item_id = :item_id 
+              AND location_id = :location_id
+              AND date BETWEEN :start_date AND :end_date
+              AND action_type IN ('new', 'add')
+              AND action_type != 'transfer'"; // Explicitly exclude transfers
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':item_id' => $item_id,
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total_add'];
+}
+// Helper function to get stock in quantity by specific action types
+function getStockInQuantityByType($pdo, $item_id, $location_id, $start_date, $end_date, $action_types) {
+    $placeholders = implode(',', array_fill(0, count($action_types), '?'));
+    $query = "SELECT COALESCE(SUM(action_quantity), 0) as total
+              FROM stock_in_history 
+              WHERE item_id = ? 
+              AND location_id = ?
+              AND date BETWEEN ? AND ?
+              AND action_type IN ($placeholders)";
+    
+    $params = array_merge([$item_id, $location_id, $start_date, $end_date], $action_types);
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute($params);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['total'];
+}
+function getTransferOnlyItems($pdo, $location_id, $start_date, $end_date) {
+    $query = "
+    SELECT DISTINCT
+        sih.item_id,
+        sih.item_code,
+        sih.name,
+        sih.category_id,
+        c.name as category_name,
+        sih.size,
+        sih.location_id,
+        l.name as location_name,
+        sih.remark,
+        sih.deporty_id,
+        d.name as deporty_name,
+        sih.invoice_no,
+        0 as beginning_quantity,
+        sih.action_quantity as transfer_quantity
+    FROM stock_in_history sih
+    LEFT JOIN categories c ON sih.category_id = c.id
+    LEFT JOIN deporty d ON sih.deporty_id = d.id
+    JOIN locations l ON sih.location_id = l.id
+    WHERE sih.location_id = :location_id
+    AND sih.date BETWEEN :start_date AND :end_date
+    AND sih.remark LIKE 'TRANSFER_FROM_%'
+    AND sih.action_type = 'transfer'  
+    AND NOT EXISTS (
+        SELECT 1 FROM items i 
+        WHERE i.name = sih.name AND i.location_id = sih.location_id
+    )
+    ORDER BY sih.name";
+    
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([
+        ':location_id' => $location_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 function generateReportData($pdo, $report_type, $location_id, $start_date, $end_date) {
     if ($report_type === 'stock_in') {
-        // Calculate previous period correctly
-        $prev_start_date = date('Y-m-01', strtotime($start_date . ' -1 month'));
-        $prev_end_date = date('Y-m-t', strtotime($start_date . ' -1 month'));
-        
-        // Get all items with their beginning quantities (ending quantity from previous period)
-        $query = "SELECT 
-            i.id as item_id,
-            i.item_code,
-            i.name,
-            i.category_id,
-            c.name as category_name,
-            i.size,
-            i.location_id,
-            l.name as location_name,
-            i.remark,
-            i.deporty_id,
-            d.name as deporty_name,
-            COALESCE((
-                -- Calculate ending quantity for previous period using a simpler approach
-                SELECT (COALESCE(SUM(CASE WHEN action_type IN ('new', 'add') THEN action_quantity ELSE 0 END), 0)
-                       - COALESCE(SUM(CASE WHEN action_type = 'deduct' THEN action_quantity ELSE 0 END), 0)
-                       - COALESCE(SUM(CASE WHEN action_type = 'broken' THEN action_quantity ELSE 0 END), 0))
-                FROM (
-                    SELECT 'in' as source, action_type, action_quantity, date, invoice_no 
-                    FROM stock_in_history 
-                    WHERE item_id = i.id AND location_id = i.location_id
-                    AND date BETWEEN :prev_start_date AND :prev_end_date
-                    UNION ALL
-                    SELECT 'out' as source, action_type, action_quantity, date, NULL as invoice_no 
-                    FROM stock_out_history 
-                    WHERE item_id = i.id AND location_id = i.location_id
-                    AND date BETWEEN :prev_start_date2 AND :prev_end_date2
-                    UNION ALL
-                    SELECT 'broken' as source, action_type, action_quantity, date, NULL as invoice_no 
-                    FROM broken_items_history 
-                    WHERE item_id = i.id AND location_id = i.location_id
-                    AND date BETWEEN :prev_start_date3 AND :prev_end_date3
-                ) combined_history
-            ), 0) as beginning_quantity,
-            -- Get the most recent invoice number for current period
-            COALESCE((
-                SELECT sih.invoice_no 
-                FROM stock_in_history sih 
-                WHERE sih.item_id = i.id 
-                AND sih.location_id = i.location_id
-                AND sih.date BETWEEN :start_date_search AND :end_date_search
-                AND sih.invoice_no IS NOT NULL
-                AND sih.invoice_no != ''
-                ORDER BY sih.date DESC, sih.id DESC 
-                LIMIT 1
-            ), 'N/A') as invoice_no
-        FROM items i
-        LEFT JOIN categories c ON i.category_id = c.id
-        LEFT JOIN deporty d ON i.deporty_id = d.id
-        JOIN locations l ON i.location_id = l.id
-        WHERE 1=1";
-        
-        $params = [
-            ':prev_start_date' => $prev_start_date,
-            ':prev_end_date' => $prev_end_date,
-            ':prev_start_date2' => $prev_start_date,
-            ':prev_end_date2' => $prev_end_date,
-            ':prev_start_date3' => $prev_start_date,
-            ':prev_end_date3' => $prev_end_date,
-            ':start_date_search' => $start_date,
-            ':end_date_search' => $end_date
-        ];
-        
+        // Get locations for report
+        $locations_query = "SELECT id, name FROM locations WHERE 1=1";
         if ($location_id) {
-            $query .= " AND i.location_id = :location_id";
-            $params[':location_id'] = $location_id;
+            $locations_query .= " AND id = :location_id";
         }
+        $locations_query .= " ORDER BY name";
         
-        $query .= " ORDER BY i.name";
+        $locations_stmt = $pdo->prepare($locations_query);
+        if ($location_id) {
+            $locations_stmt->execute([':location_id' => $location_id]);
+        } else {
+            $locations_stmt->execute();
+        }
+        $report_locations = $locations_stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // For each item, calculate add, used, and broken quantities for current period
         $report_data = [];
-        foreach ($items as $item) {
-            $item_id = $item['item_id'];
-            $item_location_id = $item['location_id'];
+        
+        foreach ($report_locations as $location) {
+            $current_location_id = $location['id'];
+            $current_location_name = $location['name'];
             
-            // Ensure beginning quantity is never negative
-            $beginning_quantity = max(0, $item['beginning_quantity']);
+            $items_query = "SELECT DISTINCT i.id as item_id, i.item_code, i.name, i.category_id, 
+c.name as category_name, i.size, i.location_id, 
+l.name as location_name, i.remark, i.deporty_id,
+d.name as deporty_name, i.invoice_no, i.quantity as current_quantity
+FROM items i
+LEFT JOIN categories c ON i.category_id = c.id
+LEFT JOIN deporty d ON i.deporty_id = d.id
+JOIN locations l ON i.location_id = l.id
+WHERE i.location_id = :location_id
+AND (
+    -- Check for ANY stock_in activity (including transfers)
+    EXISTS (
+        SELECT 1 FROM stock_in_history sih 
+        WHERE sih.item_id = i.id 
+        AND sih.location_id = i.location_id
+        AND sih.date BETWEEN :start_date AND :end_date
+        AND sih.action_type IN ('new', 'add', 'transfer')
+    )
+    OR EXISTS (
+        SELECT 1 FROM stock_out_history soh 
+        WHERE soh.item_id = i.id 
+        AND soh.location_id = i.location_id
+        AND soh.date BETWEEN :start_date AND :end_date
+    )
+    OR EXISTS (
+        SELECT 1 FROM transfer_history th 
+        WHERE th.item_id = i.id 
+        AND th.from_location_id = i.location_id
+        AND th.date BETWEEN :start_date AND :end_date
+    )
+    OR EXISTS (
+        SELECT 1 FROM transfer_history th 
+        WHERE th.item_id = i.id 
+        AND th.to_location_id = i.location_id
+        AND th.date BETWEEN :start_date AND :end_date
+    )
+    OR EXISTS (
+        SELECT 1 FROM broken_items_history bih 
+        WHERE bih.item_id = i.id 
+        AND bih.location_id = i.location_id
+        AND bih.date BETWEEN :start_date AND :end_date
+    )
+)
+ORDER BY i.name";
             
-            // Get the most recent action date for this item in the period
-            $date_query = "SELECT date, action_type 
-            FROM (
-                SELECT date, action_type FROM stock_in_history 
-                WHERE item_id = :item_id 
-                AND location_id = :location_id
-                AND date BETWEEN :start_date AND :end_date
-                AND action_type IN ('new', 'add')
-                UNION ALL
-                SELECT date, action_type FROM stock_out_history 
-                WHERE item_id = :item_id2 
-                AND location_id = :location_id2
-                AND date BETWEEN :start_date2 AND :end_date2
-                AND action_type = 'deduct'
-                UNION ALL
-                SELECT date, action_type FROM broken_items_history 
-                WHERE item_id = :item_id3 
-                AND location_id = :location_id3
-                AND date BETWEEN :start_date3 AND :end_date3
-                AND action_type = 'broken'
-            ) as all_actions
-            ORDER BY date DESC
-            LIMIT 1";
-            
-            $date_stmt = $pdo->prepare($date_query);
-            $date_stmt->execute([
-                ':item_id' => $item_id,
-                ':location_id' => $item_location_id,
-                ':start_date' => $start_date,
-                ':end_date' => $end_date,
-                ':item_id2' => $item_id,
-                ':location_id2' => $item_location_id,
-                ':start_date2' => $start_date,
-                ':end_date2' => $end_date,
-                ':item_id3' => $item_id,
-                ':location_id3' => $item_location_id,
-                ':start_date3' => $start_date,
-                ':end_date3' => $end_date
-            ]);
-            $date_result = $date_stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // If no action found in period, skip this item
-            if (!$date_result) {
-                continue;
-            }
-            
-            $action_date = $date_result['date'];
-            $action_type = $date_result['action_type'];
-            
-            // Calculate add quantity (from stock_in_history for current period)
-            $add_query = "SELECT COALESCE(SUM(action_quantity), 0) as total_add
-                FROM stock_in_history 
-                WHERE item_id = :item_id 
-                AND location_id = :location_id
-                AND date BETWEEN :start_date AND :end_date
-                AND action_type IN ('new', 'add')";
-                
-            $add_stmt = $pdo->prepare($add_query);
-            $add_stmt->execute([
-                ':item_id' => $item_id,
-                ':location_id' => $item_location_id,
+            $items_stmt = $pdo->prepare($items_query);
+            $items_stmt->execute([
+                ':location_id' => $current_location_id,
                 ':start_date' => $start_date,
                 ':end_date' => $end_date
             ]);
-            $add_result = $add_stmt->fetch(PDO::FETCH_ASSOC);
-            $add_quantity = $add_result['total_add'];
+            $items = $items_stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Calculate used quantity (from stock_out_history for current period)
-            $used_query = "SELECT COALESCE(SUM(action_quantity), 0) as total_used
-                FROM stock_out_history 
-                WHERE item_id = :item_id 
-                AND location_id = :location_id
-                AND date BETWEEN :start_date AND :end_date
-                AND action_type = 'deduct'";
+            // In the generateReportData() function, update the quantity calculations:
+foreach ($items as $item) {
+    $item_id = $item['item_id'];
+    $item_name = $item['name'];
+    
+    // Get quantities for THIS LOCATION
+    $regular_add_quantity = getRegularAddQuantity($pdo, $item_id, $current_location_id, $start_date, $end_date);
+    
+    // TRANSFER IN: Quantity received TO this location (from stock_in_history with transfer remark)
+    $transfer_in_quantity = getTransferInQuantityForReport($pdo, $item_id, $current_location_id, $start_date, $end_date);
+    
+    // TRANSFER OUT: Quantity sent FROM this location (from transfer_history)
+    $transfer_out_quantity = getTransferOutQuantityForReport($pdo, $item_id, $current_location_id, $start_date, $end_date);
+    
+    $used_quantity = getUsedQuantity($pdo, $item_id, $current_location_id, $start_date, $end_date);
+    $broken_quantity = getBrokenQuantity($pdo, $item_id, $current_location_id, $start_date, $end_date);
+    
+    // Calculate beginning quantity (previous period ending)
+    $beginning_quantity = calculateBeginningQuantity($pdo, $item_id, $current_location_id, $start_date);
+    
+    // Calculate ending quantity
+    $ending_quantity = max(0, $beginning_quantity + $regular_add_quantity + $transfer_in_quantity - $transfer_out_quantity - $used_quantity - $broken_quantity);
+    
+    // Include items that have ANY activity in the current period
+    $has_current_activity = ($regular_add_quantity > 0 || $transfer_in_quantity > 0 || $transfer_out_quantity > 0 || $used_quantity > 0 || $broken_quantity > 0);
+    
+    if ($has_current_activity) {
+        $report_data[] = [
+            'item_id' => $item_id,
+            'item_code' => $item['item_code'],
+            'name' => $item_name,
+            'category_name' => $item['category_name'],
+            'size' => $item['size'],
+            'location_id' => $current_location_id,
+            'location_name' => $current_location_name,
+            'remark' => $item['remark'],
+            'invoice_no' => $item['invoice_no'],
+            'beginning_quantity' => $beginning_quantity,
+            'add_quantity' => $regular_add_quantity, // Only regular additions (no transfers)
+            'transfer_in_quantity' => $transfer_in_quantity, // Received TO this location
+            'transfer_out_quantity' => $transfer_out_quantity, // Sent FROM this location
+            'used_quantity' => $used_quantity,
+            'broken_quantity' => $broken_quantity,
+            'ending_quantity' => $ending_quantity,
+            'date' => $start_date,
+            'deporty_name' => $item['deporty_name'] ?? 'N/A'
+        ];
+    }
+}
+            
+            // Also include transfer-only items for this location (destination only)
+            $transfer_only_items = getTransferOnlyItems($pdo, $current_location_id, $start_date, $end_date);
+            
+            foreach ($transfer_only_items as $transfer_item) {
+                $item_name = $transfer_item['name'];
+                $transfer_quantity = $transfer_item['transfer_quantity'];
                 
-            $used_stmt = $pdo->prepare($used_query);
-            $used_stmt->execute([
-                ':item_id' => $item_id,
-                ':location_id' => $item_location_id,
-                ':start_date' => $start_date,
-                ':end_date' => $end_date
-            ]);
-            $used_result = $used_stmt->fetch(PDO::FETCH_ASSOC);
-            $used_quantity = $used_result['total_used'];
-            
-            // Calculate broken quantity (from broken_items_history for current period)
-            $broken_query = "SELECT COALESCE(SUM(action_quantity), 0) as total_broken
-                FROM broken_items_history 
-                WHERE item_id = :item_id 
-                AND location_id = :location_id
-                AND date BETWEEN :start_date AND :end_date
-                AND action_type = 'broken'";
-                
-            $broken_stmt = $pdo->prepare($broken_query);
-            $broken_stmt->execute([
-                ':item_id' => $item_id,
-                ':location_id' => $item_location_id,
-                ':start_date' => $start_date,
-                ':end_date' => $end_date
-            ]);
-            $broken_result = $broken_stmt->fetch(PDO::FETCH_ASSOC);
-            $broken_quantity = $broken_result['total_broken'];
-            
-            // Calculate ending quantity (ensure it's never negative)
-            $ending_quantity = max(0, $beginning_quantity + $add_quantity - $used_quantity - $broken_quantity);
-            
-            // Only include items with activity in the period
-            if ($add_quantity > 0 || $used_quantity > 0 || $broken_quantity > 0 || $beginning_quantity > 0) {
-                $report_data[] = [
-                    'item_id' => $item_id,
-                    'item_code' => $item['item_code'],
-                    'name' => $item['name'],
-                    'category_name' => $item['category_name'],
-                    'size' => $item['size'],
-                    'location_id' => $item_location_id,
-                    'location_name' => $item['location_name'],
-                    'remark' => $item['remark'],
-                    'invoice_no' => $item['invoice_no'], // Add invoice number
-                    'beginning_quantity' => $beginning_quantity,
-                    'add_quantity' => $add_quantity,
-                    'used_quantity' => $used_quantity,
-                    'broken_quantity' => $broken_quantity,
-                    'ending_quantity' => $ending_quantity,
-                    'date' => $action_date,
-                    'deporty_name' => $item['deporty_name'] // Add deporty name
-                ];
+                if ($transfer_quantity > 0) {
+                    $report_data[] = [
+                        'item_id' => $transfer_item['item_id'],
+                        'item_code' => $transfer_item['item_code'],
+                        'name' => $item_name,
+                        'category_name' => $transfer_item['category_name'],
+                        'size' => $transfer_item['size'],
+                        'location_id' => $current_location_id,
+                        'location_name' => $current_location_name,
+                        'remark' => $transfer_item['remark'],
+                        'invoice_no' => $transfer_item['invoice_no'],
+                        'beginning_quantity' => 0,
+                        'add_quantity' => 0,
+                        'transfer_in_quantity' => $transfer_quantity, // Received TO this location
+                        'transfer_out_quantity' => 0, // No transfers out for transfer-only items
+                        'used_quantity' => 0,
+                        'broken_quantity' => 0,
+                        'ending_quantity' => $transfer_quantity,
+                        'date' => $start_date,
+                        'deporty_name' => $transfer_item['deporty_name'] ?? 'N/A'
+                    ];
+                }
             }
         }
         
@@ -368,7 +664,7 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
     generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color);
 }
 
-// Function to generate Excel content - UPDATED VERSION with alternating row colors
+// Function to generate Excel content - UPDATED VERSION with both transfer in and out
 function generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color) {
     // Get location name
     $location_name = $location_id ? $report_data[0]['location_name'] : t('report_all_location');
@@ -399,6 +695,8 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     $date_label = t('date');
     $total_label = t('total');
     $deporty = t('deporty');
+    $transfer_in = t('transfer_in');
+    $transfer_out = t('transfer_out');
     
     // Helper function to format numbers
     function formatQuantity($number) {
@@ -490,32 +788,35 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         
         <table>
             <thead>
-                <tr>
-                    <th rowspan="2">No</th>
-                    
-                    <th rowspan="2">Item Code</th>
-                    <th rowspan="2">Category</th>
-                    <th rowspan="2">Invoice No</th>
-                    <th rowspan="2">Description</th>
-                    <th rowspan="2">Unit</th>
-                    <th colspan="5">Quantity</th>
-                    <th rowspan="2">Supplier</th>
-                    <th rowspan="2">Location</th>
-                    <th rowspan="2">Remarks</th>
-                </tr>
-                <tr>
-                    <th>(Beginning <br> Period)</th>
-                    <th>(Add)</th>
-                    <th>(Used)</th>
-                    <th>(Broken)</th>
-                    <th>(Ending <br> Period)</th>
-                </tr>
-            </thead>
+        <tr>
+            <th rowspan="2">No</th>
+            <th rowspan="2">Item Code</th>
+            <th rowspan="2">Category</th>
+            <th rowspan="2">Invoice No</th>
+            <th rowspan="2">Description</th>
+            <th rowspan="2">Unit</th>
+            <th colspan="7">Quantity</th>
+            <th rowspan="2">Supplier</th>
+            <th rowspan="2">Location</th>
+            <th rowspan="2">Remarks</th>
+        </tr>
+        <tr>
+            <th>(Beginning<br>Period)</th>
+            <th>(Add)</th>
+            <th>(Transfer In)</th>
+            <th>(Transfer Out)</th>
+            <th>(Used)</th>
+            <th>(Broken)</th>
+            <th>(Ending<br>Period)</th>
+        </tr>
+    </thead>
             <tbody>';
     
     // Initialize quantities
     $total_beginning = 0;
     $total_add = 0;
+    $total_transfer_in = 0;
+    $total_transfer_out = 0;
     $total_used = 0;
     $total_broken = 0;
     $total_ending = 0;
@@ -527,6 +828,8 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         // Get quantities from the query results
         $beginning = $item['beginning_quantity'];
         $add = $item['add_quantity'];
+        $transfer_in = $item['transfer_in_quantity'];
+        $transfer_out = $item['transfer_out_quantity'];
         $used = $item['used_quantity'];
         $broken = $item['broken_quantity'];
         $ending = $item['ending_quantity'];
@@ -534,44 +837,52 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         // Update totals
         $total_beginning += $beginning;
         $total_add += $add;
+        $total_transfer_in += $transfer_in;
+        $total_transfer_out += $transfer_out;
         $total_used += $used;
         $total_broken += $broken;
         $total_ending += $ending;
-        
-        echo '<tr class="'.$row_class.'">
-                <td class="text-center">'.($index + 1).'</td>
-                <td class="text-center">'.$item['item_code'].'</td>
-                <td class="text-left">'.$item['category_name'].'</td>
-                <td class="text-center" style="mso-number-format:\@">'.$item['invoice_no'].'</td>
-                <td class="text-left">'.$item['name'].'</td>
-                <td class="text-center">'.$item['size'].'</td>
-                <td class="number-cell" style="text-align:right;">'.formatQuantity($beginning).'</td>
-                <td class="number-cell" style="text-align:right;">'.formatQuantity($add).'</td>
-                <td class="number-cell" style="text-align:right;">'.formatQuantity($used).'</td>
-                <td class="number-cell" style="text-align:right;">'.formatQuantity($broken).'</td>
-                <td class="number-cell" style="text-align:right;">'.formatQuantity($ending).'</td>
-                <td class="text-center">'.($item['deporty_name'] ?: 'N/A').'</td>
-                <td class="text-center">'.$item['location_name'].'</td>
-                <td class="text-left">'.$item['remark'].'</td>
-            </tr>';
+
+    // In the Excel generation loop, update the table row:
+echo '<tr class="'.$row_class.'">
+<td class="text-center">'.($index + 1).'</td>
+<td class="text-center">'.$item['item_code'].'</td>
+<td class="text-left">'.$item['category_name'].'</td>
+<td class="text-center" style="mso-number-format:\@">'.$item['invoice_no'].'</td>
+<td class="text-left">'.$item['name'].'</td>
+<td class="text-center">'.$item['size'].'</td>
+<td class="number-cell" style="text-align:right;">'.formatQuantity($beginning).'</td>
+<td class="number-cell" style="text-align:right;">'.formatQuantity($add).'</td>
+<td class="number-cell" style="text-align:right;">'.formatQuantity($transfer_in).'</td>
+<td class="number-cell" style="text-align:right;">'.formatQuantity($transfer_out).'</td>
+<td class="number-cell" style="text-align:right;">'.formatQuantity($used).'</td>
+<td class="number-cell" style="text-align:right;">'.formatQuantity($broken).'</td>
+<td class="number-cell" style="text-align:right;">'.formatQuantity($ending).'</td>
+<td class="text-center">'.($item['deporty_name'] ?: 'N/A').'</td>
+<td class="text-center">'.$item['location_name'].'</td>
+<td class="text-left">'.$item['remark'].'</td>
+</tr>';
     }
     
     // Add totals row (no special background color)
     echo '<tr class="bold">
-            <td colspan="6" class="text-center"rowspan="2"  style="background-color:yellow;font-size:22px;">'.$total_label.':</td>
-            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_beginning).'</td>
-            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_add).'</td>
-            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_used).'</td>
-            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_broken).'</td>
-            <td class="number-cell" rowspan="2" style="background-color:yellow;" >'.formatQuantity($total_ending).'</td>
-            <td colspan="3" rowspan="2" style="background-color:yellow;"></td>
-        </tr>';
+        <td colspan="6" class="text-center" rowspan="2" style="background-color:yellow;font-size:22px;">'.$total_label.':</td>
+        <td class="number-cell" rowspan="2" style="background-color:yellow;">'.formatQuantity($total_beginning).'</td>
+        <td class="number-cell" rowspan="2" style="background-color:yellow;">'.formatQuantity($total_add).'</td>
+        <td class="number-cell" rowspan="2" style="background-color:yellow;">'.formatQuantity($total_transfer_in).'</td>
+        <td class="number-cell" rowspan="2" style="background-color:yellow;">'.formatQuantity($total_transfer_out).'</td>
+        <td class="number-cell" rowspan="2" style="background-color:yellow;">'.formatQuantity($total_used).'</td>
+        <td class="number-cell" rowspan="2" style="background-color:yellow;">'.formatQuantity($total_broken).'</td>
+        <td class="number-cell" rowspan="2" style="background-color:yellow;">'.formatQuantity($total_ending).'</td>
+        <td colspan="3" rowspan="2" style="background-color:yellow;"></td>
+    </tr>';
     
     echo '</tbody>
         </table>
     </body>
     </html>';
 }
+
 // Helper functions for styling
 function darkenColor($color, $percent) {
     // Simple color darkening function
@@ -608,7 +919,6 @@ function getRowColor($report_type, $is_even) {
     }
 }
 ?>
-
 
 <style>
     /* Your existing CSS remains unchanged */
