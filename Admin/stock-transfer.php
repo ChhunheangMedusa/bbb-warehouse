@@ -36,94 +36,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_items'])) {
         redirect('stock-transfer.php');
     }
     
-    try {
-        $pdo->beginTransaction();
-        
-        // Loop through each item
-        foreach ($_POST['item_id'] as $index => $item_id) {
-            $item_id = (int)$item_id;
-            $quantity = (float)$_POST['quantity'][$index];
-            $size = sanitizeInput($_POST['size'][$index] ?? '');
-            $remark = sanitizeInput($_POST['remark'][$index] ?? '');
-            
-            // Get current item details
-            $stmt = $pdo->prepare("SELECT quantity, name, item_code, category_id, size FROM items WHERE id = ? AND location_id = ?");
-            $stmt->execute([$item_id, $from_location_id]);
-            $item = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$item) {
-                throw new Exception(t('item_not_found_in_location'));
-            }
-            
-            $old_qty = $item['quantity'];
-            $item_name = $item['name'];
-            
-            if ($quantity > $old_qty) {
-                throw new Exception(t('cannot_transfer_more_than_available') . ": $item_name");
-            }
-            
-            // Update quantity in source location
-            $new_qty = $old_qty - $quantity;
-            $stmt = $pdo->prepare("UPDATE items SET quantity = ? WHERE id = ?");
-            $stmt->execute([$new_qty, $item_id]);
-            
-            // Check if item exists in destination location
-            $stmt = $pdo->prepare("SELECT id, quantity FROM items WHERE name = ? AND location_id = ?");
-            $stmt->execute([$item_name, $to_location_id]);
-            $dest_item = $stmt->fetch(PDO::FETCH_ASSOC);
+    // ... existing code before the transfer loop ...
 
-            if ($dest_item) {
-                // Item exists in destination - update it
-                $destination_item_id = $dest_item['id'];
-                $dest_new_qty = $dest_item['quantity'] + $quantity;
-                $stmt = $pdo->prepare("UPDATE items SET quantity = ?, invoice_no = ?, remark = ?, date = ? WHERE id = ?");
-                $stmt->execute([$dest_new_qty, $invoice_no, $remark, $date, $dest_item['id']]);
-            } else {
-                // Insert new item in destination
-                $stmt = $pdo->prepare("INSERT INTO items 
-                (item_code, category_id, date, invoice_no, name, quantity, size, location_id, remark, alert_quantity) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 10)");
-                $stmt->execute([
-                    $item['item_code'],
-                    $item['category_id'],
-                    $date,
-                    $invoice_no,
-                    $item_name,
-                    $quantity,
-                    $item['size'],
-                    $to_location_id,
-                    $remark
-                ]);
-                $destination_item_id = $pdo->lastInsertId();
-            }
-            // Record in stock_in_history for the destination location with transfer action type
-$destination_item_id = $dest_item ? $dest_item['id'] : $pdo->lastInsertId();
-$action_type = 'transfer';
-// Now record in stock_in_history with the CORRECT destination item ID
-$stmt = $pdo->prepare("INSERT INTO stock_in_history 
-    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, deporty_id, remark, action_type, action_quantity, action_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([
-    $destination_item_id,  // This should now be correct
-    $item['item_code'],
-    $item['category_id'],
-    $invoice_no,
-    $date,
-    $item_name,
-    $dest_item ? ($dest_item['quantity'] + $quantity) : $quantity,
-    10,
-    $item['size'],
-    $to_location_id,
-    null,
-    "TRANSFER_FROM_" . $from_location_id,
-    'transfer',
-    $quantity,
-    $_SESSION['user_id']
-]);
-            // Record in transfer history
-            $stmt = $pdo->prepare("INSERT INTO transfer_history 
-            (item_id, item_code, category_id, invoice_no, date, name, quantity, size, from_location_id, to_location_id, remark, action_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+try {
+    $pdo->beginTransaction();
+    
+    // Loop through each item
+    foreach ($_POST['item_id'] as $index => $item_id) {
+        $item_id = (int)$item_id;
+        $quantity = (float)$_POST['quantity'][$index];
+        $size = sanitizeInput($_POST['size'][$index] ?? '');
+        $remark = sanitizeInput($_POST['remark'][$index] ?? '');
+        
+        // Get current item details including deporty_id
+        $stmt = $pdo->prepare("SELECT quantity, name, item_code, category_id, size, deporty_id FROM items WHERE id = ? AND location_id = ?");
+        $stmt->execute([$item_id, $from_location_id]);
+        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$item) {
+            throw new Exception(t('item_not_found_in_location'));
+        }
+        
+        $old_qty = $item['quantity'];
+        $item_name = $item['name'];
+        $deporty_id = $item['deporty_id']; // Get the deporty_id from source item
+        
+        if ($quantity > $old_qty) {
+            throw new Exception(t('cannot_transfer_more_than_available') . ": $item_name");
+        }
+        
+        // Update quantity in source location
+        $new_qty = $old_qty - $quantity;
+        $stmt = $pdo->prepare("UPDATE items SET quantity = ? WHERE id = ?");
+        $stmt->execute([$new_qty, $item_id]);
+        
+        // Check if item exists in destination location
+        $stmt = $pdo->prepare("SELECT id, quantity, deporty_id FROM items WHERE name = ? AND location_id = ?");
+        $stmt->execute([$item_name, $to_location_id]);
+        $dest_item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($dest_item) {
+            // Item exists in destination - update it
+            $destination_item_id = $dest_item['id'];
+            $dest_new_qty = $dest_item['quantity'] + $quantity;
+            
+            // If destination item has no deporty_id, update it with source deporty_id
+            $update_deporty_id = $dest_item['deporty_id'] ? $dest_item['deporty_id'] : $deporty_id;
+            
+            $stmt = $pdo->prepare("UPDATE items SET quantity = ?, invoice_no = ?, remark = ?, date = ?, deporty_id = ? WHERE id = ?");
+            $stmt->execute([$dest_new_qty, $invoice_no, $remark, $date, $update_deporty_id, $dest_item['id']]);
+        } else {
+            // Insert new item in destination with deporty_id
+            $stmt = $pdo->prepare("INSERT INTO items 
+            (item_code, category_id, date, invoice_no, name, quantity, size, location_id, remark, alert_quantity, deporty_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 10, ?)");
+            $stmt->execute([
+                $item['item_code'],
+                $item['category_id'],
+                $date,
+                $invoice_no,
+                $item_name,
+                $quantity,
+                $item['size'],
+                $to_location_id,
+                $remark,
+                $deporty_id  // Include deporty_id here
+            ]);
+            $destination_item_id = $pdo->lastInsertId();
+        }
+        
+        // Record in stock_in_history for the destination location with transfer action type and deporty_id
+        $destination_item_id = $dest_item ? $dest_item['id'] : $pdo->lastInsertId();
+        $action_type = 'transfer';
+        
+        // Now record in stock_in_history with the CORRECT destination item ID and deporty_id
+        $stmt = $pdo->prepare("INSERT INTO stock_in_history 
+            (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, deporty_id, remark, action_type, action_quantity, action_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $destination_item_id,
+            $item['item_code'],
+            $item['category_id'],
+            $invoice_no,
+            $date,
+            $item_name,
+            $dest_item ? ($dest_item['quantity'] + $quantity) : $quantity,
+            10,
+            $item['size'],
+            $to_location_id,
+            $deporty_id,  // Use the actual deporty_id
+            "TRANSFER_FROM_" . $from_location_id,
+            'transfer',
+            $quantity,
+            $_SESSION['user_id']
+        ]);
+        
+        // Record in transfer history with deporty_id
+        $stmt = $pdo->prepare("INSERT INTO transfer_history 
+            (item_id, item_code, category_id, invoice_no, date, name, quantity, size, from_location_id, to_location_id, deporty_id, remark, action_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $item_id,
             $item['item_code'],
@@ -135,33 +146,42 @@ $stmt->execute([
             $item['size'],
             $from_location_id,
             $to_location_id,
+            $deporty_id,  // Add deporty_id here
             $remark,
             $_SESSION['user_id']
         ]);
 
-
-
-
-            
-            // Log activity
-            $stmt = $pdo->prepare("SELECT name FROM locations WHERE id IN (?, ?)");
-            $stmt->execute([$from_location_id, $to_location_id]);
-            $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $log_message = "Transferred $item_name ($quantity $size) from {$locations[0]['name']} to {$locations[1]['name']}";
-            logActivity($_SESSION['user_id'], 'Transfer', $log_message);
+        // Log activity including deporty information if available
+        $stmt = $pdo->prepare("SELECT name FROM locations WHERE id IN (?, ?)");
+        $stmt->execute([$from_location_id, $to_location_id]);
+        $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Include deporty name in the log if available
+        $deporty_info = "";
+        if ($deporty_id) {
+            $stmt = $pdo->prepare("SELECT name FROM deporty WHERE id = ?");
+            $stmt->execute([$deporty_id]);
+            $deporty = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($deporty) {
+                $deporty_info = " [Deporty: {$deporty['name']}]";
+            }
         }
         
-        $pdo->commit();
-        $_SESSION['success'] = t('transfer_success');
-        redirect('stock-transfer.php');
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        $_SESSION['error'] = t('transfer_error') . ": " . $e->getMessage();
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        $_SESSION['error'] = $e->getMessage();
+        $log_message = "Transferred $item_name ($quantity $size) from {$locations[0]['name']} to {$locations[1]['name']}$deporty_info";
+        logActivity($_SESSION['user_id'], 'Transfer', $log_message);
     }
+    
+    $pdo->commit();
+    $_SESSION['success'] = t('transfer_success');
+    redirect('stock-transfer.php');
+} catch (PDOException $e) {
+    $pdo->rollBack();
+    $_SESSION['error'] = t('transfer_error') . ": " . $e->getMessage();
+} catch (Exception $e) {
+    $pdo->rollBack();
+    $_SESSION['error'] = $e->getMessage();
+}
+
 }
 
 // Get filter parameters
@@ -225,7 +245,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = $per_page;
 $offset = ($page - 1) * $limit;
 
-// Build query with filters
+// Update the transfer history query to include deporty information
 $query = "SELECT 
     t.id,
     t.item_id,
@@ -241,6 +261,8 @@ $query = "SELECT
     fl.name as from_location_name,
     t.to_location_id,
     tl.name as to_location_name,
+    t.deporty_id,
+    d.name as deporty_name,
     t.remark,
     t.action_by,
     u.username as action_by_name,
@@ -254,6 +276,8 @@ JOIN
     locations fl ON t.from_location_id = fl.id
 JOIN 
     locations tl ON t.to_location_id = tl.id
+LEFT JOIN 
+    deporty d ON t.deporty_id = d.id 
 JOIN
     users u ON t.action_by = u.id
 WHERE 1=1";
@@ -1210,6 +1234,7 @@ body {
                                 <th><?php echo t('item_name'); ?></th>
                                 <th><?php echo t('item_qty'); ?></th>
                                 <th><?php echo t('unit'); ?></th>
+                                <th><?php echo t('deporty'); ?></th>
                                 <th><?php echo t('from_location'); ?></th>
                                 <th><?php echo t('to_location'); ?></th>
                                 <th><?php echo t('item_remark'); ?></th>
@@ -1234,6 +1259,13 @@ body {
                                         <td><?php echo $item['name']; ?></td>
                                         <td><?php echo $item['quantity']; ?></td>
                                         <td><?php echo $item['size']; ?></td>
+                                        <td>
+    <?php if ($item['deporty_name']): ?>
+        <?php echo htmlspecialchars($item['deporty_name']); ?>
+    <?php else: ?>
+        <span class="badge bg-secondary"><?php echo "N/A" ?></span>
+    <?php endif; ?>
+</td>
                                         <td><?php echo $item['from_location_name']; ?></td>
                                         <td><?php echo $item['to_location_name']; ?></td>
                                         <td><?php echo $item['remark']; ?></td>
