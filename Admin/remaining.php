@@ -2304,7 +2304,22 @@ table th{
                 </div>
                 <div class="modal-body">
                     <div class="row">
+                    <div class="col-md-6 mb-3">
+                            <label for="edit_invoice_no" class="form-label"><?php echo t('item_invoice');?></label>
+                            <input type="text" class="form-control" id="edit_invoice_no" name="invoice_no">
+                        </div>
                         <div class="col-md-6 mb-3">
+                            <label for="edit_date" class="form-label"><?php echo t('item_date');?></label>
+                            <input type="date" class="form-control" id="edit_date" name="date" required>
+                        </div>
+
+                       
+                    </div>
+                    
+                    <!-- Add Deporty Field Here -->
+                    <div class="row">
+                   
+                    <div class="col-md-6 mb-3">
                             <label for="edit_item_code" class="form-label"><?php echo t('item_code');?></label>
                             <input type="text" class="form-control" id="edit_item_code" name="item_code">
                         </div>
@@ -2320,19 +2335,27 @@ table th{
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                    </div>
-                    
-                    <!-- Add Deporty Field Here -->
-                    <div class="row">
-                    <div class="col-md-6 mb-3">
-                            <label for="edit_invoice_no" class="form-label"><?php echo t('item_invoice');?></label>
-                            <input type="text" class="form-control" id="edit_invoice_no" name="invoice_no">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_deporty_id" class="form-label"><?php echo t('deporty');?></label>
+                            <select class="form-select" id="edit_deporty_id" name="deporty_id">
+                                <option value=""><?php echo t('select_deporty');?></option>
+                                <?php 
+                                $stmt = $pdo->query("SELECT * FROM deporty ORDER BY name");
+                                $deporties = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                foreach ($deporties as $deporty): ?>
+                                    <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="edit_date" class="form-label"><?php echo t('item_date');?></label>
-                            <input type="date" class="form-control" id="edit_date" name="date" required>
+                            <label for="edit_location_id" class="form-label"><?php echo t('location_column');?></label>
+                            <select class="form-select" id="edit_location_id" name="location_id" required>
+                                <option value=""><?php echo t('item_locations');?></option>
+                                <?php foreach ($locations as $location): ?>
+                                    <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                  
                         <div class="col-md-4 mb-3">
                             <label for="edit_name" class="form-label"><?php echo t('item_name');?></label>
                             <input type="text" class="form-control" id="edit_name" name="name" required>
@@ -2345,28 +2368,8 @@ table th{
                             <label for="edit_size" class="form-label"><?php echo t('item_size');?></label>
                             <input type="text" class="form-control" id="edit_size" name="size">
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="edit_deporty_id" class="form-label"><?php echo t('deporty');?></label>
-                            <select class="form-select" id="edit_deporty_id" name="deporty_id">
-                                <option value=""><?php echo t('select_deporty');?></option>
-                                <?php 
-                                $stmt = $pdo->query("SELECT * FROM deporty ORDER BY name");
-                                $deporties = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                                foreach ($deporties as $deporty): ?>
-                                    <option value="<?php echo $deporty['id']; ?>"><?php echo $deporty['name']; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="edit_location_id" class="form-label"><?php echo t('location_column');?></label>
-                            <select class="form-select" id="edit_location_id" name="location_id" required>
-                                <option value=""><?php echo t('item_locations');?></option>
-                                <?php foreach ($locations as $location): ?>
-                                    <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-3">
+                       
+                        <div class="col-md-12 mb-3">
                             <label for="edit_remark" class="form-label"><?php echo t('item_remark');?></label>
                             <input type="text" class="form-control" id="edit_remark" name="remark">
                         </div>

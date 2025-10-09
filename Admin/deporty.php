@@ -1622,7 +1622,7 @@ input[name="invoice_no"] {
                 </nav>
                 <div class="text-center text-muted">
                     <?php echo t('page'); ?> <?php echo $page; ?> <?php echo t('page_of'); ?> <?php echo $total_pages; ?> 
-                    (<?php echo t('total_records'); ?>: <?php echo $total_items; ?>)
+                   
                 </div>
             <?php endif; ?>
         </div>
