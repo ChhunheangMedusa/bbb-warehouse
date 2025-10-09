@@ -1467,6 +1467,24 @@ body {
     margin: 1px;
     white-space: nowrap;
 }
+/* Ensure unblock modal buttons stay in one line on all screens */
+#unblockConfirmModal .modal-footer {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    gap: 10px !important;
+}
+
+#unblockConfirmModal .modal-footer .btn {
+    flex: 1 !important;
+    min-width: auto !important;
+    margin-bottom: 0 !important;
+    white-space: nowrap !important;
+}
+
+#unblockConfirmModal .modal-footer form {
+    flex: 1 !important;
+}
 </style>
 
 <div class="container-fluid">

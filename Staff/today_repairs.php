@@ -1034,6 +1034,16 @@ table th{
         width: 100%;
     }
 }
+.table th,td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Specifically for recent activities table */
+.table-responsive .table thead th {
+    white-space: nowrap;
+}
 </style>
 
 <div class="container-fluid">
