@@ -1059,7 +1059,7 @@ body {
 
         <!-- Filter Card -->
         <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-success text-white">
                 <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
             </div>
             <div class="card-body">
@@ -1170,7 +1170,7 @@ body {
         </div>
         
         <div class="card mb-4">
-            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><?php echo t('transfer_items'); ?></h5>
                 <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#transferItemModal">
                     <i class="bi bi-arrow-left-right"></i> <?php echo t('transfer_history'); ?>
@@ -1365,7 +1365,7 @@ body {
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="POST">
-                <div class="modal-header bg-info text-white">
+                <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="transferItemModalLabel"><?php echo t('transfer_items'); ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -1453,7 +1453,7 @@ body {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
-                    <button type="submit" name="transfer_items" class="btn btn-info"><?php echo t('transferss'); ?></button>
+                    <button type="submit" name="transfer_items" class="btn btn-success"><?php echo t('transferss'); ?></button>
                 </div>
             </form>
         </div>

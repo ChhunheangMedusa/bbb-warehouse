@@ -1283,7 +1283,150 @@ input[name="invoice_no"] {
         flex: 1;
     }
 }
+/* Force all table buttons to stay in one line */
+.table td {
+    white-space: nowrap !important;
+}
 
+.d-inline-flex {
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+/* Ensure buttons don't wrap */
+.btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+.flex-nowrap {
+    flex-wrap: nowrap !important;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0 !important;
+}
+
+/* Remove any mobile breakpoints that force stacking */
+@media (max-width: 767.98px) {
+    .table .btn {
+        display: inline-block !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .d-inline-flex {
+        flex-direction: row !important;
+    }
+    
+    /* Make table horizontally scrollable on mobile instead of stacking buttons */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Remove the stacking rule for action buttons */
+    .table td:last-child .btn {
+        display: inline-block !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+}
+
+/* For very small screens, reduce button padding but keep in one line */
+@media (max-width: 480px) {
+    .btn-sm {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.75rem !important;
+    }
+}
+/* Ensure action buttons stay in one line */
+.action-buttons {
+    display: flex;
+    align-items: flex-end;
+}
+
+.action-buttons .d-flex {
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+.action-buttons .btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    min-width: max-content;
+}
+
+/* For very small screens, adjust button padding but keep in one line */
+@media (max-width: 480px) {
+    .action-buttons .btn {
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .action-buttons .d-flex {
+        gap: 0.5rem !important;
+    }
+}
+
+/* Ensure the form row doesn't wrap on mobile */
+@media (max-width: 768px) {
+  
+    
+    .row.g-2 > [class*="col-"] {
+        flex: 0 0 auto;
+        min-width: 200px;
+    }
+    
+    .action-buttons {
+        min-width: 180px;
+    }
+}
+/* Ensure filter form stays in one line on all screens */
+@media (max-width: 768px) {
+    .row.g-3.align-items-end {
+        flex-wrap: wrap;
+    }
+    
+    .row.g-3.align-items-end > [class*="col-"] {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .row.g-3.align-items-end .col-md-2 {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .row.g-3.align-items-end .col-md-2 .btn {
+        flex: 1;
+    }
+}
+/* Very small screens */
+@media (max-width: 576px) {
+    .row.g-3.align-items-end > [class*="col-"] {
+        min-width: 150px;
+    }
+    
+    .row.g-3.align-items-end .col-md-2 {
+        min-width: 140px;
+    }
+    
+    .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+@media (max-width: 576px) {
+    .row.g-3.align-items-end .col-md-2 {
+        flex-direction: row;
+    }
+    
+    .row.g-3.align-items-end .col-md-2 .btn {
+        min-width: 120px;
+    }
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('deporty_management'); ?></h2>
@@ -1299,52 +1442,50 @@ input[name="invoice_no"] {
     </div>
     
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header text-white" style="background-color:#0091ad;">
             <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
         </div>
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-md-12">
-                    <form method="GET" class="row g-2">
-                        <div class="col-md-4">
-                        <label for="search" class="form-label"><?php echo t('name'); ?></label>
-                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
-                        </div>
-                        <div class="col-md-4">
-                        <label for="sort" class="form-label"><?php echo t('sort'); ?></label>
-                            <select name="sort_option" class="form-select">
-                                <option value="name_asc" <?php echo $sort_option === 'name_asc' ? 'selected' : ''; ?>><?php echo t('name_a_to_z'); ?></option>
-                                <option value="name_desc" <?php echo $sort_option === 'name_desc' ? 'selected' : ''; ?>><?php echo t('name_z_to_a'); ?></option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-4">
-                        <label for="search" class="form-label"><?php echo t('show_entries').' '.t('entries'); ?></label>
-                 
-                <select class="form-select " id="per_page_select">
-                    <?php foreach ($limit_options as $option): ?>
-                        <option value="<?php  ?> <?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
-                        <?php echo $option; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-             
-                        </div>
-
-
-                       
-
-                
-                        <div class="col-md-4 action-buttons">
-                            <button type="submit" class="btn btn-primary">
-                               <?php echo t('search'); ?>
-                            </button>
-                            <a href="deporty.php" class="btn btn-secondary">
-                            <?php echo t('reset'); ?>
-                            </a>
-                            
-                        </div>
-                    </form>
+                <form method="GET" class="row g-3 align-items-end">
+    <div class="col-md-4">
+        <label for="search" class="form-label"><?php echo t('name'); ?></label>
+        <input type="text" class="form-control" id="search" name="search" 
+               placeholder="<?php echo t('search'); ?>" 
+               value="<?php echo htmlspecialchars($search_query); ?>">
+    </div>
+    <div class="col-md-3">
+        <label for="sort" class="form-label"><?php echo t('sort'); ?></label>
+        <select name="sort_option" id="sort" class="form-select">
+            <option value="name_asc" <?php echo $sort_option == 'name_asc' ? 'selected' : ''; ?>>
+                <?php echo t('name_a_to_z'); ?>
+            </option>
+            <option value="name_desc" <?php echo $sort_option == 'name_desc' ? 'selected' : ''; ?>>
+                <?php echo t('name_z_to_a'); ?>
+            </option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label for="sort" class="form-label"><?php echo t('show_entries').' '.t('entries'); ?></label>
+        <select class="form-select" id="per_page_select">
+            <?php foreach ($limit_options as $option): ?>
+                <option value="<?php echo $option; ?>" <?php echo $per_page == $option ? 'selected' : ''; ?>>
+                    <?php echo $option; ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    
+    <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary me-2 flex-shrink-0">
+            <?php echo t('search'); ?>
+        </button>
+        <a href="deporty.php" class="btn btn-secondary flex-shrink-0">
+            <?php echo t('reset'); ?>
+        </a>
+    </div>
+</form>
                 </div>
             </div>
         </div>
@@ -1352,7 +1493,7 @@ input[name="invoice_no"] {
     
     <!-- Data Table Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#0091ad;">
             <h5 class="mb-0"><?php echo t('deporty_list'); ?></h5>
             <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addDeportyModal">
                 <i class="bi bi-plus-circle"></i> <?php echo t('add_deporty'); ?>
@@ -1384,14 +1525,16 @@ input[name="invoice_no"] {
     </a>
 </td>
                                     <td>
-                                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editDeportyModal" 
+                                    <div class="d-inline-flex gap-1 align-items-center flex-nowrap">
+                                        <button class="btn btn-sm btn-warning edit-category flex-shrink-0" data-bs-toggle="modal" data-bs-target="#editDeportyModal" 
                                                 data-id="<?php echo $deporty['id']; ?>" data-name="<?php echo $deporty['name']; ?>">
                                             <i class="bi bi-pencil"></i> <?php echo t('update_button'); ?>
                                         </button>
-                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDeportyModal" 
+                                        <button class="btn btn-sm btn-danger delete-category flex-shrink-0" data-bs-toggle="modal" data-bs-target="#deleteDeportyModal" 
                                                 data-id="<?php echo $deporty['id']; ?>" data-name="<?php echo $deporty['name']; ?>">
                                             <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
                                         </button>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

@@ -300,43 +300,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             $old_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-    // In the edit_item section, replace the image handling with this:
-    if (!empty($_FILES['images']['name'][0])) {
-        try {
-            // Delete all old image records first
-            $stmt = $pdo->prepare("DELETE FROM item_images WHERE item_id = ?");
-            $stmt->execute([$id]);
-            
-            // Handle new image uploads
-            foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
-                if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                    // Validate and process image (same as add item)
-                    $imageData = file_get_contents($tmp_name);
-                    $stmt = $pdo->prepare("INSERT INTO item_images (item_id, image_path) VALUES (?, ?)");
-                    $stmt->execute([$id, $imageData]);
+            // Image handling
+            if (!empty($_FILES['images']['name'][0])) {
+                try {
+                    // Delete all old image records first
+                    $stmt = $pdo->prepare("DELETE FROM item_images WHERE item_id = ?");
+                    $stmt->execute([$id]);
+                    
+                    // Handle new image uploads
+                    foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                        if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
+                            // Validate and process image
+                            $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
+                            $mime = finfo_file($fileInfo, $tmp_name);
+                            finfo_close($fileInfo);
+                            $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/avif', 'image/jpg'];
+                            
+                            if (!in_array($mime, $allowedMimes)) {
+                                throw new Exception("Invalid file type.");
+                            }
+                            
+                            $imageData = file_get_contents($tmp_name);
+                            $stmt = $pdo->prepare("INSERT INTO item_images (item_id, image_path) VALUES (?, ?)");
+                            $stmt->execute([$id, $imageData]);
+                        }
+                    }
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $_SESSION['error'] = "Image upload failed: " . $e->getMessage();
+                    
+                    // Preserve filters after failed edit
+                    $filter_params = [];
+                    if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
+                    if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
+                    if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
+                    if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
+                    if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
+                    if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+                    if (isset($_GET['page'])) $filter_params['page'] = (int)$_GET['page'];
+                    if (isset($_GET['per_page'])) $filter_params['per_page'] = (int)$_GET['per_page'];
+                    
+                    redirect('remaining.php?' . http_build_query($filter_params));
                 }
             }
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $_SESSION['error'] = "Image upload failed: " . $e->getMessage();
             
-            // Preserve filters after failed edit
-            $filter_params = [];
-            if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
-            if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
-            if (isset($_GET['month'])) $filter_params['month'] = (int)$_GET['month'];
-            if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
-            if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
-            if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
-            
-            redirect('remaining.php?' . http_build_query($filter_params));
-        }
-    }
             // Get new location name for comparison
             $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
             $stmt->execute([$location_id]);
             $new_location = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    
             // Get new deporty name for comparison
             $stmt = $pdo->prepare("SELECT name FROM deporty WHERE id = ?");
             $stmt->execute([$deporty_id]);
@@ -345,39 +357,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update item details
             $stmt = $pdo->prepare("UPDATE items SET item_code=?, category_id=?, deporty_id=?, invoice_no=?, date=?, name=?, quantity=?, size=?, location_id=?, remark=? WHERE id=?");
             $stmt->execute([$item_code, $category_id, $deporty_id, $invoice_no, $date, $name, $quantity, $size, $location_id, $remark, $id]);
-   
-          
             
             $pdo->commit();
             
             // Prepare log message with changes
             $log_message = "";
             $changes = [];
-            // In the changes array, add these checks:
+            
             if ($old_item['item_code'] != $item_code) {
                 $old_code = $old_item['item_code'] ?: 'N/A';
                 $new_code = $item_code ?: 'N/A';
                 $changes[] = "Updated item code ($name) : $old_code → $new_code ";
             }
-
+    
             if ($old_item['category_id'] != $category_id) {
                 $old_category = $old_item['category_id'] ? getCategoryName($pdo, $old_item['category_id']) : 'N/A';
                 $new_category = $category_id ? getCategoryName($pdo, $category_id) : 'N/A';
                 $changes[] = "Updated item category ($name) : $old_category → $new_category";
             }
-
+    
             if ($old_item['deporty_id'] != $deporty_id) {
                 $old_deporty = $old_item['deporty_name'] ?: 'N/A';
                 $new_deporty_name = $new_deporty ? $new_deporty['name'] : 'N/A';
                 $changes[] = "Updated item deporty ($name) : $old_deporty → $new_deporty_name";
             }
-
+    
             if ($old_item['invoice_no'] != $invoice_no) {
                 $old_invoice = $old_item['invoice_no'] ?: 'N/A';
                 $new_invoice = $invoice_no ?: 'N/A';
                 $changes[] = "Updated item invoice ($name) : $old_invoice → $new_invoice";
             }
-
+    
             if ($old_item['date'] != $date) {
                 $changes[] = "Updated item date ($name) : {$old_item['date']} → $date";
             }
@@ -414,13 +424,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $log_message .= implode(', ', $changes);
             }
+            
             $update_item1=t('update_item1');
             $update_item2=t('update_item2');
             
             $_SESSION['success'] = "$update_item1";
             logActivity($_SESSION['user_id'], 'Edit Item', $log_message);
             
-            // Preserve filters after editing item
+            // Preserve filters after editing item (including pagination)
             $filter_params = [];
             if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
             if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
@@ -428,6 +439,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
             if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
             if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            if (isset($_GET['page'])) $filter_params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $filter_params['per_page'] = (int)$_GET['per_page'];
             
             redirect('remaining.php?' . http_build_query($filter_params));
             
@@ -435,7 +448,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->rollBack();
             $_SESSION['error'] = "$update_item2: " . $e->getMessage();
             
-            // Preserve filters after failed edit
+            // Preserve filters after failed edit (including pagination)
             $filter_params = [];
             if (isset($_GET['location'])) $filter_params['location'] = (int)$_GET['location'];
             if (isset($_GET['category'])) $filter_params['category'] = (int)$_GET['category'];
@@ -443,6 +456,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_GET['year'])) $filter_params['year'] = (int)$_GET['year'];
             if (isset($_GET['search'])) $filter_params['search'] = sanitizeInput($_GET['search']);
             if (isset($_GET['sort_option'])) $filter_params['sort_option'] = sanitizeInput($_GET['sort_option']);
+            if (isset($_GET['page'])) $filter_params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $filter_params['per_page'] = (int)$_GET['per_page'];
             
             redirect('remaining.php?' . http_build_query($filter_params));
         }
@@ -796,10 +811,19 @@ body {
 
 /* Button Styles */
 .btn {
-  border-radius: 0.35rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  transition: all 0.2s;
+    border-radius: 0.35rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    font-size: 0.875rem;
+    min-height: auto;
 }
 
 
@@ -1134,10 +1158,19 @@ body {
 
 /* Button Styles */
 .btn {
-  border-radius: 0.35rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  transition: all 0.2s;
+    border-radius: 0.35rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    font-size: 0.875rem;
+    min-height: auto;
 }
 
 
@@ -1175,11 +1208,23 @@ body {
 
 /* Specifically allow the action column to expand */
 .table td:last-child {
-    overflow: visible;
-    white-space: normal;
-    text-overflow: clip;
-    max-width: none;
-    min-width: 150px; /* Ensure enough space for buttons */
+    min-width: 280px !important; /* Increased width for 3 buttons */
+    max-width: 300px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+}
+.table td:last-child .btn {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    margin: 0 2px !important;
+    min-width: 70px !important; /* Fixed minimum width */
+    padding: 0.375rem 0.5rem !important; /* Smaller padding */
+    font-size: 0.75rem !important; /* Smaller font */
+}
+.table .btn-sm {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
 }
 table th{
     white-space: nowrap;
@@ -1517,8 +1562,8 @@ table th{
 @media (max-width: 768px) {
     /* Make buttons full width */
     .btn {
-        width: 100%;
-        margin-bottom: 5px;
+      
+        margin-bottom: 0.5rem;
     }
     
     /* Adjust card padding */
@@ -1549,7 +1594,32 @@ table th{
         margin-bottom: 10px;
     }
 }
+/* Specific button variants */
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+    background-color: transparent;
+}
 
+.btn-outline-primary:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
 /* Prevent text input zoom on iOS */
 @media screen and (-webkit-min-device-pixel-ratio:0) {
     select:focus,
@@ -1684,7 +1754,7 @@ table th{
 
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header text-white" style="background-color:#797d62;">
             <h5 class="mb-0"><?php echo t('filter_options');?></h5>
         </div>
         <div class="card-body">
@@ -1797,7 +1867,7 @@ table th{
     
     <!-- Data Card -->
     <div class="card mb-4">
-        <div class="card-header text-white" style="background-color:#674ea7;">
+        <div class="card-header text-white" style="background-color:#797d62;">
 
             <h5 class="mb-0"><?php echo t('item_list');?></h5>
         </div>

@@ -822,7 +822,7 @@ body {
     
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header  text-white"style="background-color:#775144;">
             <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
         </div>
         <div class="card-body">
@@ -908,7 +908,7 @@ body {
     
     <!-- Data Card -->
     <div class="card mb-4">
-        <div class="card-header text-white" style="background-color:#674ea7;">
+        <div class="card-header text-white" style="background-color:#775144;">
             <h5 class="mb-0"><?php echo t('item_list'); ?></h5>
         </div>
         <div class="card-body">

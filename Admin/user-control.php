@@ -1144,6 +1144,41 @@ body {
 .form-control-file:hover::before {
   background: #e9ecef;
 }
+.table-responsive .btn {
+    white-space: nowrap;
+    margin: 2px;
+}
+@media (max-width: 767.98px) {
+
+    /* For modal footer buttons on mobile only */
+    .modal-footer .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* For action buttons in cards on mobile */
+    .card .action-buttons .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+@media (max-width: 767.98px) {
+    .table-responsive .btn {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* Stack buttons vertically on very small screens */
+    @media (max-width: 575.98px) {
+        .table-responsive .btn {
+            display: block;
+            width: 100%;
+            margin: 2px 0;
+        }
+    }
+}
 /* Mobile-specific styles */
 @media (max-width: 767.98px) {
     /* Adjust main content width when sidebar is hidden */
@@ -1179,13 +1214,13 @@ body {
         padding: 1rem;
     }
     
-    /* Make buttons full width */
+    /* Make buttons full width 
     .btn {
         display: block;
         width: 100%;
         margin-bottom: 0.5rem;
     }
-    
+    */
     /* Adjust form controls */
     .form-control, .form-select {
         font-size: 16px; /* prevents iOS zoom */
@@ -1207,18 +1242,7 @@ body {
     z-index: 1070 !important;
 }
 
-/* Animation for duplicate username modal */
-@keyframes pulseWarning {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
-    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
-}
 
-#duplicateUsernameModal .modal-content {
-    animation: pulseWarning 1.5s infinite;
-    border: 2px solid #ffc107;
-    box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
-}
 
 /* Filter section styles */
 .filter-section {
@@ -1370,7 +1394,79 @@ body {
     font-size: 0.875em;
     color: #198754;
 }
+/* Table action buttons - keep in one line */
+.btn-group-vertical.btn-group-sm {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    gap: 4px;
+}
 
+.btn-group-vertical.btn-group-sm .btn {
+    white-space: nowrap;
+    margin: 0 !important;
+}
+
+/* Ensure table cells don't force wrapping */
+.table td {
+    white-space: nowrap !important;}
+    .d-inline-flex {
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+* Ensure buttons don't wrap */
+.btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+/* Remove any mobile breakpoints that force stacking */
+@media (max-width: 768px) {
+    .table .btn {
+        display: inline-block !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .d-inline-flex {
+        flex-direction: row !important;
+    }
+    
+    /* Make table horizontally scrollable on mobile instead of stacking buttons */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* For very small screens, reduce button padding but keep in one line */
+@media (max-width: 480px) {
+    .btn-sm {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .badge {
+        font-size: 0.7rem !important;
+    }
+}
+/* Responsive behavior for very small screens */
+@media (max-width: 768px) {
+    .btn-group-vertical.btn-group-sm {
+        flex-direction: column !important;
+    }
+    
+    .btn-group-vertical.btn-group-sm .btn {
+        width: 100%;
+        margin-bottom: 2px !important;
+    }
+}
+
+/* Specific fix for action buttons */
+.table .btn {
+    margin: 1px;
+    white-space: nowrap;
+}
 </style>
 
 <div class="container-fluid">
@@ -1378,7 +1474,7 @@ body {
     
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header text-white" style="background-color:#ce7e00;">
             <h5 class="mb-0"><?php echo t('filter_options');?></h5>
         </div>
         <div class="card-body">
@@ -1511,35 +1607,39 @@ body {
                                     <td><?php echo $user['phone_number'] ?? 'N/A'; ?></td>
                                     <td><?php echo $user['email']; ?></td>
                                     <td>
-                                        <button class="btn btn-sm btn-warning edit-user" 
-                                            data-id="<?php echo $user['id']; ?>"
-                                            data-username="<?php echo $user['username']; ?>"
-                                            data-user_type="<?php echo $user['user_type']; ?>"
-                                            data-phone_number="<?php echo $user['phone_number']; ?>"
-                                            data-email="<?php echo $user['email']; ?>"
-                                            data-picture="<?php echo isset($user['picture']) ? '1' : '0'; ?>">
-                                            <i class="bi bi-pencil"></i> <?php echo t('update_button')?>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger delete-user" 
-                                            data-id="<?php echo $user['id']; ?>"
-                                            data-username="<?php echo htmlspecialchars($user['username']); ?>">
-                                            <i class="bi bi-trash"></i> <?php echo t('delete_button')?>
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <?php 
-                                        $is_blocked = $user['is_blocked'] ?? false;
-                                        if ($is_blocked): ?>
-                                            <span class="badge bg-danger"><?php echo t('block_status')?></span>
-                                            <button class="btn btn-sm btn-success unblock-user" 
-                                                    data-id="<?php echo $user['id']; ?>"
-                                                    data-username="<?php echo htmlspecialchars($user['username']); ?>">
-                                                <i class="bi bi-unlock"></i> <?php echo t('unblock_button')?>
-                                            </button>
-                                        <?php else: ?>
-                                            <span class="badge bg-success"><?php echo t('active_status')?></span>
-                                        <?php endif; ?>
-                                    </td>
+    <div class="d-inline-flex gap-1 align-items-center">
+        <button class="btn btn-sm btn-warning edit-user" 
+            data-id="<?php echo $user['id']; ?>"
+            data-username="<?php echo $user['username']; ?>"
+            data-user_type="<?php echo $user['user_type']; ?>"
+            data-phone_number="<?php echo $user['phone_number']; ?>"
+            data-email="<?php echo $user['email']; ?>"
+            data-picture="<?php echo isset($user['picture']) ? '1' : '0'; ?>">
+            <i class="bi bi-pencil"></i> <?php echo t('update_button')?>
+        </button>
+        <button class="btn btn-sm btn-danger delete-user" 
+            data-id="<?php echo $user['id']; ?>"
+            data-username="<?php echo htmlspecialchars($user['username']); ?>">
+            <i class="bi bi-trash"></i> <?php echo t('delete_button')?>
+        </button>
+    </div>
+</td>
+<td>
+    <div class="d-inline-flex gap-1 align-items-center">
+        <?php 
+        $is_blocked = $user['is_blocked'] ?? false;
+        if ($is_blocked): ?>
+            <span class="badge bg-danger"><?php echo t('block_status')?></span>
+            <button class="btn btn-sm btn-success unblock-user" 
+                    data-id="<?php echo $user['id']; ?>"
+                    data-username="<?php echo htmlspecialchars($user['username']); ?>">
+                <i class="bi bi-unlock"></i> <?php echo t('unblock_button')?>
+            </button>
+        <?php else: ?>
+            <span class="badge bg-success"><?php echo t('active_status')?></span>
+        <?php endif; ?>
+    </div>
+</td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>

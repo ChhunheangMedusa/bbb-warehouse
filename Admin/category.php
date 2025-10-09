@@ -813,6 +813,65 @@ body {
         flex: 1;
     }
 }
+/* Force all table buttons to stay in one line */
+.table td {
+    white-space: nowrap !important;
+}
+
+.d-inline-flex {
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+/* Ensure buttons don't wrap */
+.btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+.flex-nowrap {
+    flex-wrap: nowrap !important;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0 !important;
+}
+
+/* Remove any mobile breakpoints that force stacking */
+@media (max-width: 767.98px) {
+    .table .btn {
+        display: inline-block !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .d-inline-flex {
+        flex-direction: row !important;
+    }
+    
+    /* Make table horizontally scrollable on mobile instead of stacking buttons */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Remove the stacking rule for action buttons */
+    .table td:last-child .btn {
+        display: inline-block !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+}
+
+/* For very small screens, reduce button padding but keep in one line */
+@media (max-width: 480px) {
+    .btn-sm {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.75rem !important;
+    }
+}
+
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('category_management'); ?></h2>
@@ -825,7 +884,7 @@ body {
 </div>
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
+        <div class="card-header text-white" style="background-color:#775144;">
             <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
         </div>
         <div class="card-body">
@@ -885,7 +944,7 @@ body {
     </div>
     
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#775144;">
             <h5 class="mb-0"><?php echo t('category_list'); ?></h5>
             <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
                 <i class="bi bi-plus-circle"></i> <?php echo t('add_category'); ?>
@@ -923,19 +982,20 @@ body {
     </a>
 </td>
                                  
-                                    <td>
-                                        <button class="btn btn-sm btn-warning edit-category" 
-                                                data-id="<?php echo $category['id']; ?>"
-                                                data-name="<?php echo $category['name']; ?>"
-                                                >
-                                            <i class="bi bi-pencil"></i> <?php echo t('update_button'); ?>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger delete-category"
-                                                data-id="<?php echo $category['id']; ?>"
-                                                data-name="<?php echo $category['name']; ?>">
-                                            <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
-                                        </button>
-                                    </td>
+<td>
+    <div class="d-inline-flex gap-1 align-items-center flex-nowrap">
+        <button class="btn btn-sm btn-warning edit-category flex-shrink-0" 
+                data-id="<?php echo $category['id']; ?>"
+                data-name="<?php echo $category['name']; ?>">
+            <i class="bi bi-pencil"></i> <?php echo t('update_button'); ?>
+        </button>
+        <button class="btn btn-sm btn-danger delete-category flex-shrink-0"
+                data-id="<?php echo $category['id']; ?>"
+                data-name="<?php echo $category['name']; ?>">
+            <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
+        </button>
+    </div>
+</td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

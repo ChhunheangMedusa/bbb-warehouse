@@ -942,13 +942,71 @@ body {
         flex: 1;
     }
 }
+/* Force all table buttons to stay in one line */
+.table td {
+    white-space: nowrap !important;
+}
+
+.d-inline-flex {
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+/* Ensure buttons don't wrap */
+.btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+.flex-nowrap {
+    flex-wrap: nowrap !important;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0 !important;
+}
+
+/* Remove any mobile breakpoints that force stacking */
+@media (max-width: 767.98px) {
+    .table .btn {
+        display: inline-block !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .d-inline-flex {
+        flex-direction: row !important;
+    }
+    
+    /* Make table horizontally scrollable on mobile instead of stacking buttons */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Remove the stacking rule for action buttons */
+    .table td:last-child .btn {
+        display: inline-block !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+}
+
+/* For very small screens, reduce button padding but keep in one line */
+@media (max-width: 480px) {
+    .btn-sm {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.75rem !important;
+    }
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"> <?php echo t('location_title');?></h2>
     
     <!-- Filter Card -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+    <div class="card mb-4"> 
+        <div class="card-header text-white" style="background-color:#415A77;"> 
             <h5 class="mb-0"><?php echo t('filter_options');?></h5>
         </div>
         <div class="card-body">
@@ -1008,7 +1066,7 @@ body {
     </div>
     
     <div class="card mb-4">
-        <div class="card-header text-white" style="background-color:#674ea7;">
+        <div class="card-header text-white" style="background-color:#415A77;">
             <button class="btn btn-light btn-sm float-end" data-bs-toggle="modal" data-bs-target="#addLocationModal">
                 <i class="bi bi-plus-circle"></i> <?php echo t('add_location');?>
             </button>
@@ -1071,19 +1129,21 @@ body {
         <?php echo $location['type']; ?>
     </a>
 </td>
-                                    <td>
-    <button class="btn btn-sm btn-warning edit-location" 
-            data-id="<?php echo $location['id']; ?>"
-            data-name="<?php echo $location['name']; ?>"
-            data-type="<?php echo $location['type']; ?>">
-        <i class="bi bi-pencil"></i> <?php echo t('update_button');?>
-    </button>
-    <button class="btn btn-sm btn-danger delete-location" 
-            data-id="<?php echo $location['id']; ?>"
-            data-name="<?php echo $location['name']; ?>"
-            data-type="<?php echo $location['type']; ?>">
-        <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
-    </button>
+<td>
+    <div class="d-inline-flex gap-1 align-items-center flex-nowrap">
+        <button class="btn btn-sm btn-warning edit-location flex-shrink-0" 
+                data-id="<?php echo $location['id']; ?>"
+                data-name="<?php echo $location['name']; ?>"
+                data-type="<?php echo $location['type']; ?>">
+            <i class="bi bi-pencil"></i> <?php echo t('update_button');?>
+        </button>
+        <button class="btn btn-sm btn-danger delete-location flex-shrink-0" 
+                data-id="<?php echo $location['id']; ?>"
+                data-name="<?php echo $location['name']; ?>"
+                data-type="<?php echo $location['type']; ?>">
+            <i class="bi bi-trash"></i> <?php echo t('delete_button');?>
+        </button>
+    </div>
 </td>
                                 </tr>
                             <?php endforeach; ?>

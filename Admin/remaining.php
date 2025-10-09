@@ -811,10 +811,19 @@ body {
 
 /* Button Styles */
 .btn {
-  border-radius: 0.35rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  transition: all 0.2s;
+    border-radius: 0.35rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    font-size: 0.875rem;
+    min-height: auto;
 }
 
 
@@ -1149,10 +1158,19 @@ body {
 
 /* Button Styles */
 .btn {
-  border-radius: 0.35rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  transition: all 0.2s;
+    border-radius: 0.35rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    font-size: 0.875rem;
+    min-height: auto;
 }
 
 
@@ -1190,11 +1208,23 @@ body {
 
 /* Specifically allow the action column to expand */
 .table td:last-child {
-    overflow: visible;
-    white-space: normal;
-    text-overflow: clip;
-    max-width: none;
-    min-width: 150px; /* Ensure enough space for buttons */
+    min-width: 280px !important; /* Increased width for 3 buttons */
+    max-width: 300px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+}
+.table td:last-child .btn {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    margin: 0 2px !important;
+    min-width: 70px !important; /* Fixed minimum width */
+    padding: 0.375rem 0.5rem !important; /* Smaller padding */
+    font-size: 0.75rem !important; /* Smaller font */
+}
+.table .btn-sm {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
 }
 table th{
     white-space: nowrap;
@@ -1532,8 +1562,8 @@ table th{
 @media (max-width: 768px) {
     /* Make buttons full width */
     .btn {
-        width: 100%;
-        margin-bottom: 5px;
+      
+        margin-bottom: 0.5rem;
     }
     
     /* Adjust card padding */
@@ -1564,7 +1594,32 @@ table th{
         margin-bottom: 10px;
     }
 }
+/* Specific button variants */
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+    background-color: transparent;
+}
 
+.btn-outline-primary:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
 /* Prevent text input zoom on iOS */
 @media screen and (-webkit-min-device-pixel-ratio:0) {
     select:focus,
@@ -1699,7 +1754,7 @@ table th{
 
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header text-white" style="background-color:#797d62;">
             <h5 class="mb-0"><?php echo t('filter_options');?></h5>
         </div>
         <div class="card-body">
@@ -1812,7 +1867,7 @@ table th{
     
     <!-- Data Card -->
     <div class="card mb-4">
-        <div class="card-header text-white" style="background-color:#674ea7;">
+        <div class="card-header text-white" style="background-color:#797d62;">
 
             <h5 class="mb-0"><?php echo t('item_list');?></h5>
         </div>

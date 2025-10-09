@@ -1328,6 +1328,97 @@ table th{
         flex: 1;
     }
 }
+/* Add More Row Button - Responsive */
+#add-broken-more-row {
+    width: auto;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    margin-bottom: 1rem;
+}
+
+/* Mobile responsiveness for Add More Row button */
+@media (max-width: 768px) {
+    #add-broken-more-row {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Ensure the button container is full width on mobile */
+    #broken_items_container + button {
+        width: 100%;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 576px) {
+    #add-broken-more-row {
+        padding: 0.875rem 1rem;
+        font-size: 1.1rem;
+    }
+    
+    /* Make the button text more readable on small screens */
+    #add-broken-more-row .bi {
+        margin-right: 0.5rem;
+    }
+}
+/* Responsive styles for broken item rows */
+.broken-item-row {
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 0.35rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+}
+
+/* Mobile styles for broken item rows */
+@media (max-width: 768px) {
+    .broken-item-row {
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .broken-item-row .row {
+        margin-bottom: 0.5rem;
+    }
+    
+    .broken-item-row .col-md-6,
+    .broken-item-row .col-md-3,
+    .broken-item-row .col-md-4,
+    .broken-item-row .col-md-8 {
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Make form controls full width on mobile */
+    .broken-item-row .form-control,
+    .broken-item-row .form-select {
+        width: 100%;
+    }
+    
+    /* Adjust remove button position for mobile */
+    .broken-item-row .remove-row-btn {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+    .broken-item-row {
+        padding: 0.5rem;
+    }
+    
+    .broken-item-row .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+}
 </style>
 
 <div class="container-fluid">
@@ -1413,14 +1504,14 @@ table th{
                     <?php endforeach; ?>
                 </select>
                         </div>
-                        <div class="action-buttons">
-                            <button type="submit" class="btn btn-danger">
-                               <?php echo t('search'); ?>
-                            </button>
-                            <a href="broken-items.php" class="btn btn-secondary">
-                               <?php echo t('reset'); ?>
-                            </a>
-                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+    <button type="submit" class="btn btn-danger me-2">
+        <?php echo t('search'); ?>
+    </button>
+    <a href="broken-items.php" class="btn btn-secondary">
+        <?php echo t('reset'); ?>
+    </a>
+</div>
                     </form>
                 </div>
             </div>
@@ -1890,56 +1981,75 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Image gallery functionality
     const imageGalleryModal = document.getElementById('imageGalleryModal');
-    if (imageGalleryModal) {
-        imageGalleryModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const itemId = button.getAttribute('data-item-id');
-            const carouselInner = document.getElementById('carousel-inner');
-            
-            // Clear previous images
-            carouselInner.innerHTML = '';
-            
-            // Fetch images for this item
-            fetch(`get_item_images.php?item_id=${itemId}`)
-                .then(response => response.json())
-                .then(images => {
-                    if (images.length > 0) {
-                        images.forEach((image, index) => {
-                            const carouselItem = document.createElement('div');
-                            carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-                            
-                            const img = document.createElement('img');
-                            img.src = `display_image.php?id=${image.id}`;
-                            img.className = 'd-block w-100';
-                            img.alt = 'Item image';
-                            img.style.maxHeight = '500px';
-                            img.style.objectFit = 'contain';
-                            
-                            carouselItem.appendChild(img);
-                            carouselInner.appendChild(carouselItem);
-                        });
-                    } else {
-                        carouselInner.innerHTML = `
-                            <div class="carousel-item active">
-                                <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
-                                    <p class="text-muted"><?php echo t('no_images_available'); ?></p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching images:', error);
+if (imageGalleryModal) {
+    imageGalleryModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const itemId = button.getAttribute('data-item-id');
+        const carouselInner = document.getElementById('carousel-inner');
+        
+        // Clear previous images
+        carouselInner.innerHTML = '';
+        
+        // Show loading state
+        carouselInner.innerHTML = `
+            <div class="carousel-item active">
+                <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Fetch images for this item - FIXED: using correct parameter name
+        fetch(`get_item_images.php?id=${itemId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(images => {
+                carouselInner.innerHTML = '';
+                
+                if (images && images.length > 0) {
+                    images.forEach((image, index) => {
+                        const carouselItem = document.createElement('div');
+                        carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+                        
+                        const img = document.createElement('img');
+                        img.src = `display_image.php?id=${image.id}`;
+                        img.className = 'd-block w-100';
+                        img.alt = 'Item image';
+                        img.style.maxHeight = '500px';
+                        img.style.objectFit = 'contain';
+                        
+                        carouselItem.appendChild(img);
+                        carouselInner.appendChild(carouselItem);
+                    });
+                } else {
                     carouselInner.innerHTML = `
                         <div class="carousel-item active">
                             <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
-                                <p class="text-danger"><?php echo t('error_loading_images'); ?></p>
+                                <p class="text-muted"><?php echo t('no_images_available'); ?></p>
                             </div>
                         </div>
                     `;
-                });
-        });
-    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching images:', error);
+                carouselInner.innerHTML = `
+                    <div class="carousel-item active">
+                        <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
+                            <p class="text-danger"><?php echo t('error_loading_images'); ?></p>
+                            <small class="d-block text-muted">Error: ${error.message}</small>
+                        </div>
+                    </div>
+                `;
+            });
+    });
+}
     
     // Per page select change
     const perPageSelect = document.getElementById('per_page_select');

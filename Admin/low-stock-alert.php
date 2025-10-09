@@ -721,7 +721,7 @@ body {
 
     <!-- Filter Section -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header bg-danger text-white">
             <h5 class="mb-0"><?php echo t('filter_options');?></h5>
         </div>
         <div class="card-body">

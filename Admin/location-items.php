@@ -60,9 +60,13 @@ $offset = ($currentPage - 1) * $itemsPerPage;
 
 // Build query for items with filters
 $query = "
-    SELECT i.id, i.name, i.invoice_no, i.quantity, i.status, i.size, i.remark, i.created_at as date_added, 
+    SELECT i.id, i.item_code, i.category_id, i.deporty_id, i.invoice_no, i.date, 
+           i.name, i.quantity, i.size, i.remark, i.created_at,
+           c.name as category_name, d.name as deporty_name,
            ii.image_path as image_data
     FROM items i 
+    LEFT JOIN categories c ON i.category_id = c.id
+    LEFT JOIN deporty d ON i.deporty_id = d.id
     LEFT JOIN item_images ii ON i.id = ii.item_id
     WHERE i.location_id = :location_id
 ";
@@ -554,7 +558,54 @@ body {
         }
     }
 }
+/* Table responsive styles */
+.table-responsive {
+    overflow-x: auto;
+}
 
+/* Make table cells single line by default */
+.table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+/* Specifically allow the action column to expand */
+.table td:last-child {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+    max-width: none;
+}
+
+table th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.75rem 0.5rem;
+    line-height: 1.2;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    table th {
+        padding: 0.5rem 0.3rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Hide less important columns on very small screens */
+    @media (max-width: 480px) {
+        .table td:nth-child(2), /* Item Code */
+        .table th:nth-child(2),
+        .table td:nth-child(3), /* Category */
+        .table th:nth-child(3),
+        .table td:nth-child(9), /* Supplier */
+        .table th:nth-child(9) {
+            display: none;
+        }
+    }
+}
 /* Filter section styles */
 .filter-section {
     background-color: #f8f9fa;
@@ -643,7 +694,7 @@ body {
 
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header text-white"style="background-color:#415A77;">
             <h5 class="mb-0"><?php echo t('filter_options');?></h5>
         </div>
         <div class="card-body">
@@ -698,15 +749,7 @@ body {
     </div>
     
     <div class="card mb-4">
-    <div class="card-header <?php 
-        if ($location['type'] == 'Construction Site') {
-            echo 'bg-success';
-        } elseif ($location['type'] == 'Repair') {
-            echo 'bg-warning';
-        } else {
-            echo 'bg-primary';
-        }
-    ?> text-white">
+    <div class="card-header text-white"style="background-color:#415A77;">
         <h5 class="mb-0"><?php echo t('item_list');?></h5>
     </div>
         <div class="card-body">
@@ -728,50 +771,56 @@ body {
             
             <div class="table-responsive">
                 <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th><?php echo t('item_no');?></th>
-                            <th><?php echo t('item_date');?></th>
-                            <th><?php echo t('item_invoice');?></th>
-                            <th><?php echo t('item_name');?></th>
-                            <th><?php echo t('item_qty');?></th>
-                            <th><?php echo t('item_size');?></th>
-                            <th><?php echo t('item_remark');?></th>
-                            <th><?php echo t('item_photo');?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($items)): ?>
-                            <tr>
-                                <td colspan="8" class="text-center"><?php echo t('no_item_location');?></td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($items as $index => $item): ?>
-                                <tr>
-                                    <td><?php echo $index + 1 + $offset; ?></td>
-                                    <td><?php echo htmlspecialchars($item['date_added'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($item['invoice_no'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($item['name'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($item['quantity'] ?? '0'); ?></td>
-                                    <td><?php echo htmlspecialchars($item['size'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($item['remark'] ?? 'N/A'); ?></td>
-                                    <td>
-                                        <?php if (!empty($item['image_data'])): ?>
-                                            <img src="data:image/jpeg;base64,<?php echo base64_encode($item['image_data']); ?>" 
-                                                 alt="<?php echo htmlspecialchars($item['name']); ?>" 
-                                                 class="img-thumbnail" 
-                                                 width="50"
-                                                 data-bs-toggle="modal" 
-                                                 data-bs-target="#imageGalleryModal"
-                                                 data-item-id="<?php echo $item['id']; ?>">
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary"><?php echo t('no_image');?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
+                <thead>
+    <tr>
+        <th><?php echo t('item_no');?></th>
+        <th><?php echo t('item_code');?></th>
+        <th><?php echo t('category');?></th>
+        <th><?php echo t('item_invoice');?></th>
+        <th><?php echo t('item_date');?></th>
+        <th><?php echo t('item_name');?></th>
+        <th><?php echo t('item_qty');?></th>
+        <th><?php echo t('item_size');?></th>
+        <th><?php echo t('deporty');?></th>
+        <th><?php echo t('item_remark');?></th>
+        <th><?php echo t('item_photo');?></th>
+    </tr>
+</thead>
+<tbody>
+    <?php if (empty($items)): ?>
+        <tr>
+            <td colspan="11" class="text-center"><?php echo t('no_item_location');?></td>
+        </tr>
+    <?php else: ?>
+        <?php foreach ($items as $index => $item): ?>
+            <tr>
+                <td><?php echo $index + 1 + $offset; ?></td>
+                <td><?php echo htmlspecialchars($item['item_code'] ?: 'N/A'); ?></td>
+                <td><?php echo htmlspecialchars($item['category_name'] ?: 'N/A'); ?></td>
+                <td><?php echo htmlspecialchars($item['invoice_no'] ?? 'N/A'); ?></td>
+                <td><?php echo htmlspecialchars($item['date'] ?? 'N/A'); ?></td>
+                <td><?php echo htmlspecialchars($item['name'] ?? 'N/A'); ?></td>
+                <td><?php echo htmlspecialchars($item['quantity'] ?? '0'); ?></td>
+                <td><?php echo htmlspecialchars($item['size'] ?? 'N/A'); ?></td>
+                <td><?php echo htmlspecialchars($item['deporty_name'] ?: 'N/A'); ?></td>
+                <td><?php echo htmlspecialchars($item['remark'] ?? 'N/A'); ?></td>
+                <td>
+                    <?php if (!empty($item['image_data'])): ?>
+                        <img src="data:image/jpeg;base64,<?php echo base64_encode($item['image_data']); ?>" 
+                             alt="<?php echo htmlspecialchars($item['name']); ?>" 
+                             class="img-thumbnail" 
+                             width="50"
+                             data-bs-toggle="modal" 
+                             data-bs-target="#imageGalleryModal"
+                             data-item-id="<?php echo $item['id']; ?>">
+                    <?php else: ?>
+                        <span class="badge bg-secondary"><?php echo t('no_image');?></span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</tbody>
                 </table>
             </div>
 
@@ -851,7 +900,28 @@ body {
         </div>
     </div>
 </div>
-
+<!-- Image Gallery Modal -->
+<div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-labelledby="imageGalleryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageGalleryModalLabel"><?php echo t('item_photo'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="" class="img-fluid" style="max-height: 70vh;">
+                <div id="imageNavigation" class="mt-3" style="display: none;">
+                    <button id="prevImage" class="btn btn-primary btn-sm"><?php echo t('previous'); ?></button>
+                    <span id="imageCounter" class="mx-3"></span>
+                    <button id="nextImage" class="btn btn-primary btn-sm"><?php echo t('next'); ?></button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('close'); ?></button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Handle entries per page change
@@ -865,6 +935,117 @@ body {
         });
     }
 });
+// Image gallery functionality
+const imageGalleryModal = document.getElementById('imageGalleryModal');
+    const modalImage = document.getElementById('modalImage');
+    const imageNavigation = document.getElementById('imageNavigation');
+    const prevImageBtn = document.getElementById('prevImage');
+    const nextImageBtn = document.getElementById('nextImage');
+    const imageCounter = document.getElementById('imageCounter');
+
+    let currentImages = [];
+    let currentImageIndex = 0;
+    let currentItemId = null;
+
+    // Handle image click
+    document.querySelectorAll('.img-thumbnail[data-item-id]').forEach(img => {
+        img.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-item-id');
+            currentItemId = itemId;
+            loadItemImages(itemId);
+        });
+    });
+
+    // Load images for the clicked item
+    function loadItemImages(itemId) {
+        fetch(`get_item_images.php?id=${itemId}`)
+            .then(response => response.json())
+            .then(images => {
+                currentImages = images;
+                currentImageIndex = 0;
+                
+                if (images.length > 0) {
+                    showImage(0);
+                    if (images.length > 1) {
+                        imageNavigation.style.display = 'block';
+                        updateNavigation();
+                    } else {
+                        imageNavigation.style.display = 'none';
+                    }
+                } else {
+                    // Fallback to the thumbnail image if no separate images found
+                    const thumbnail = document.querySelector(`.img-thumbnail[data-item-id="${itemId}"]`);
+                    if (thumbnail) {
+                        modalImage.src = thumbnail.src;
+                        modalImage.alt = thumbnail.alt;
+                        imageNavigation.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading images:', error);
+                // Fallback to thumbnail
+                const thumbnail = document.querySelector(`.img-thumbnail[data-item-id="${itemId}"]`);
+                if (thumbnail) {
+                    modalImage.src = thumbnail.src;
+                    modalImage.alt = thumbnail.alt;
+                }
+                imageNavigation.style.display = 'none';
+            });
+    }
+
+    // Show specific image
+    function showImage(index) {
+        if (currentImages.length > 0 && index >= 0 && index < currentImages.length) {
+            const imageId = currentImages[index].id;
+            modalImage.src = `get_image.php?id=${imageId}`;
+            modalImage.alt = `Item Image ${index + 1}`;
+            currentImageIndex = index;
+            updateNavigation();
+        }
+    }
+
+    // Update navigation buttons and counter
+    function updateNavigation() {
+        imageCounter.textContent = `${currentImageIndex + 1} / ${currentImages.length}`;
+        prevImageBtn.disabled = currentImageIndex === 0;
+        nextImageBtn.disabled = currentImageIndex === currentImages.length - 1;
+    }
+
+    // Navigation event listeners
+    prevImageBtn.addEventListener('click', function() {
+        if (currentImageIndex > 0) {
+            showImage(currentImageIndex - 1);
+        }
+    });
+
+    nextImageBtn.addEventListener('click', function() {
+        if (currentImageIndex < currentImages.length - 1) {
+            showImage(currentImageIndex + 1);
+        }
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (imageGalleryModal.classList.contains('show')) {
+            if (e.key === 'ArrowLeft') {
+                prevImageBtn.click();
+            } else if (e.key === 'ArrowRight') {
+                nextImageBtn.click();
+            } else if (e.key === 'Escape') {
+                bootstrap.Modal.getInstance(imageGalleryModal).hide();
+            }
+        }
+    });
+
+    // Reset when modal is closed
+    imageGalleryModal.addEventListener('hidden.bs.modal', function() {
+        currentImages = [];
+        currentImageIndex = 0;
+        currentItemId = null;
+        modalImage.src = '';
+        imageNavigation.style.display = 'none';
+    });
 </script>
 <?php
 require_once '../includes/footer.php';

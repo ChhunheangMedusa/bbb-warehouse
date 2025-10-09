@@ -179,8 +179,8 @@ $today_repairs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <style>
     :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
+  --primary: #0d6efd;
+  --primary-dark:#0d6efd ;
   --primary-light: #f8f9fc;
   --secondary: #858796;
   --success: #1cc88a;
@@ -525,8 +525,8 @@ body {
 
 
     :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
+  --primary: #0d6efd;
+  --primary-dark: #0d6efd;
   --primary-light: #f8f9fc;
   --secondary: #858796;
   --success: #1cc88a;

@@ -424,7 +424,7 @@ $translations = [
 'no_items_found_for_search' => 'មិនមានសម្ភារៈត្រូវបានរកឃើញនោះទេ',
 'price_low_high'=>'តម្លៃ (ទាប-ខ្ពស់)',
 'price_high_low'=>'តម្លៃ (ខ្ពស់-ទាប)',
-'price'=>'តម្លៃ',
+'price'=>'តម្លៃរាយ',
 'sub_total'=>'តម្លៃសរុប',
 'store_inventory'=>'តារាងតម្លៃសម្ភារៈ',
 'reports'=>'របាយការណ៍',
@@ -461,11 +461,13 @@ $translations = [
 'stockout'=>'ស្តុកចេញ',
 'deporty_deleted_success'=>'អ្នកផ្គត់ផ្គង់ត្រូវបានលុបដោយជោគជ័យ',
 'names'=>'ឈ្មោះ',
-'broken_qty'=>'បរិមាណខូច'
+'broken_qty'=>'បរិមាណខូច',
+'status_transfer'=>'ផ្ទេរ',
     ],
 
 
     'en' => [
+        'status_transfer'=>'Transfer',
         'broken_qty'=>'Broken Qty',
         'names'=>'Name',
         'deporty_deleted_success'=>'Supplier deleted successfully',
@@ -502,7 +504,7 @@ $translations = [
         'reports'=>'Report',
         'store_inventory'=>'Price List',
         'sub_total'=>'Total',
-        'price'=>'Price',
+        'price'=>'Price/Unit',
 'price_low_high'=>'Price (Low-High)',
 'price_high_low'=>'Price (High-Low)',
         // Add these to your translation array

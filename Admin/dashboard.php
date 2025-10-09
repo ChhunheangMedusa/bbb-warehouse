@@ -179,8 +179,8 @@ $today_repairs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <style>
     :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
+  --primary: #0d6efd;
+  --primary-dark: #0d6efd;
   --primary-light: #f8f9fc;
   --secondary: #858796;
   --success: #1cc88a;
@@ -326,13 +326,13 @@ body {
 }
 
 .btn-outline-primary {
-  color: var(--primary);
-  border-color: var(--primary);
+  color: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 .btn-outline-primary:hover {
-  background-color: var(--primary);
-  border-color: var(--primary);
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 /* Table Styles */
@@ -525,8 +525,8 @@ body {
 
 
     :root {
-  --primary: #4e73df;
-  --primary-dark: #2e59d9;
+  --primary: #0d6efd;
+  --primary-dark: #0d6efd;
   --primary-light: #f8f9fc;
   --secondary: #858796;
   --success: #1cc88a;
@@ -1051,15 +1051,15 @@ body {
         border-color: #ce7e00;
     }
     .btn-outline-purple {
-        color: #674ea7;
-        border-color: #674ea7;
+        color: #415A77;
+        border-color: #415A77;
         background-color: transparent;
     }
     
     .btn-outline-purple:hover {
         color: white;
-        background-color: #674ea7;
-        border-color: #674ea7;
+        background-color: #415A77;
+        border-color: #415A77;
     }
     .dashboard-container {
             max-width: 1200px;
@@ -1121,15 +1121,15 @@ body {
         }
 
         .btn-outline-purple {
-            color: #674ea7;
-            border-color: #674ea7;
+            color: #415A77;
+            border-color: #415A77;
             background-color: transparent;
         }
         
         .btn-outline-purple:hover {
             color: white;
-            background-color: #674ea7;
-            border-color: #674ea7;
+            background-color: #415A77;
+            border-color: #415A77;
         }
 
         .table-responsive {

@@ -1262,7 +1262,7 @@ table th{
 
     <!-- Filter Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header  text-white" style="background-color:#4f772d;">
             <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
         </div>
         <div class="card-body">
@@ -1319,17 +1319,21 @@ table th{
           
            
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary"><?php echo t('search'); ?></button>
-                    <a href="store.php" class="btn btn-secondary"><?php echo t('reset'); ?></a>
-                </div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+    <button type="submit" class="btn btn-primary flex-grow-1 flex-md-grow-0">
+        <?php echo t('search'); ?>
+    </button>
+    <a href="store.php" class="btn btn-secondary flex-grow-1 flex-md-grow-0">
+        <?php echo t('reset'); ?>
+    </a>
+</div>
             </form>
         </div>
     </div>
     
     <!-- Store Inventory Table -->
     <div class="card">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <div class="card-header text-white d-flex justify-content-between align-items-center"style="background-color:#4f772d;">
             <h5 class="mb-0"><?php echo t('store_inventory'); ?></h5>
             <!--   <span class="badge bg-light text-dark"><?php echo t('total_items'); ?>: <?php echo $total_items; ?></span>-->
         </div>

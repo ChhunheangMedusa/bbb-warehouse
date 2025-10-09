@@ -1651,7 +1651,7 @@ table th{
  
         <!-- Filter Card -->
             <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
                 </div>
                 
@@ -2000,7 +2000,7 @@ table th{
  
         <!-- Filter Card for History -->
             <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
                 </div>
                 <div class="card-body">
@@ -2121,7 +2121,7 @@ table th{
             
             <!-- Data Card for History -->
             <div class="card mb-4">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><?php echo t('repair_history'); ?></h5>
                 </div>
                 <div class="card-body">
@@ -2568,41 +2568,41 @@ table th{
                 <p><?php echo t('delete_warning'); ?></p>
             </div>
             <div class="modal-footer justify-content-center">
-                <form method="POST" id="deleteForm">
+                <form method="POST" id="deleteForm" class="w-100">
                     <input type="hidden" name="tab" value="<?php echo $active_tab; ?>">
                     <input type="hidden" name="delete_id" id="delete_id">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
-                    </button>
-                    <button type="submit" name="delete_repair_item" class="btn btn-danger">
-                        <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
-                    </button>
+                    <div class="d-flex justify-content-center gap-2 flex-nowrap">
+                        <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
+                        </button>
+                        <button type="submit" name="delete_repair_item" class="btn btn-danger flex-fill">
+                            <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Image Gallery Modal (same as in items.php) -->
-<div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
+<!-- Image Gallery Modal -->
+<div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-labelledby="imageGalleryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><?php echo t('item_photo'); ?></h5>
+                <h5 class="modal-title" id="imageGalleryModalLabel"><?php echo t('item_photo'); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <div id="carouselExample" class="carousel slide">
-                    <div class="carousel-inner" id="carousel-inner">
-                        <!-- Images will be loaded here via JavaScript -->
-                    </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    </button>
+                <img id="modalImage" src="" alt="" class="img-fluid" style="max-height: 70vh;">
+                <div id="imageNavigation" class="mt-3" style="display: none;">
+                    <button id="prevImage" class="btn btn-primary btn-sm"><?php echo t('previous'); ?></button>
+                    <span id="imageCounter" class="mx-3"></span>
+                    <button id="nextImage" class="btn btn-primary btn-sm"><?php echo t('next'); ?></button>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('close'); ?></button>
             </div>
         </div>
     </div>
@@ -2953,44 +2953,118 @@ document.querySelectorAll('.return-btn').forEach(btn => {
     });
 });
 
-// Image gallery functionality (same as in items.php)
-document.querySelectorAll('[data-bs-target="#imageGalleryModal"]').forEach(img => {
-    img.addEventListener('click', function() {
-        const itemId = this.getAttribute('data-item-id');
+// Image gallery functionality
+const imageGalleryModal = document.getElementById('imageGalleryModal');
+    const modalImage = document.getElementById('modalImage');
+    const imageNavigation = document.getElementById('imageNavigation');
+    const prevImageBtn = document.getElementById('prevImage');
+    const nextImageBtn = document.getElementById('nextImage');
+    const imageCounter = document.getElementById('imageCounter');
+
+    let currentImages = [];
+    let currentImageIndex = 0;
+    let currentItemId = null;
+
+    // Handle image click
+    document.querySelectorAll('.img-thumbnail[data-item-id]').forEach(img => {
+        img.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-item-id');
+            currentItemId = itemId;
+            loadItemImages(itemId);
+        });
+    });
+
+    // Load images for the clicked item
+    function loadItemImages(itemId) {
         fetch(`get_item_images.php?id=${itemId}`)
             .then(response => response.json())
             .then(images => {
-                const carouselInner = document.getElementById('carousel-inner');
-                carouselInner.innerHTML = '';
+                currentImages = images;
+                currentImageIndex = 0;
                 
                 if (images.length > 0) {
-                    images.forEach((image, index) => {
-                        const item = document.createElement('div');
-                        item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-                        
-                        const imgElement = document.createElement('img');
-                        imgElement.src = `display_image.php?id=${image.id}`;
-                        imgElement.className = 'd-block w-100';
-                        imgElement.alt = 'Item Image';
-                        imgElement.style.maxHeight = '70vh';
-                        imgElement.style.objectFit = 'contain';
-                        
-                        item.appendChild(imgElement);
-                        carouselInner.appendChild(item);
-                    });
+                    showImage(0);
+                    if (images.length > 1) {
+                        imageNavigation.style.display = 'block';
+                        updateNavigation();
+                    } else {
+                        imageNavigation.style.display = 'none';
+                    }
                 } else {
-                    carouselInner.innerHTML = `
-                        <div class="carousel-item active">
-                            <img src="assets/images/no-image.png" 
-                                 class="d-block w-100" 
-                                 alt="No image"
-                                 style="max-height: 70vh; object-fit: contain;">
-                        </div>
-                    `;
+                    // Fallback to the thumbnail image if no separate images found
+                    const thumbnail = document.querySelector(`.img-thumbnail[data-item-id="${itemId}"]`);
+                    if (thumbnail) {
+                        modalImage.src = thumbnail.src;
+                        modalImage.alt = thumbnail.alt;
+                        imageNavigation.style.display = 'none';
+                    }
                 }
+            })
+            .catch(error => {
+                console.error('Error loading images:', error);
+                // Fallback to thumbnail
+                const thumbnail = document.querySelector(`.img-thumbnail[data-item-id="${itemId}"]`);
+                if (thumbnail) {
+                    modalImage.src = thumbnail.src;
+                    modalImage.alt = thumbnail.alt;
+                }
+                imageNavigation.style.display = 'none';
             });
+    }
+
+    // Show specific image
+    function showImage(index) {
+        if (currentImages.length > 0 && index >= 0 && index < currentImages.length) {
+            const imageId = currentImages[index].id;
+            modalImage.src = `get_image.php?id=${imageId}`;
+            modalImage.alt = `Item Image ${index + 1}`;
+            currentImageIndex = index;
+            updateNavigation();
+        }
+    }
+
+    // Update navigation buttons and counter
+    function updateNavigation() {
+        imageCounter.textContent = `${currentImageIndex + 1} / ${currentImages.length}`;
+        prevImageBtn.disabled = currentImageIndex === 0;
+        nextImageBtn.disabled = currentImageIndex === currentImages.length - 1;
+    }
+
+    // Navigation event listeners
+    prevImageBtn.addEventListener('click', function() {
+        if (currentImageIndex > 0) {
+            showImage(currentImageIndex - 1);
+        }
     });
-});
+
+    nextImageBtn.addEventListener('click', function() {
+        if (currentImageIndex < currentImages.length - 1) {
+            showImage(currentImageIndex + 1);
+        }
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (imageGalleryModal.classList.contains('show')) {
+            if (e.key === 'ArrowLeft') {
+                prevImageBtn.click();
+            } else if (e.key === 'ArrowRight') {
+                nextImageBtn.click();
+            } else if (e.key === 'Escape') {
+                bootstrap.Modal.getInstance(imageGalleryModal).hide();
+            }
+        }
+    });
+
+    // Reset when modal is closed
+    imageGalleryModal.addEventListener('hidden.bs.modal', function() {
+        currentImages = [];
+        currentImageIndex = 0;
+        currentItemId = null;
+        modalImage.src = '';
+        imageNavigation.style.display = 'none';
+    });
+
 </script>
 
 <?php

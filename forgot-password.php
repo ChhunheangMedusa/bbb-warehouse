@@ -4,7 +4,7 @@ require_once 'includes/functions.php';
 require_once 'includes/auth.php';
 require_once 'includes/forgot.php';
 require 'vendor/autoload.php'; // Add this for PHPMailer
-
+require_once 'config/smtp.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -34,19 +34,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Send email using PHPMailer
         $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-        try {
-            // Server settings
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com'; // Gmail SMTP server
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'hgonlinestore678@gmail.com'; // Your Gmail address
-            $mail->Password   = 'jsvk vioj ehyp oltr'; // Use App Password if 2FA is enabled
-            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 587;
-            
-            // Recipients
-            $mail->setFrom('chhunheangxiaowu@gmail.com', 'B. Brilliant Builder Co., Ltd');
-            $mail->addAddress($email, $user['username']);
+try {
+    // Brevo SMTP settings
+    $mail->isSMTP();
+    $mail->Host       = SMTP_HOST;
+    $mail->SMTPAuth   = true;
+    $mail->Username   = SMTP_USERNAME;
+    $mail->Password   = SMTP_PASSWORD;
+    $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port       = SMTP_PORT;
+    
+    // Recipients
+    $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+    $mail->addAddress($email, $user['username']);
             
             // Content
             $mail->isHTML(true);

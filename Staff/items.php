@@ -1800,6 +1800,272 @@ input[name="invoice_no"] {
         flex: 1;
     }
 }
+/* Add this to your existing CSS in items.php */
+.card-header .d-inline-flex {
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+.card-header .btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+.card-header .flex-nowrap {
+    flex-wrap: nowrap !important;
+}
+
+.card-header .flex-shrink-0 {
+    flex-shrink: 0 !important;
+}
+
+/* Ensure buttons don't wrap on mobile */
+@media (max-width: 767.98px) {
+    .card-header {
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+    
+    .card-header .d-inline-flex {
+        flex-direction: row !important;
+        gap: 0.5rem !important;
+    }
+    
+    .card-header .btn {
+        padding: 0.375rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem !important;
+        margin-bottom: 0 !important;
+    }
+}
+
+/* For very small screens, reduce button padding but keep in one line */
+@media (max-width: 480px) {
+    .card-header .btn-sm {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .card-header h5 {
+        font-size: 0.9rem !important;
+    }
+}
+/* Responsive Modal Styles */
+.modal-dialog.modal-lg {
+    max-width: 95vw;
+    margin: 1rem auto;
+}
+
+/* Modal body responsive adjustments */
+.modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+/* Responsive form layout */
+.modal-body .row {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+}
+
+.modal-body .col-md-4,
+.modal-body .col-md-6,
+.modal-body .col-md-8,
+.modal-body .col-md-12 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+/* Stack form elements on mobile */
+@media (max-width: 768px) {
+    .modal-body .row > [class*="col-"] {
+        margin-bottom: 0.75rem;
+    }
+    
+    .modal-body .row {
+        flex-direction: column;
+    }
+    
+    .modal-body .col-md-4,
+    .modal-body .col-md-6,
+    .modal-body .col-md-8,
+    .modal-body .col-md-12 {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Reduce padding on mobile */
+    .modal-body {
+        padding: 0.75rem;
+        max-height: 60vh;
+    }
+    
+    /* Make form controls more touch-friendly */
+    .form-control,
+    .form-select {
+        padding: 0.75rem;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    /* Adjust modal header and footer */
+    .modal-header,
+    .modal-footer {
+        padding: 1rem 0.75rem;
+    }
+    
+    /* Stack buttons in footer on mobile */
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        margin: 0;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 576px) {
+    .modal-dialog.modal-lg {
+        max-width: 98vw;
+        margin: 0.5rem auto;
+    }
+    
+    .modal-content {
+        border-radius: 0.5rem;
+    }
+    
+    /* Reduce font sizes */
+    .modal-title {
+        font-size: 1.1rem;
+    }
+    
+    .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Compact item rows */
+    .item-row,
+    .add-qty-item-row,
+    .deduct-qty-item-row {
+        padding: 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    
+    /* Remove button sizing */
+    .remove-row {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Prevent horizontal overflow */
+.modal-body {
+    overflow-x: hidden;
+}
+
+/* Ensure dropdowns don't cause overflow */
+.dropdown-menu {
+    max-width: 100%;
+}
+
+.custom-dropdown-menu {
+    width: 100% !important;
+    min-width: auto !important;
+}
+
+/* Image preview responsive */
+.image-preview-container {
+    flex-wrap: wrap;
+}
+
+.image-preview-wrapper {
+    width: 80px;
+    height: 80px;
+    margin: 0.25rem;
+}
+
+/* Make tables in modals responsive */
+.modal-body .table-responsive {
+    font-size: 0.8rem;
+}
+
+/* Ensure no horizontal scroll on modals */
+.modal {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.modal-open .modal {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Fix for Bootstrap modal backdrop */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Ensure modal is centered and properly sized */
+.modal-dialog {
+    display: flex;
+    align-items: center;
+    min-height: calc(100% - 1rem);
+}
+
+@media (max-width: 768px) {
+    .modal-dialog {
+        min-height: calc(100% - 0.5rem);
+    }
+}
+/* Modal Size Control for Desktop */
+@media (min-width: 992px) {
+    /* Add Item Modal - Medium size */
+    #addItemModal .modal-dialog {
+        max-width: 800px;
+    }
+    
+    /* Add Quantity Modal - Smaller size */
+    #addQtyModal .modal-dialog {
+        max-width: 700px;
+    }
+    
+    /* Deduct Quantity Modal - Smaller size */
+    #deductQtyModal .modal-dialog {
+        max-width: 700px;
+    }
+}
+
+/* Ensure modals don't get too large on very wide screens */
+@media (min-width: 1400px) {
+    #addItemModal .modal-dialog {
+        max-width: 900px;
+    }
+    
+    #addQtyModal .modal-dialog,
+    #deductQtyModal .modal-dialog {
+        max-width: 750px;
+    }
+}
+
+/* Keep responsive behavior for smaller screens */
+@media (max-width: 991.98px) {
+    #addItemModal .modal-dialog,
+    #addQtyModal .modal-dialog,
+    #deductQtyModal .modal-dialog {
+        max-width: 95%;
+        margin: 1rem auto;
+    }
+}
 </style>
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('item_history'); ?></h2>
@@ -1907,14 +2173,14 @@ input[name="invoice_no"] {
             </select>
           
                              </div>
-                              <div class="action-buttons">
-                                  <button type="submit" class="btn btn-primary">
-                                   <?php echo t('search'); ?>
-                                  </button>
-                                  <a href="items.php?tab=in" class="btn btn-secondary">
-                                 <?php echo t('reset'); ?>
-                                  </a>
-                              </div>
+                             <div class="col-md-3 d-flex align-items-end">
+    <button type="submit" class="btn btn-primary me-2">
+        <?php echo t('search'); ?>
+    </button>
+    <a href="items.php?tab=in" class="btn btn-secondary">
+        <?php echo t('reset'); ?>
+    </a>
+</div>
                           </form>
                       </div>
                   </div>
@@ -1923,17 +2189,17 @@ input[name="invoice_no"] {
           
           <!-- Data Table Card -->
           <div class="card mb-4">
-              <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                  <h5 class="mb-0"><?php echo t('stock_in_history'); ?></h5>
-                  <div>
-                      <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                          <i class="bi bi-plus-circle"></i> <?php echo t('add_new_item'); ?>
-                      </button>
-                      <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addQtyModal">
-                          <i class="bi bi-plus-lg"></i> <?php echo t('add_qty'); ?>
-                      </button>
-                  </div>
-              </div>
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><?php echo t('stock_in_history'); ?></h5>
+        <div class="d-inline-flex gap-2 align-items-center flex-nowrap">
+            <button class="btn btn-light btn-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                <i class="bi bi-plus-circle"></i> <?php echo t('add_new_item'); ?>
+            </button>
+            <button class="btn btn-light btn-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#addQtyModal">
+                <i class="bi bi-plus-lg"></i> <?php echo t('add_qty'); ?>
+            </button>
+        </div>
+    </div>
               <div class="card-body">
                     
                     <div class="table-responsive">
@@ -2116,7 +2382,7 @@ input[name="invoice_no"] {
  
 </div>
           <div class="card mb-4">
-              <div class="card-header bg-primary text-white">
+              <div class="card-header bg-danger text-white">
                   <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
               </div>
 
@@ -2197,14 +2463,14 @@ input[name="invoice_no"] {
                 <?php endforeach; ?>
             </select>
                              </div>
-                              <div class="action-buttons">
-                                  <button type="submit" class="btn btn-primary">
-                                    <?php echo t('search'); ?>
-                                  </button>
-                                  <a href="items.php?tab=out" class="btn btn-secondary">
-                                      <?php echo t('reset'); ?>
-                                  </a>
-                              </div>
+                              <div class="col-md-3 d-flex align-items-end">
+    <button type="submit" class="btn btn-primary me-2">
+        <?php echo t('search'); ?>
+    </button>
+    <a href="items.php?tab=out" class="btn btn-secondary">
+        <?php echo t('reset'); ?>
+    </a>
+</div>
                           </form>
                       </div>
                   </div>
