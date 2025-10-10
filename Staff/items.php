@@ -1193,17 +1193,16 @@ body {
 /* Make all table cells single line by default */
 .table td {
     white-space: nowrap;
-    overflow: hidden;
+    overflow: visible;
     text-overflow: ellipsis;
-    max-width: 200px;
+    max-width: 300px;
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 /* Specifically allow the action column to expand */
 .table td:last-child {
-    overflow: visible;
-    white-space: normal;
-    text-overflow: clip;
-    max-width: none;
+
     min-width: 150px; /* Ensure enough space for buttons */
 }
 table th{
@@ -2265,7 +2264,24 @@ input[name="invoice_no"] {
                                             <td><?php echo $item['deporty_name'] ?: 'N/A'; ?></td>
 
                                             <td><?php echo $item['location_name']; ?></td>
-                                            <td><?php echo $item['remark']; ?></td>
+                                            <td>
+    <?php 
+    if ($item['action_type'] === 'transfer') {
+        // Extract location ID from remark and get location name
+        if (preg_match('/TRANSFER_FROM_(\d+)/', $item['remark'], $matches)) {
+            $from_location_id = $matches[1];
+            $stmt = $pdo->prepare("SELECT name FROM locations WHERE id = ?");
+            $stmt->execute([$from_location_id]);
+            $from_location = $stmt->fetch(PDO::FETCH_ASSOC);
+            echo "Transferred from: " . ($from_location ? $from_location['name'] : 'Unknown Location');
+        } else {
+            echo $item['remark'];
+        }
+    } else {
+        echo $item['remark'];
+    }
+    ?>
+</td>
                                             <td>
                                                 <?php if ($item['image_id']): ?>
                                                     <img src="display_image.php?id=<?php echo $item['image_id']; ?>" 

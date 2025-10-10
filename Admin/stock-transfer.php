@@ -100,36 +100,41 @@ try {
                 $item['size'],
                 $to_location_id,
                 $remark,
-                $deporty_id  // Include deporty_id here
+                $deporty_id
             ]);
             $destination_item_id = $pdo->lastInsertId();
+            
+            // Copy images from source item to destination item
+            $stmt = $pdo->prepare("INSERT INTO item_images (item_id, image_path) 
+                                   SELECT ?, image_path FROM item_images WHERE item_id = ?");
+            $stmt->execute([$destination_item_id, $item_id]);
         }
         
         // Record in stock_in_history for the destination location with transfer action type and deporty_id
-        $destination_item_id = $dest_item ? $dest_item['id'] : $pdo->lastInsertId();
-        $action_type = 'transfer';
+        $destination_item_id = $dest_item ? $dest_item['id'] : $destination_item_id;
+                $action_type = 'transfer';
         
         // Now record in stock_in_history with the CORRECT destination item ID and deporty_id
         $stmt = $pdo->prepare("INSERT INTO stock_in_history 
-            (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, deporty_id, remark, action_type, action_quantity, action_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $destination_item_id,
-            $item['item_code'],
-            $item['category_id'],
-            $invoice_no,
-            $date,
-            $item_name,
-            $dest_item ? ($dest_item['quantity'] + $quantity) : $quantity,
-            10,
-            $item['size'],
-            $to_location_id,
-            $deporty_id,  // Use the actual deporty_id
-            "TRANSFER_FROM_" . $from_location_id,
-            'transfer',
-            $quantity,
-            $_SESSION['user_id']
-        ]);
+    (item_id, item_code, category_id, invoice_no, date, name, quantity, alert_quantity, size, location_id, deporty_id, remark, action_type, action_quantity, action_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->execute([
+    $destination_item_id,
+    $item['item_code'],
+    $item['category_id'],
+    $invoice_no,
+    $date,
+    $item_name,
+    $dest_item ? ($dest_item['quantity'] + $quantity) : $quantity,
+    10,
+    $item['size'],
+    $to_location_id,
+    $deporty_id,
+    "TRANSFER_FROM_" . $from_location_id,
+    'transfer',
+    $quantity,
+    $_SESSION['user_id']
+]);
         
         // Record in transfer history with deporty_id
         $stmt = $pdo->prepare("INSERT INTO transfer_history 
