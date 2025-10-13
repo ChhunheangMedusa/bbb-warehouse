@@ -1896,14 +1896,14 @@ table th{
                                             <td class="action-buttons">
                                                 <?php if ($item['action_type'] == 'send_for_repair'): ?>
                                                     <button class="btn btn-success btn-sm return-btn" 
-                data-id="<?php echo $item['id']; ?>"
-                data-name="<?php echo $item['item_name']; ?>"
-                data-quantity="<?php echo $item['quantity']; ?>"
-                data-size="<?php echo $item['size']; ?>"
-                data-from-location="<?php echo $item['to_location_id']; ?>"
-                data-original-location="<?php echo $item['from_location_id']; ?>">
-            <i class="bi bi-arrow-return-left"></i> <?php echo t('return_back'); ?>
-        </button>
+    data-id="<?php echo $item['id']; ?>"
+    data-name="<?php echo $item['item_name']; ?>"
+    data-quantity="<?php echo $item['quantity']; ?>"
+    data-size="<?php echo $item['size']; ?>"
+    data-from-location="<?php echo $item['to_location_id']; ?>"
+    data-original-location="<?php echo $item['from_location_id']; ?>">
+    <i class="bi bi-arrow-return-left"></i> <?php echo t('return_back'); ?>
+</button>
                                                 <?php endif; ?>
                                                 <button class="btn btn-danger btn-sm delete-btn" 
                                                         data-id="<?php echo $item['id']; ?>"
@@ -2825,27 +2825,45 @@ document.getElementById('return_from_location_id').addEventListener('change', fu
     const locationId = this.value;
     const dropdowns = document.querySelectorAll('#return_repair_items_container .item-dropdown');
     
+    console.log('Return from location changed to:', locationId);
+    
     dropdowns.forEach(dropdown => {
         populateItemDropdown(dropdown, locationId, true);
     });
-    
-    // Auto-select the most logical destination
-    autoSelectReturnDestination(locationId);
 });
-// Function to auto-select the return destination
-function autoSelectReturnDestination(fromLocationId) {
+// Function to auto-select the return destination based on repair item data
+function autoSelectReturnDestination(fromLocationId, repairItemId = null) {
     const toLocationSelect = document.getElementById('return_to_location_id');
     
-    // If it's a repair location, try to find the most common destination
-    // You can customize this logic based on your business rules
-    if (fromLocationId) {
-        // Example: Select the first non-repair location as default
-        const nonRepairOptions = Array.from(toLocationSelect.options)
-            .filter(option => option.value && option.value !== '');
-        
-        if (nonRepairOptions.length > 0) {
-            toLocationSelect.value = nonRepairOptions[0].value;
-        }
+    if (repairItemId) {
+        // If we have a specific repair item ID, try to get its original location
+        // This would require an AJAX call to get the repair item details
+        fetch(`get_repair_item_details.php?id=${repairItemId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.from_location_id) {
+                    toLocationSelect.value = data.from_location_id;
+                } else {
+                    setDefaultReturnDestination(toLocationSelect);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching repair item details:', error);
+                setDefaultReturnDestination(toLocationSelect);
+            });
+    } else {
+        setDefaultReturnDestination(toLocationSelect);
+    }
+}
+
+// Set default return destination (first non-repair location)
+function setDefaultReturnDestination(toLocationSelect) {
+    const nonRepairOptions = Array.from(toLocationSelect.options)
+        .filter(option => option.value && option.value !== '');
+    
+    if (nonRepairOptions.length > 0) {
+        toLocationSelect.value = nonRepairOptions[0].value;
+        console.log('Set default to location:', nonRepairOptions[0].value);
     }
 }
 
@@ -2894,27 +2912,53 @@ document.querySelectorAll('.delete-btn').forEach(btn => {
     });
 });
 
-// Quick return button with auto-location detection
+// Quick return button with proper location detection
 document.querySelectorAll('.return-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const id = this.getAttribute('data-id');
         const name = this.getAttribute('data-name');
         const quantity = this.getAttribute('data-quantity');
         const size = this.getAttribute('data-size');
-        const fromLocation = this.getAttribute('data-from-location');
-        const originalLocation = this.getAttribute('data-original-location');
+        const fromLocation = this.getAttribute('data-from-location'); // Current repair location
+        const originalLocation = this.getAttribute('data-original-location'); // Original location
+        
+        console.log('Return button clicked:', {
+            id, name, quantity, size, fromLocation, originalLocation
+        });
+
         // Auto-detect and set locations
         document.getElementById('return_invoice_no').value = '';
         document.getElementById('return_date').valueAsDate = new Date();
         
-        // Auto-select from location (repair location)
-        document.getElementById('return_from_location_id').value = fromLocation;
-         // Auto-select to location (original location)
-         document.getElementById('return_to_location_id').value = originalLocation;
- 
-        // Trigger location change to populate items
-        document.getElementById('return_from_location_id').dispatchEvent(new Event('change'));
+        // Set FROM location (current repair location)
+        const fromLocationSelect = document.getElementById('return_from_location_id');
+        fromLocationSelect.value = fromLocation;
+        console.log('Set from location to:', fromLocation);
         
+        // Set TO location (original location where item came from)
+        const toLocationSelect = document.getElementById('return_to_location_id');
+        if (originalLocation && originalLocation !== '') {
+            toLocationSelect.value = originalLocation;
+            console.log('Set to location to original:', originalLocation);
+        } else {
+            // Fallback: try to get the original location from database
+            fetch(`get_repair_item_details.php?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.from_location_id) {
+                        toLocationSelect.value = data.from_location_id;
+                        console.log('Set to location from DB:', data.from_location_id);
+                    } else {
+                        // Final fallback: use first available location
+                        setDefaultReturnDestination(toLocationSelect);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching repair item details:', error);
+                    setDefaultReturnDestination(toLocationSelect);
+                });
+        }
+
         // Clear and add one row with the item
         const container = document.getElementById('return_repair_items_container');
         container.innerHTML = '';
@@ -2940,7 +2984,7 @@ document.querySelectorAll('.return-btn').forEach(btn => {
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label"><?php echo t('item_remark'); ?></label>
-                    <input type="text" class="form-control" name="remark[]">
+                    <input type="text" class="form-control" name="remark[]" placeholder="Return remark...">
                 </div>
             </div>
         `;
@@ -2950,6 +2994,12 @@ document.querySelectorAll('.return-btn').forEach(btn => {
         // Show the modal
         const modal = new bootstrap.Modal(document.getElementById('returnFromRepairModal'));
         modal.show();
+        
+        // Debug: Log current select values
+        setTimeout(() => {
+            console.log('After modal show - From location:', fromLocationSelect.value);
+            console.log('After modal show - To location:', toLocationSelect.value);
+        }, 100);
     });
 });
 
