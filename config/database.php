@@ -2,7 +2,7 @@
 $host = 'localhost';
 $dbname = 'u372764244_bbbstock';
 $username = 'u372764244_bbbstock';
-$password = 'bbbstock@warehouse';
+$password = 'Bbbstock@warehouse123';
 
 
 try {
