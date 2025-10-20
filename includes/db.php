@@ -1,8 +1,8 @@
 <?php
 $host = 'localhost';
-$db   = 'u372764244_warehousebbb';
-$user = 'u372764244_bbrilliant';
-$pass = 'Bbb@warehouse123';
+$db   = 'u372764244_bbbstock';
+$user = 'u372764244_bbbstock';
+$pass = 'bbbstock@warehouse';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
