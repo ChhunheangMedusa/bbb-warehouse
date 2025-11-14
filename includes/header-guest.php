@@ -182,7 +182,7 @@ $hasAvatar = ($userPicture !== null);
     <!-- Sidebar Navigation -->
 <div class="sidebar bg-gradient-primary">
     <div class="sidebar-brand text-center py-4">
-        <img src="../assets/images/white_logo.png" alt="Logo" class="sidebar-logo">
+       
         <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
     </div>
     <div class="sidebar-nav">
