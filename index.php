@@ -506,33 +506,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
         
-        <form method="POST" action="" id="loginForm">
-            <div class="form-group">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" required>
-                <i class="bi bi-person input-icon"></i>
-            </div>
-            
-            <div class="form-group" id="passwordGroup">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" minlength="8">
-                <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
-            </div>
-            
-            <div class="remember-me">
-                <input type="checkbox" id="remember" name="remember">
-                <label for="remember">Remember me</label>
-            </div>
-            
-            <button type="submit" class="btn-login" id="loginButton">
-                <i class="bi bi-box-arrow-in-right"></i> Login
-            </button>
-            
-            <div class="login-footer">
-                <a href="forgot-password.php">Forgot password?</a>
-               
-            </div>
-        </form>
+      <!-- Modify your form to help browsers recognize it as a login form -->
+<form method="POST" action="" id="loginForm" autocomplete="on">
+    <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" class="form-control" id="username" name="username" 
+               autocomplete="username" required>
+        <i class="bi bi-person input-icon"></i>
+    </div>
+    
+    <div class="form-group" id="passwordGroup">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" 
+               autocomplete="current-password" minlength="8">
+        <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
+    </div>
+    
+    <div class="remember-me">
+        <input type="checkbox" id="remember" name="remember">
+        <label for="remember">Remember me</label>
+    </div>
+    
+    <button type="submit" class="btn-login" id="loginButton">
+        <i class="bi bi-box-arrow-in-right"></i> Login
+    </button>
+</form>
         
         
         </div>
@@ -557,21 +555,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Toggle password visibility
-    document.getElementById('togglePassword').addEventListener('click', function() {
-        const passwordInput = document.getElementById('password');
-        const icon = this;
-        
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
-        } else {
-            passwordInput.type = 'password';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
-        }
-    });
+// Add this to your existing JavaScript
+document.getElementById('togglePassword').addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    const icon = this;
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+        // Auto-select the password for easy copying
+        passwordInput.select();
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    }
+});
 
  // Update the username blur event to make an AJAX call to check user type
 document.getElementById('username').addEventListener('blur', function() {
