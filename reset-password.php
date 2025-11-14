@@ -452,7 +452,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label for="password" class="form-label">Password</label>
                         <input type="password" class="form-control" id="password" name="password" required>
-                        <i class="bi bi-eye-slash input-icon" id="togglePassword" style="margin-top:13px;"></i>
+                        <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
                         <div class="password-strength">
                             <div class="password-strength-bar" id="password-strength-bar"></div>
                         </div>
@@ -461,7 +461,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label for="confirm_password" class="form-label">Confirm Password</label>
                         <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                        <i class="bi bi-eye-slash input-icon" id="togglePassword2" style="margin-top:18px;"></i>
+                        <i class="bi bi-eye-slash input-icon" id="togglePassword2"></i>
                     </div>
                     
                     <button type="submit" class="btn-login">
@@ -504,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </button>
                     <?php else: ?>
                         <a href="index.php" class="btn btn-success">
-                            <i class="bi bi-arrow-right"></i> ទៅទំព័រចូល
+                            <i class="bi bi-arrow-right"></i> Login
                         </a>
                     <?php endif; ?>
                 </div>
