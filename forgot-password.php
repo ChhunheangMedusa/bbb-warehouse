@@ -506,8 +506,8 @@ try {
     <?php if ($error || $success): ?>
 <div class="modal fade show" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="false" style="display: block; background-color: rgba(0,0,0,0.5);">
     <div class="modal-dialog modal-dialog-centered">
-        
-            <div class="modal-header <?php echo $error ? 'bg-danger text-white' : 'bg-success text-white'; ?>">
+        <div class="modal-content">
+            <div class="modal-header <?php echo $error ? 'text-danger ' : 'text-success'; ?>">
                 <h5 class="modal-title" id="alertModalLabel">
                     <i class="bi <?php echo $error ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill'; ?>"></i>
                     <?php echo $error ? 'Error' : 'Success'; ?>
@@ -532,7 +532,7 @@ try {
         </a>
     <?php endif; ?>
 </div>
-       
+        </div>
     </div>
 </div>
 <?php endif; ?>
