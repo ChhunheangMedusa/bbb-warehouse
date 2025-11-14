@@ -555,22 +555,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script>
-// Add this to your existing JavaScript
-document.getElementById('togglePassword').addEventListener('click', function() {
+// Add this JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    const rememberCheckbox = document.getElementById('remember');
+    const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
-    const icon = this;
     
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        icon.classList.remove('bi-eye-slash');
-        icon.classList.add('bi-eye');
-        // Auto-select the password for easy copying
-        passwordInput.select();
-    } else {
-        passwordInput.type = 'password';
-        icon.classList.remove('bi-eye');
-        icon.classList.add('bi-eye-slash');
+    // Check if credentials are saved
+    const savedUsername = localStorage.getItem('rememberedUsername');
+    const savedPassword = localStorage.getItem('rememberedPassword');
+    
+    if (savedUsername && savedPassword) {
+        usernameInput.value = savedUsername;
+        passwordInput.value = savedPassword;
+        rememberCheckbox.checked = true;
+        
+        // Auto-focus on login button for quick submission
+        document.getElementById('loginButton').focus();
     }
+    
+    // Handle form submission
+    document.getElementById('loginForm').addEventListener('submit', function() {
+        if (rememberCheckbox.checked) {
+            // Save credentials
+            localStorage.setItem('rememberedUsername', usernameInput.value);
+            localStorage.setItem('rememberedPassword', passwordInput.value);
+        } else {
+            // Clear saved credentials
+            localStorage.removeItem('rememberedUsername');
+            localStorage.removeItem('rememberedPassword');
+        }
+    });
 });
 
  // Update the username blur event to make an AJAX call to check user type
