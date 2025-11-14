@@ -93,7 +93,7 @@ try {
             $error = "Message not sent. Error in sending: {$mail->ErrorInfo}";
         }
     } else {
-        $error = "Couldn't find any user with this email address!";
+        $error = "Couldn't find any user with this email address";
     }
 }
 ?>
@@ -104,7 +104,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password | ប្រព័ន្ធគ្រប់គ្រងឃ្លាំង</title>
+    <title>Forgot Password</title>
     <link href="assets/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     
@@ -506,7 +506,8 @@ try {
     <?php if ($error || $success): ?>
 <div class="modal fade show" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="false" style="display: block; background-color: rgba(0,0,0,0.5);">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content" <?php echo $error ? 'bg-danger text-white' : 'bg-success text-white'; ?>>
+            
                 <h5 class="modal-title" id="alertModalLabel">
                     <i class="bi <?php echo $error ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill'; ?>"></i>
                     <?php echo $error ? 'Error' : 'Success'; ?>
