@@ -158,49 +158,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     body {
         font-family: "Khmer OS Siemreap", sans-serif;
-        background-color: #005064;
+        background-color: #f5f5f5;
         min-height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
         margin: 0;
         padding: 20px;
-        background-image: 
-            radial-gradient(circle at 10% 20%, rgba(78, 115, 223, 0.05) 0%, transparent 20%),
-            radial-gradient(circle at 90% 80%, rgba(78, 115, 223, 0.05) 0%, transparent 20%);
     }
 
-    .login-box {
+    .login-container {
+        display: flex;
         width: 100%;
-        max-width: 420px;
-        background: var(--white);
+        max-width: 900px;
+        background: white;
         border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(78, 115, 223, 0.15);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         overflow: hidden;
-        position: relative;
+        min-height: 550px;
+    }
+
+    img{
+        flex: 1;
+        background:rgb(255, 255, 255);
+        color: BLACK;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem;
+        text-align: center;
+        height: 500px;
+        margin-top:50px;
+       
+        
+    }
+
+  
+       
+   
+
+    .login-left h2 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+    }
+
+    .login-left p {
+        font-size: 1rem;
+        opacity: 0.9;
+        max-width: 300px;
+    }
+
+    .login-right {
+        flex: 1;
+        padding: 3rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     .login-header {
-        background: #0A7885;
-        color: white;
-        padding: 1.5rem;
         text-align: center;
-    }
-
-    .login-header img {
-        height: 150px;
-        margin-bottom: 1rem;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        margin-bottom: 2rem;
     }
 
     .login-header h3 {
-        margin: 0;
         font-weight: 700;
-        font-size: 1.5rem;
+        color: #333;
+        margin-bottom: 0.5rem;
     }
 
-    .login-body {
-        padding: 2rem;
+    .login-header p {
+        color: #666;
     }
 
     .form-group {
@@ -211,39 +242,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-label {
         display: block;
         margin-bottom: 0.5rem;
-        color: var(--dark);
+        color: #333;
         font-weight: 600;
     }
 
     .form-control {
         width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 1rem; /* Added more right padding */
-    border: 1px solid #d1d3e2;
-    border-radius: 8px;
-    transition: all 0.3s;
-    font-size: 1rem;
-    margin: 0 auto;
+        padding: 0.75rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        transition: all 0.3s;
+        font-size: 1rem;
     }
 
     .form-control:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+        border-color: #0A7885;
+        box-shadow: 0 0 0 0.2rem rgba(10, 120, 133, 0.25);
         outline: none;
     }
 
     .input-icon {
         position: absolute;
         right: 15px;
-        top: 50%;
+        top: 70%;
         transform: translateY(-50%);
-        color: var(--primary);
+        color: #777;
         cursor: pointer;
     }
 
     .btn-login {
         width: 100%;
         padding: 0.75rem;
-        background: #0A7885;
+        background:rgb(0, 0, 0);
         border: none;
         color: white;
         font-weight: 600;
@@ -252,13 +282,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         transition: all 0.3s;
         font-size: 1rem;
         margin-top: 0.5rem;
-        font-family:"Khmer OS Siemreap", sans-serif;
+        font-family: "Khmer OS Siemreap", sans-serif;
     }
 
     .btn-login:hover {
-        background-position: right center;
+        background:rgb(0, 0, 0);
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(78, 115, 223, 0.3);
+        box-shadow: 0 5px 15px rgba(10, 120, 133, 0.3);
     }
 
     .remember-me {
@@ -280,30 +310,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .login-footer a {
-        color: var(--primary);
+        color:rgb(0, 0, 0);
         text-decoration: none;
         transition: all 0.3s;
         font-size: 0.9rem;
     }
 
     .login-footer a:hover {
-        color: var(--primary-dark);
+        color: #08626d;
         text-decoration: underline;
     }
 
     .alert {
         border-radius: 8px;
         margin-bottom: 1.5rem;
-        color:red;
+        color: red;
+        background-color: rgba(255, 0, 0, 0.05);
+        border: 1px solid rgba(255, 0, 0, 0.2);
+        padding: 0.75rem 1rem;
     }
 
-    @media (max-width: 576px) {
-        .login-box {
-            border-radius: 0;
+    .social-login {
+        margin-top: 1.5rem;
+        text-align: center;
+    }
+
+    .social-login p {
+        margin-bottom: 1rem;
+        color: #666;
+        position: relative;
+    }
+
+    .social-login p::before,
+    .social-login p::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 30%;
+        height: 1px;
+        background-color: #ddd;
+    }
+
+    .social-login p::before {
+        left: 0;
+    }
+
+    .social-login p::after {
+        right: 0;
+    }
+
+    .social-icons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .social-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f5f5f5;
+        color: #333;
+        transition: all 0.3s;
+    }
+
+    .social-icon:hover {
+        background: #0A7885;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .login-container {
+            flex-direction: column;
+            max-width: 450px;
         }
         
-        body {
-            padding: 0;
+        .login-left {
+            padding: 2rem 1rem;
+        }
+        
+        .login-right {
+            padding: 2rem 1.5rem;
         }
     }
 
@@ -398,55 +489,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-<div class="login-box">
+<div class="login-container">
+   
+     <img src="assets/images/login.png" alt="">
+    
+    
+    <div class="login-right">
         <div class="login-header">
-            <img src="" alt="Logo">
-            <h3>ប្រព័ន្ធគ្រប់គ្រងឃ្លាំង</h3>
+            <h3>Login</h3>
+            
         </div>
         
-        <div class="login-body">
-            <?php if ($error): ?>
-                <div class="alert alert-danger">
-                    <?php echo $error; ?>
-                </div>
-            <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert">
+                <?php echo $error; ?>
+            </div>
+        <?php endif; ?>
+        
+        <form method="POST" action="" id="loginForm">
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+                <i class="bi bi-person input-icon"></i>
+            </div>
             
-            <form method="POST" action="" id="loginForm">
-                <div class="form-group">
-                    <label for="username" class="form-label">ឈ្មោះអ្នកប្រើប្រាស់</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
-                    <i class="bi bi-person input-icon" style="margin-top:17px;"></i>
-                </div>
-                
-                <div class="form-group" id="passwordGroup">
-                    <label for="password" class="form-label">ពាក្យសម្ងាត់</label>
-                    <input type="password" class="form-control" id="password" name="password" minlength="8">
-                    <i class="bi bi-eye-slash input-icon" id="togglePassword" style="margin-top:6px;"></i>
-                    <a href="forgot-password.php" class="text-primary">ភ្លេចពាក្យសម្ងាត់?</a>
-                </div>
-                
-                <button type="submit" class="btn-login" id="loginButton">
-                    <i class="bi bi-box-arrow-in-right"></i> ចូល
-                </button>
-            </form>
+            <div class="form-group" id="passwordGroup">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" minlength="8">
+                <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
+            </div>
+            
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Remember me</label>
+            </div>
+            
+            <button type="submit" class="btn-login" id="loginButton">
+                <i class="bi bi-box-arrow-in-right"></i> Login
+            </button>
+            
+            <div class="login-footer">
+                <a href="forgot-password.php">Forgot password?</a>
+               
+            </div>
+        </form>
+        
+        
         </div>
     </div>
+</div>
 
-    <!-- Error Modal -->
-    <div class="modal-overlay" id="errorModal">
-        <div class="modal-content">
-            <div class="modal-icon">
-                <i class="bi bi-exclamation-triangle-fill"></i>
-            </div>
-            <h3 class="modal-title">កំហុសក្នុងការចូល</h3>
-            <p class="modal-message" id="modalMessage">ពាក្យសម្ងាត់មិនត្រឹមត្រូវ។</p>
-            <div class="countdown-timer" id="countdownTimer" style="display: none;">
-                សូមរង់ចាំ: <span id="countdown">05:00</span>
-            </div>
-            <p class="attempts-info" id="attemptsInfo"></p>
-            <button class="modal-button" id="modalButton">យល់ព្រម</button>
+<!-- Error Modal -->
+<div class="modal-overlay" id="errorModal">
+    <div class="modal-content">
+        <div class="modal-icon">
+            <i class="bi bi-exclamation-triangle-fill"></i>
         </div>
+        <h3 class="modal-title">Error Login</h3>
+        <p class="modal-message" id="modalMessage">Incorrect Password</p>
+        <div class="countdown-timer" id="countdownTimer" style="display: none;">
+            Please wait: <span id="countdown">05:00</span>
+        </div>
+        <p class="attempts-info" id="attemptsInfo"></p>
+        <button class="modal-button" id="modalButton">Confirm</button>
     </div>
+</div>
 
     <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script>
