@@ -555,6 +555,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script>
+    // Toggle password visibility
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordInput = document.getElementById('password');
+        const icon = this;
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        }
+    });
 // Add this JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     const rememberCheckbox = document.getElementById('remember');
@@ -587,7 +602,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
  // Update the username blur event to make an AJAX call to check user type
 document.getElementById('username').addEventListener('blur', function() {
     const username = this.value.trim();
