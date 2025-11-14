@@ -417,7 +417,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <form method="POST" action="">
         <div class="form-group">
-        <label for="code" class="form-label">លេខកូដបញ្ជាក់ 6 ខ្ទង់</label>
+        <label for="code" class="form-label">6-digit verification code</label>
                     <input type="text" class="form-control" id="code" name="code" 
                            maxlength="6" pattern="\d{6}" required
                            placeholder="••••••">
@@ -444,7 +444,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="modal fade show" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="false" style="display: block; background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
+                <div class="modal-header text-danger">
                     <h5 class="modal-title" id="alertModalLabel">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                         Error
