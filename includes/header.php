@@ -50,195 +50,119 @@ $hasAvatar = ($userPicture !== null);
     <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
 </head>
 <style>
-    :root {
-        --sidebar-width: 280px;
-        --sidebar-collapsed-width: 80px;
-        --primary-color: #6366f1;
-        --primary-dark: #4f46e5;
-        --primary-light: #a5b4fc;
-        --sidebar-bg: #1e293b;
-        --sidebar-hover: #334155;
-        --sidebar-active: #3b82f6;
-        --text-light: #f8fafc;
-        --text-muted: #94a3b8;
-        --transition-speed: 0.3s;
-    }
-    
     body {
         overflow-x: hidden;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f8fafc;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
     }
     
     .avatar-img {
-        width: 36px;
-        height: 36px;
+        width: 30px;
+        height: 30px;
         object-fit: cover;
         border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, 0.2);
     }
     .default-avatar {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
-        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        background-color: #000; /* Black background */
         color: white;
-        border: 2px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid #ddd; /* Light gray outline */
+    }
+    .sidebar-logo {
+        color: #FFFFFF;
+        width: 120px;
+        height: auto;
+        margin: 0 auto;
+        display: block;
     }
     
-    /* Modern Sidebar Styles */
+    /* Glass Morphism Sidebar Styles */
     .sidebar {
         position: fixed;
         top: 0;
         left: 0;
         height: 100vh;
-        width: var(--sidebar-width);
-        background: var(--sidebar-bg);
         z-index: 1000;
         overflow-y: auto;
-        transition: all var(--transition-speed) ease;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-right: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+        width: 250px;
     }
     
     .sidebar-brand {
-        padding: 1.5rem 1.5rem 1rem;
+        background: rgba(255, 255, 255, 0.1);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 1rem;
-    }
-    
-    .sidebar-brand h4 {
-        font-weight: 700;
-        font-size: 1.25rem;
-        background: linear-gradient(90deg, #fff, var(--primary-light));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 0;
-    }
-    
-    .sidebar-nav {
-        flex: 1;
-        padding: 0 1rem;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
     }
     
     .sidebar-nav .nav-link {
-        color: var(--text-light);
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.25rem;
-        border-radius: 0.5rem;
-        display: flex;
-        align-items: center;
-        transition: all 0.2s ease;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .sidebar-nav .nav-link::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
-        width: 4px;
-        background: var(--primary-color);
-        transform: scaleY(0);
-        transition: transform 0.2s ease;
+        color: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        margin: 2px 10px;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     .sidebar-nav .nav-link:hover {
-        background: var(--sidebar-hover);
-        color: white;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
         transform: translateX(5px);
     }
     
-    .sidebar-nav .nav-link:hover::before {
-        transform: scaleY(1);
-    }
-    
     .sidebar-nav .nav-link.active {
-        background: var(--sidebar-active);
-        color: white;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        box-shadow: 0 4px 15px 0 rgba(31, 38, 135, 0.2);
     }
     
-    .sidebar-nav .nav-link.active::before {
-        transform: scaleY(1);
-    }
-    
-    .sidebar-nav .nav-link i {
-        margin-right: 0.75rem;
-        font-size: 1.1rem;
-        width: 24px;
-        text-align: center;
-    }
-    
-    /* Sidebar dropdown styles */
-    .sidebar .nav-link[data-bs-toggle="collapse"] {
-        position: relative;
-        padding-right: 2.5rem;
-    }
-
-    .sidebar .nav-link[data-bs-toggle="collapse"] .bi-chevron-down {
-        position: absolute;
-        right: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        transition: transform 0.2s ease;
-        font-size: 0.8rem;
-    }
-
-    .sidebar .nav-link[data-bs-toggle="collapse"].collapsed .bi-chevron-down {
-        transform: translateY(-50%) rotate(-90deg);
-    }
-
     .sidebar .collapse ul {
-        background-color: rgba(0, 0, 0, 0.2);
-        border-radius: 0.5rem;
-        margin: 0.25rem 0;
-        padding: 0.5rem 0;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        margin: 5px 15px;
     }
     
-    .sidebar .collapse .nav-link {
-        padding: 0.6rem 1rem 0.6rem 2.5rem;
-        font-size: 0.9rem;
-        margin-bottom: 0;
-    }
-    
-    .sidebar .collapse .nav-link::before {
-        width: 3px;
-        left: 1.5rem;
-    }
-    
-    .sidebar .collapse .nav-link:hover {
-        transform: translateX(3px);
-    }
-
     .sidebar-footer {
-        padding: 1rem 1.5rem;
+        background: rgba(255, 255, 255, 0.1);
         border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
     }
     
     .sidebar-footer .btn {
-        width: 100%;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+        transition: all 0.3s ease;
     }
     
     .sidebar-footer .btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
     
     .main-content {
-        margin-left: var(--sidebar-width);
-        width: calc(100% - var(--sidebar-width));
-        transition: all var(--transition-speed) ease;
+        margin-left: 250px; /* Adjust this based on your sidebar width */
+        width: calc(100% - 250px);
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px 0 0 15px;
+        min-height: 100vh;
+        box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
     }
     
     /* Mobile styles */
@@ -246,20 +170,23 @@ $hasAvatar = ($userPicture !== null);
         .sidebar {
             width: 0;
             overflow: hidden;
+            transition: width 0.3s ease;
         }
         
         .sidebar.collapsed {
-            width: var(--sidebar-width);
+            width: 250px;
         }
         
         .main-content {
             margin-left: 0;
             width: 100%;
+            transition: margin-left 0.3s ease;
+            border-radius: 0;
         }
         
         .main-content.expanded {
-            margin-left: var(--sidebar-width);
-            width: calc(100% - var(--sidebar-width));
+            margin-left: 250px;
+            width: calc(100% - 250px);
         }
         
         .navbar {
@@ -267,12 +194,12 @@ $hasAvatar = ($userPicture !== null);
         }
         
         .avatar-img {
-            width: 32px;
-            height: 32px;
+            width: 25px;
+            height: 25px;
         }
         
-        .sidebar-brand h4 {
-            font-size: 1.1rem;
+        .sidebar-logo {
+            width: 80px;
         }
         
         .dropdown-menu {
@@ -308,19 +235,42 @@ $hasAvatar = ($userPicture !== null);
         }
     }
     
+    /* Sidebar dropdown styles */
+    .sidebar .nav-link[data-bs-toggle="collapse"] {
+        position: relative;
+        padding-right: 2rem;
+    }
+
+    .sidebar .nav-link[data-bs-toggle="collapse"] .bi-chevron-down {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: transform 0.2s ease;
+    }
+
+    .sidebar .nav-link[data-bs-toggle="collapse"].collapsed .bi-chevron-down {
+        transform: translateY(-50%) rotate(-90deg);
+    }
+
+    .sidebar .nav-link.collapsed {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
     /* Ensure sidebar content doesn't overflow */
     .sidebar-nav {
         max-height: calc(100vh - 180px);
         overflow-y: auto;
     }
     
-    /* Custom scrollbar for sidebar */
+    /* Custom scrollbar for glass sidebar */
     .sidebar-nav::-webkit-scrollbar {
         width: 5px;
     }
     
     .sidebar-nav::-webkit-scrollbar-track {
         background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
     }
     
     .sidebar-nav::-webkit-scrollbar-thumb {
@@ -332,112 +282,84 @@ $hasAvatar = ($userPicture !== null);
         background: rgba(255, 255, 255, 0.5);
     }
     
-    /* Modern navbar styles */
+    /* Glass morphism navbar */
     .navbar {
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-        padding: 0.75rem 1.5rem;
+        background: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     }
     
-    .navbar .dropdown-toggle {
-        border-radius: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        transition: all 0.2s ease;
-    }
-    
-    .navbar .dropdown-toggle:hover {
-        background-color: #f1f5f9;
-    }
-    
-    /* Content area styling */
-    .container-fluid {
-        padding: 1.5rem;
-    }
-    
-    /* Alert styling */
-    .alert {
-        border-radius: 0.75rem;
-        border: none;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* Toggle button for mobile */
-    .sidebar-toggle {
-        display: none;
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: #64748b;
-        margin-right: 1rem;
-    }
-    
-    @media (max-width: 768px) {
-        .sidebar-toggle {
-            display: block;
-        }
+    .dropdown-menu {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
     }
     
 </style>
 <body class="d-flex">
     <!-- Sidebar Navigation -->
     <div class="sidebar">
-        <div class="sidebar-brand">
-            <h4 class="text-white"><?php echo t('system_title'); ?></h4>
+        <div class="sidebar-brand text-center py-4">
+            <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Admin/dashboard.php' ? 'active' : ''; ?>" href="../Admin/dashboard.php">
-                        <i class="bi bi-speedometer2"></i><?php echo t('dashboard'); ?>
+                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard'); ?>
                     </a>
                 </li>
                
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/user-control.php' ? 'active' : ''; ?>" href="../Admin/user-control.php">
-                        <i class="bi bi-people"></i><?php echo t('user_management'); ?>
+                        <i class="bi bi-people me-2"></i><?php echo t('user_management'); ?>
                     </a>
                 </li>
                
                 
                 <li class="nav-item">
                     <a class="nav-link collapsed" data-bs-toggle="collapse" href="#itemManagementCollapse" role="button" aria-expanded="false">
-                        <i class="bi bi-box-seam"></i><?php echo t('item_management'); ?>
-                        <i class="bi bi-chevron-down ms-auto"></i>
+                        <i class="bi bi-box-seam me-2"></i><?php echo t('item_management'); ?>
+                        <i class="bi bi-chevron-down ms-auto" style="font-size: 0.8rem;"></i>
                     </a>
                     <div class="collapse" id="itemManagementCollapse">
-                        <ul class="nav flex-column">
+                        <ul class="nav flex-column ps-4">
                         <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/items.php' ? 'active' : ''; ?>" href="../Admin/items.php">
-                                    <i class="bi bi-box-seam"></i><?php echo t('item'); ?>
+                                    <i class="bi bi-box-seam me-2"></i><?php echo t('item'); ?>
                                 </a>
                             </li>
 
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/stock-transfer.php' ? 'active' : ''; ?>" href="../Admin/stock-transfer.php">
-                                    <i class="bi bi-arrow-left-right"></i><?php echo t('transfer'); ?>
+                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('transfer'); ?>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/remaining.php' ? 'active' : ''; ?>" href="../Admin/remaining.php">
-                                  <i class="bi bi-archive"></i><?php echo t('remaining'); ?>
+                                  <i class="bi bi-archive me-2"></i><?php echo t('remaining'); ?>
                                 </a>
                             </li>
 
                         <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/store.php' ? 'active' : ''; ?>" href="../Admin/store.php">
-                                    <i class="bi bi-currency-dollar"></i><?php echo t('store_inventory'); ?>
+                                    <i class="bi bi-currency-dollar me-2"></i><?php echo t('store_inventory'); ?>
                                 </a>
                             </li>
                           
                        
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/repair.php' ? 'active' : ''; ?>" href="../Admin/repair.php">
-                                    <i class="bi bi-tools"></i><?php echo t('repair'); ?>
+                                    <i class="bi bi-tools me-2"></i><?php echo t('repair'); ?>
                                 </a>
                             </li>
                             
                             <li class="nav-item">
                                 <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/broken-items.php' ? 'active' : ''; ?>" href="../Admin/broken-items.php">
-                                    <i class="bi bi-exclamation-triangle"></i><?php echo t('broken_items'); ?>
+                                    <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('broken_items'); ?>
                                 </a>
                             </li>
                            
@@ -447,53 +369,50 @@ $hasAvatar = ($userPicture !== null);
               
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/location-control.php' ? 'active' : ''; ?>" href="../Admin/location-control.php">
-                        <i class="bi bi-pin-map"></i><?php echo t('location_management'); ?>
+                        <i class="bi bi-pin-map me-2"></i><?php echo t('location_management'); ?>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/category.php' ? 'active' : ''; ?>" href="../Admin/category.php">
-                        <i class="bi bi-card-list"></i><?php echo t('category_management'); ?>
+                        <i class="bi bi-card-list me-2"></i><?php echo t('category_management'); ?>
                     </a>
                 </li>
        
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/deporty.php' ? 'active' : ''; ?>" href="../Admin/deporty.php">
-                        <i class="bi bi-geo-alt"></i><?php echo t('deporty_management'); ?>
+                        <i class="bi bi-geo-alt me-2"></i><?php echo t('deporty_management'); ?>
                     </a>
                 </li>
               
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/access-log.php' ? 'active' : ''; ?>" href="../Admin/access-log.php">
-                        <i class="bi bi-clock-history"></i><?php echo t('logs'); ?>
+                        <i class="bi bi-clock-history me-2"></i><?php echo t('logs'); ?>
                     </a>
                 </li>
             
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/report.php' ? 'active' : ''; ?>" href="../Admin/report.php">
-                        <i class="bi bi-file-earmark-text"></i><?php echo t('reports'); ?>
+                        <i class="bi bi-file-earmark-text me-2"></i><?php echo t('reports'); ?>
                     </a>
                 </li>
               
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/low-stock-alert.php' ? 'active' : ''; ?>" href="../Admin/low-stock-alert.php">
-                        <i class="bi bi-exclamation-triangle"></i><?php echo t('low_stock'); ?>
+                        <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('low_stock'); ?>
                     </a>
                 </li>
             </ul>
         </div>
-        <div class="sidebar-footer">
-            <a href="../logout.php" class="btn btn-outline-light">
-                <i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?>
+        <div class="sidebar-footer mt-auto p-3 text-center">
+            <a href="../logout.php" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-box-arrow-right me-1"></i><?php echo t('logout'); ?>
             </a>
         </div>
     </div>
 
     <div class="main-content d-flex flex-column min-vh-100">
-        <nav class="navbar navbar-expand navbar-light bg-white">
+        <nav class="navbar navbar-expand navbar-light">
             <div class="container-fluid">
-                <button class="sidebar-toggle" id="sidebarToggle">
-                    <i class="bi bi-list"></i>
-                </button>
               
                 <div class="navbar-collapse justify-content-end">
                     <ul class="navbar-nav">
@@ -513,7 +432,7 @@ $hasAvatar = ($userPicture !== null);
                                     <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
                                 <?php else: ?>
                                     <div class="default-avatar me-2">
-                                        <i class="bi bi-person-fill" style="font-size: 1.1rem;"></i>
+                                        <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
                                     </div>
                                 <?php endif; ?>
                                 <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
@@ -548,30 +467,5 @@ $hasAvatar = ($userPicture !== null);
 ob_end_flush();
 ?>
 <script>
-// Mobile sidebar toggle
-document.addEventListener('DOMContentLoaded', function() {
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.querySelector('.main-content');
-    
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
-        });
-    }
-    
-    // Close sidebar when clicking outside on mobile
-    document.addEventListener('click', function(event) {
-        if (window.innerWidth <= 768) {
-            const isClickInsideSidebar = sidebar.contains(event.target);
-            const isClickInsideToggle = sidebarToggle.contains(event.target);
-            
-            if (!isClickInsideSidebar && !isClickInsideToggle && sidebar.classList.contains('collapsed')) {
-                sidebar.classList.remove('collapsed');
-                mainContent.classList.remove('expanded');
-            }
-        }
-    });
-});
+
 </script>
