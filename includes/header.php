@@ -52,8 +52,6 @@ $hasAvatar = ($userPicture !== null);
 <style>
     body {
         overflow-x: hidden;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
     }
     
     .avatar-img {
@@ -81,7 +79,7 @@ $hasAvatar = ($userPicture !== null);
         display: block;
     }
     
-    /* Glass Morphism Sidebar Styles */
+    /* Fixed sidebar styles */
     .sidebar {
         position: fixed;
         top: 0;
@@ -89,80 +87,11 @@ $hasAvatar = ($userPicture !== null);
         height: 100vh;
         z-index: 1000;
         overflow-y: auto;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border-right: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
-        width: 250px;
-    }
-    
-    .sidebar-brand {
-        background: rgba(255, 255, 255, 0.1);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-    }
-    
-    .sidebar-nav .nav-link {
-        color: rgba(255, 255, 255, 0.9);
-        border-radius: 8px;
-        margin: 2px 10px;
-        transition: all 0.3s ease;
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .sidebar-nav .nav-link:hover {
-        background: rgba(255, 255, 255, 0.15);
-        color: #fff;
-        transform: translateX(5px);
-    }
-    
-    .sidebar-nav .nav-link.active {
-        background: rgba(255, 255, 255, 0.2);
-        color: #fff;
-        box-shadow: 0 4px 15px 0 rgba(31, 38, 135, 0.2);
-    }
-    
-    .sidebar .collapse ul {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        margin: 5px 15px;
-    }
-    
-    .sidebar-footer {
-        background: rgba(255, 255, 255, 0.1);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-    }
-    
-    .sidebar-footer .btn {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.9);
-        transition: all 0.3s ease;
-    }
-    
-    .sidebar-footer .btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        color: #fff;
-        transform: translateY(-2px);
     }
     
     .main-content {
-        margin-left: 250px; /* Adjust this based on your sidebar width */
+        margin-left: 221.5px; /* Adjust this based on your sidebar width */
         width: calc(100% - 250px);
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 15px 0 0 15px;
-        min-height: 100vh;
-        box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
     }
     
     /* Mobile styles */
@@ -181,7 +110,6 @@ $hasAvatar = ($userPicture !== null);
             margin-left: 0;
             width: 100%;
             transition: margin-left 0.3s ease;
-            border-radius: 0;
         }
         
         .main-content.expanded {
@@ -257,20 +185,30 @@ $hasAvatar = ($userPicture !== null);
         color: rgba(255, 255, 255, 0.8);
     }
 
+    .sidebar .collapse ul {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 0.25rem;
+        margin: 0.25rem 0;
+    }
+
+    .sidebar .nav-item .nav-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
     /* Ensure sidebar content doesn't overflow */
     .sidebar-nav {
         max-height: calc(100vh - 180px);
         overflow-y: auto;
     }
     
-    /* Custom scrollbar for glass sidebar */
+    /* Custom scrollbar for sidebar */
     .sidebar-nav::-webkit-scrollbar {
         width: 5px;
     }
     
     .sidebar-nav::-webkit-scrollbar-track {
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
     }
     
     .sidebar-nav::-webkit-scrollbar-thumb {
@@ -282,27 +220,12 @@ $hasAvatar = ($userPicture !== null);
         background: rgba(255, 255, 255, 0.5);
     }
     
-    /* Glass morphism navbar */
-    .navbar {
-        background: rgba(255, 255, 255, 0.8) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .dropdown-menu {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
-    }
-    
 </style>
 <body class="d-flex">
     <!-- Sidebar Navigation -->
-    <div class="sidebar">
+    <div class="sidebar bg-gradient-primary">
         <div class="sidebar-brand text-center py-4">
+         
             <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
         </div>
         <div class="sidebar-nav">
@@ -411,7 +334,7 @@ $hasAvatar = ($userPicture !== null);
     </div>
 
     <div class="main-content d-flex flex-column min-vh-100">
-        <nav class="navbar navbar-expand navbar-light">
+        <nav class="navbar navbar-expand navbar-light bg-white shadow-sm">
             <div class="container-fluid">
               
                 <div class="navbar-collapse justify-content-end">
