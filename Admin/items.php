@@ -409,7 +409,7 @@ $in_query = "SELECT
     d.name as deporty_name,
     (SELECT id FROM item_images WHERE item_id = si.item_id ORDER BY id DESC LIMIT 1) as image_id
 FROM 
-    stock_in_history si
+    `stock_in_history` si
 LEFT JOIN 
     categories c ON si.category_id = c.id
 LEFT JOIN 
@@ -460,7 +460,7 @@ if ($in_search_query) {
 $in_query .= " ORDER BY $sort_by $sort_order";
 
 // Get total count for in history pagination
-$in_count_query = "SELECT COUNT(*) as total FROM stock_in_history si
+$in_count_query = "SELECT COUNT(*) as total FROM `stock_in_history` si
                 LEFT JOIN categories c ON si.category_id = c.id
                 JOIN locations l ON si.location_id = l.id
                 WHERE 1=1";

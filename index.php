@@ -400,7 +400,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="login-box">
         <div class="login-header">
-            <img src="assets/images/white_logo.png" alt="Logo">
+            <img src="" alt="Logo">
             <h3>ប្រព័ន្ធគ្រប់គ្រងឃ្លាំង</h3>
         </div>
         
