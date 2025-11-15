@@ -63,8 +63,8 @@ $hasAvatar = ($userPicture !== null);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 30px;
-        height: 30px;
+        width: 100px;
+        height: 100px;
         border-radius: 50%;
         background-color: #000; /* Black background */
         color: white;
