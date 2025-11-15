@@ -236,7 +236,7 @@ $hasAvatar = ($userPicture !== null);
                                 <br>
                             
                             </a>
-                            <p style="color:white; text-decoration:none;"><?php echo htmlspecialchars($username); ?></p>
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($username); ?></p>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
@@ -326,23 +326,7 @@ $hasAvatar = ($userPicture !== null);
                                 <li><a class="dropdown-item" href="../change-language.php?lang=en">English</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <?php if ($hasAvatar): ?>
-                                    <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
-                                <?php else: ?>
-                                    <div class="default-avatar me-2">
-                                        <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
-                                    </div>
-                                <?php endif; ?>
-                                <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                <li><a class="dropdown-item" href="../Staff/profile-staff.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?></a></li>
-                            </ul>
-                        </li>
+                        
                     </ul>
                 </div>
             </div>
