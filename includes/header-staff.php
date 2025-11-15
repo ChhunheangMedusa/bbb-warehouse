@@ -12,7 +12,7 @@ if (!isset($_SESSION['language'])) {
 // Get the current user's data from database
 $userId = $_SESSION['user_id'] ?? 0;
 $username = $_SESSION['username'] ?? 'User';
-
+$user_type = sanitizeInput($_POST['user_type']);
 // Fetch user's picture from database
 $userPicture = null;
 if ($userId) {
@@ -63,8 +63,8 @@ $hasAvatar = ($userPicture !== null);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 100px;
-        height: 100px;
+        width: 50px;
+        height: 50px;
         border-radius: 50%;
         background-color: #000; /* Black background */
         color: white;
@@ -236,7 +236,8 @@ $hasAvatar = ($userPicture !== null);
                                 <br>
                             
                             </a>
-                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($username); ?></p>
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($username); ?></p><br>
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($user_type); ?></p>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
