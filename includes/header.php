@@ -253,7 +253,7 @@ $hasAvatar = ($userPicture !== null);
             default: echo 'bg-secondary';
         }
         ?>" 
-        style="font-size:10px;">
+        style="font-size:14px;">
         <?php echo ucfirst(htmlspecialchars($userType)); ?>
     </span>
                         </p>
