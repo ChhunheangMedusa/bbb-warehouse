@@ -12,7 +12,7 @@ if (!isset($_SESSION['language'])) {
 // Get the current user's data from database
 $userId = $_SESSION['user_id'] ?? 0;
 $username = $_SESSION['username'] ?? 'User';
-$user_type = sanitizeInput($_POST['user_type']);
+
 // Fetch user's picture from database
 $userPicture = null;
 if ($userId) {
@@ -27,6 +27,9 @@ if ($userId) {
 
 // Check if avatar exists in database, otherwise use default
 $hasAvatar = ($userPicture !== null);
+
+$stmt = $pdo->query("SELECT DISTINCT user_type FROM users ORDER BY user_type");
+$user_types = $stmt->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $_SESSION['language']; ?>">
@@ -237,7 +240,7 @@ $hasAvatar = ($userPicture !== null);
                             
                             </a>
                             <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($username); ?></p><br>
-                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($user_type); ?></p>
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($user_types); ?></p>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
