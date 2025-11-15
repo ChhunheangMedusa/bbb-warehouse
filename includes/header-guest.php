@@ -205,8 +205,8 @@ $hasAvatar = ($userPicture !== null);
         <?php 
         switch(strtolower($userType)) {
             case 'admin': echo 'bg-danger'; break;
-            case 'staff': echo 'bg-warning'; break;
-            case 'guest': echo 'bg-info'; break;
+            case 'staff': echo 'bg-primary'; break;
+            case 'guest': echo 'bg-success'; break;
             default: echo 'bg-secondary';
         }
         ?>" 
