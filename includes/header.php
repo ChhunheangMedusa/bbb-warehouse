@@ -243,8 +243,7 @@ $hasAvatar = ($userPicture !== null);
                                 <?php endif; ?>
                                 <br>
                             </a>
-                            <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?></p><br>
-                       
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?>
                             <span class="badge 
         <?php 
         switch(strtolower($userType)) {
@@ -257,7 +256,7 @@ $hasAvatar = ($userPicture !== null);
         style="font-size:10px;">
         <?php echo ucfirst(htmlspecialchars($userType)); ?>
     </span>
-    </p>
+                        </p>
 
         </div>
         <div class="sidebar-nav">
