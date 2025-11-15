@@ -303,11 +303,7 @@ $hasAvatar = ($userPicture !== null);
                 </li>
             </ul>
         </div>
-        <div class="sidebar-footer mt-auto p-3 text-center">
-            <a href="../logout.php" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-box-arrow-right me-1"></i><?php echo t('logout'); ?>
-            </a>
-        </div>
+
     </div>
 
     <div class="main-content d-flex flex-column min-vh-100">
@@ -326,7 +322,17 @@ $hasAvatar = ($userPicture !== null);
                                 <li><a class="dropdown-item" href="../change-language.php?lang=en">English</a></li>
                             </ul>
                         </li>
-                        
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                               
+                                <span class="d-none d-md-inline"><?php echo "Settings" ?></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="../Admin/profile.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?></a></li>
+                            </ul>
+                        </li>
                     </ul>
                 </div>
             </div>
