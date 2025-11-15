@@ -380,7 +380,7 @@ $hasAvatar = ($userPicture !== null);
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                
-                                <span class="d-none d-md-inline"><?php echo "Settings" ?></span>
+                                <span class="d-none d-md-inline"><?php echo t('settings') ?></span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                 <li><a class="dropdown-item" href="../Admin/profile.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
