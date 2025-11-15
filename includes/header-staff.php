@@ -28,8 +28,7 @@ if ($userId) {
 // Check if avatar exists in database, otherwise use default
 $hasAvatar = ($userPicture !== null);
 
-$stmt = $pdo->query("SELECT DISTINCT user_type FROM users ORDER BY user_type");
-$user_types = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $_SESSION['language']; ?>">
@@ -239,8 +238,7 @@ $user_types = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                 <br>
                             
                             </a>
-                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($username); ?></p><br>
-                            <p style="color:white; text-decoration:none;text-transform:uppercase;"><?php echo htmlspecialchars($user_types); ?></p>
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?></p><br>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
