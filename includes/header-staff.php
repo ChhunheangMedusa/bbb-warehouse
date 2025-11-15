@@ -225,6 +225,17 @@ $hasAvatar = ($userPicture !== null);
         <div class="sidebar-brand text-center py-4">
            
             <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
+            <a href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <?php if ($hasAvatar): ?>
+                                    <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
+                                <?php else: ?>
+                                    <div class="default-avatar me-2">
+                                        <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <br>
+                                <span style="color:white; text-decoration:none;"><?php echo htmlspecialchars($username); ?></span>
+                            </a>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
