@@ -237,9 +237,9 @@ $hasAvatar = ($userPicture !== null);
                                     </div>
                                 <?php endif; ?>
                                 <br>
-                                <span style="color:white; text-decoration:none;"><?php echo htmlspecialchars($username); ?></span>
                             </a>
-                           
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?></p><br>
+                       
                       
 
         </div>
