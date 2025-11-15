@@ -225,7 +225,7 @@ $hasAvatar = ($userPicture !== null);
         <div class="sidebar-brand text-center py-4">
            
             <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
-            <a href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <?php if ($hasAvatar): ?>
                                     <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
                                 <?php else: ?>
@@ -234,8 +234,9 @@ $hasAvatar = ($userPicture !== null);
                                     </div>
                                 <?php endif; ?>
                                 <br>
-                                <span style="color:white; text-decoration:none;"><?php echo htmlspecialchars($username); ?></span>
+                            
                             </a>
+                            <p style="color:white; text-decoration:none;"><?php echo htmlspecialchars($username); ?></p>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
@@ -334,7 +335,7 @@ $hasAvatar = ($userPicture !== null);
                                         <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
                                     </div>
                                 <?php endif; ?>
-                                <p><?php echo htmlspecialchars($username); ?></p>
+                                <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                 <li><a class="dropdown-item" href="../Staff/profile-staff.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
