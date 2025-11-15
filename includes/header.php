@@ -243,7 +243,7 @@ $hasAvatar = ($userPicture !== null);
                                 <?php endif; ?>
                                 <br>
                             </a>
-                            <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?>
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?><br>
                             <span class="badge 
         <?php 
         switch(strtolower($userType)) {
