@@ -355,9 +355,9 @@ $hasAvatar = ($userPicture !== null);
                                 <li><a class="dropdown-item" href="../change-language.php?lang=en">English</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item dropdown nav-link dropdown-toggle">
+                        <li class="nav-item dropdown">
                             
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <ul class=" nav-link dropdown-toggle" aria-labelledby="navbarDropdown">
                                 <li><a class="dropdown-item" href="../Admin/profile.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?></a></li>
