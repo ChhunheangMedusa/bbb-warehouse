@@ -16,12 +16,17 @@ $username = $_SESSION['username'] ?? 'User';
 // Fetch user's picture from database
 $userPicture = null;
 if ($userId) {
-    $stmt = $pdo->prepare("SELECT picture FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT picture, user_type FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     $userData = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    if ($userData && !empty($userData['picture'])) {
-        $userPicture = $userData['picture'];
+    if ($userData) {
+        if (!empty($userData['picture'])) {
+            $userPicture = $userData['picture'];
+        }
+        if (!empty($userData['user_type'])) {
+            $userType = $userData['user_type'];
+        }
     }
 }
 
@@ -51,8 +56,8 @@ $hasAvatar = ($userPicture !== null);
 <!-- Rest of your header.php content remains the same, but update the navigation items to use t() function -->
 <style>
     .avatar-img {
-        width: 30px;
-        height: 30px;
+        width: 100px;
+        height: 100px;
         object-fit: cover;
         border-radius: 50%;
     }
@@ -60,8 +65,8 @@ $hasAvatar = ($userPicture !== null);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 30px;
-        height: 30px;
+        width: 50px;
+        height: 50px;
         border-radius: 50%;
         background-color: #000; /* Black background */
         color: white;
@@ -184,6 +189,32 @@ $hasAvatar = ($userPicture !== null);
     <div class="sidebar-brand text-center py-4">
        
         <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
+        <a href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <?php if ($hasAvatar): ?>
+                                    <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
+                                <?php else: ?>
+                                    <div class="default-avatar me-2">
+                                        <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <br>
+                            
+                            </a>
+                            <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?><br>
+                            <span class="badge 
+        <?php 
+        switch(strtolower($userType)) {
+            case 'admin': echo 'bg-danger'; break;
+            case 'staff': echo 'bg-warning'; break;
+            case 'guest': echo 'bg-info'; break;
+            default: echo 'bg-secondary';
+        }
+        ?>" 
+        style="font-size:14px;">
+        <?php echo ucfirst(htmlspecialchars($userType)); ?>
+    </span>
+                        </p>
+
     </div>
     <div class="sidebar-nav">
         <ul class="nav flex-column">
@@ -219,19 +250,7 @@ $hasAvatar = ($userPicture !== null);
                         <li><a class="dropdown-item" href="../change-language.php?lang=en">English</a></li>
                     </ul>
                 </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link " href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php if ($hasAvatar): ?>
-                            <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
-                        <?php else: ?>
-                            <div class="default-avatar me-2">
-                                <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
-                            </div>
-                        <?php endif; ?>
-                        <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
-                    </a>
-                   
-                </li>
+               
             </ul>
         </div>
     </div>
