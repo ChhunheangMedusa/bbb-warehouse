@@ -334,7 +334,7 @@ $hasAvatar = ($userPicture !== null);
                                         <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
                                     </div>
                                 <?php endif; ?>
-                                <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
+                                <p><?php echo htmlspecialchars($username); ?></p>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                 <li><a class="dropdown-item" href="../Staff/profile-staff.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
