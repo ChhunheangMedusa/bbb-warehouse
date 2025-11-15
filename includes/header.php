@@ -357,11 +357,7 @@ $hasAvatar = ($userPicture !== null);
                 </li>
             </ul>
         </div>
-        <div class="sidebar-footer mt-auto p-3 text-center">
-            <a href="../logout.php" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-box-arrow-right me-1"></i><?php echo t('logout'); ?>
-            </a>
-        </div>
+       
     </div>
 
     <div class="main-content d-flex flex-column min-vh-100">
