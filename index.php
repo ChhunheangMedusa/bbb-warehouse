@@ -532,7 +532,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </button>
 </form>
         
-        
+<div class="login-footer">
+                <a href="forgot-password.php">Forgot Password?</a>
+              
+            </div>
+
         </div>
     </div>
 </div>
