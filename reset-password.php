@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unset($_SESSION['reset_token']);
             unset($_SESSION['reset_email']);
             
-            $success = "Your password has been successfully reset </br></br>  You can now log in using your new password";
+            $success = "Your password has been successfully reset. You may now log in using your new credentials.";
             
            
         }
