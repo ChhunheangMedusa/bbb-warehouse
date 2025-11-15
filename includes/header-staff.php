@@ -54,8 +54,8 @@ $hasAvatar = ($userPicture !== null);
     }
     
     .avatar-img {
-        width: 30px;
-        height: 30px;
+        width: 100px;
+        height: 100px;
         object-fit: cover;
         border-radius: 50%;
     }
