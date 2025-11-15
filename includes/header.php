@@ -7,7 +7,7 @@ if (!isset($_SESSION['language'])) {
     $_SESSION['language'] = 'km'; // Default to Khmer
 }
 
-// Language translations
+
 
 // Get the current user's data from database
 $userId = $_SESSION['user_id'] ?? 0;
@@ -16,12 +16,17 @@ $username = $_SESSION['username'] ?? 'User';
 // Fetch user's picture from database
 $userPicture = null;
 if ($userId) {
-    $stmt = $pdo->prepare("SELECT picture FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT picture, user_type FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     $userData = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    if ($userData && !empty($userData['picture'])) {
-        $userPicture = $userData['picture'];
+    if ($userData) {
+        if (!empty($userData['picture'])) {
+            $userPicture = $userData['picture'];
+        }
+        if (!empty($userData['user_type'])) {
+            $userType = $userData['user_type'];
+        }
     }
 }
 
@@ -240,7 +245,9 @@ $hasAvatar = ($userPicture !== null);
                             </a>
                             <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?></p><br>
                        
-                      
+                            <p style="color:#ccc; text-decoration:none;margin-top:2px;font-size:12px;font-style:italic;">
+        <?php echo ucfirst(htmlspecialchars($userType)); ?>
+    </p>
 
         </div>
         <div class="sidebar-nav">
