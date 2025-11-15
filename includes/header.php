@@ -245,8 +245,18 @@ $hasAvatar = ($userPicture !== null);
                             </a>
                             <p style="color:white; text-decoration:none;text-transform:uppercase;margin-top:5px;"><?php echo htmlspecialchars($username); ?></p><br>
                        
-                            <p style="color:#ccc; text-decoration:none;margin-top:2px;font-size:12px;font-style:italic;">
+                            <span class="badge 
+        <?php 
+        switch(strtolower($userType)) {
+            case 'admin': echo 'bg-danger'; break;
+            case 'staff': echo 'bg-warning'; break;
+            case 'guest': echo 'bg-info'; break;
+            default: echo 'bg-secondary';
+        }
+        ?>" 
+        style="font-size:10px;">
         <?php echo ucfirst(htmlspecialchars($userType)); ?>
+    </span>
     </p>
 
         </div>
