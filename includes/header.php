@@ -55,8 +55,8 @@ $hasAvatar = ($userPicture !== null);
     }
     
     .avatar-img {
-        width: 30px;
-        height: 30px;
+        width: 100px;
+        height: 100px;
         object-fit: cover;
         border-radius: 50%;
     }
@@ -237,7 +237,7 @@ $hasAvatar = ($userPicture !== null);
                                     </div>
                                 <?php endif; ?>
                                 <br>
-                                <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
+                                <span class="d-none d-md-inline" style="color:white"><?php echo htmlspecialchars($username); ?></span>
                             </a>
                            
                       
