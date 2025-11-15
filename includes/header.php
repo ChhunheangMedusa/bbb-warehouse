@@ -227,8 +227,8 @@ $hasAvatar = ($userPicture !== null);
         <div class="sidebar-brand text-center py-4">
          
             <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
-            <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          
+                            <a href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <?php if ($hasAvatar): ?>
                                     <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
                                 <?php else: ?>
@@ -240,7 +240,7 @@ $hasAvatar = ($userPicture !== null);
                                 <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
                             </a>
                            
-                        </li>
+                      
 
         </div>
         <div class="sidebar-nav">
