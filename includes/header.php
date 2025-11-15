@@ -227,9 +227,20 @@ $hasAvatar = ($userPicture !== null);
         <div class="sidebar-brand text-center py-4">
          
             <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <?php if ($hasAvatar): ?>
+                                    <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
+                                <?php else: ?>
+                                    <div class="default-avatar me-2">
+                                        <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
+                            </a>
         </div>
         <div class="sidebar-nav">
             <ul class="nav flex-column">
+                
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Admin/dashboard.php' ? 'active' : ''; ?>" href="../Admin/dashboard.php">
                         <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard'); ?>
@@ -326,11 +337,7 @@ $hasAvatar = ($userPicture !== null);
                 </li>
             </ul>
         </div>
-        <div class="sidebar-footer mt-auto p-3 text-center">
-            <a href="../logout.php" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-box-arrow-right me-1"></i><?php echo t('logout'); ?>
-            </a>
-        </div>
+        
     </div>
 
     <div class="main-content d-flex flex-column min-vh-100">
@@ -350,16 +357,7 @@ $hasAvatar = ($userPicture !== null);
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <?php if ($hasAvatar): ?>
-                                    <img src="get_user_image.php?id=<?php echo $userId; ?>" class="avatar-img me-2" alt="<?php echo htmlspecialchars($username); ?>">
-                                <?php else: ?>
-                                    <div class="default-avatar me-2">
-                                        <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
-                                    </div>
-                                <?php endif; ?>
-                                <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
-                            </a>
+                            
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                 <li><a class="dropdown-item" href="../Admin/profile.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
                                 <li><hr class="dropdown-divider"></li>
