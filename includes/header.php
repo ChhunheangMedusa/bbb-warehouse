@@ -236,13 +236,10 @@ $hasAvatar = ($userPicture !== null);
                                         <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
                                     </div>
                                 <?php endif; ?>
+                                <br>
                                 <span class="d-none d-md-inline"><?php echo htmlspecialchars($username); ?></span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                <li><a class="dropdown-item" href="../Admin/profile.php"><i class="bi bi-person me-2"></i><?php echo t('profile'); ?></a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i><?php echo t('logout'); ?></a></li>
-                            </ul>
+                           
                         </li>
 
         </div>
