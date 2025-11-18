@@ -100,11 +100,16 @@ function checkLowStock() {
         logActivity(null, 'System', "Low Stock Alert: {$item['name']} ({$item['quantity']} {$item['size']}) at {$item['location']}");
     }
 }
-function verifyRecaptcha($secretKey, $token) {
+function verifyRecaptcha($secretKey, $response) {
+    if (empty($response)) {
+        return false;
+    }
+    
     $url = 'https://www.google.com/recaptcha/api/siteverify';
     $data = [
         'secret' => $secretKey,
-        'response' => $token
+        'response' => $response,
+        'remoteip' => $_SERVER['REMOTE_ADDR']
     ];
     
     $options = [
@@ -123,12 +128,8 @@ function verifyRecaptcha($secretKey, $token) {
         return false;
     }
     
-    $response = json_decode($result);
-    
-    // Log reCAPTCHA response for debugging
-    error_log("reCAPTCHA Response: " . print_r($response, true));
-    
-    return $response->success && $response->score > 0.3; // Lower threshold for flexibility
+    $responseData = json_decode($result);
+    return $responseData->success;
 }
 function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)));

@@ -38,15 +38,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // 3. reCAPTCHA verification
-    $recaptchaToken = $_POST['recaptcha_response'] ?? '';
-    if (!$bot_detected && !verifyRecaptcha(RECAPTCHA_SECRET_KEY, $recaptchaToken)) {
+    $recaptchaResponse = $_POST['recaptcha_response'] ?? '';
+    if (!$bot_detected && !verifyRecaptcha(RECAPTCHA_SECRET_KEY, $recaptchaResponse)) {
         $bot_detected = true;
+        $error = "សូមបញ្ជាក់ថាអ្នកមិនមែនជារូបយន្ត។";
         error_log("Bot detected: reCAPTCHA failed");
     }
-    
-    if ($bot_detected) {
+    if ($bot_detected && empty($error)) {
         $error = "សូមព្យាយាមម្តងទៀត។ ការផ្ទៀងផ្ទាត់សុវត្ថិភាពបរាជ័យ។";
-    } else {
+    } 
+
+     else if (!$bot_detected){
         // Continue with normal login processing
         $username = sanitizeInput($_POST['username']);
         $password = $_POST['password'] ?? ''; // Make password optional
@@ -175,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="assets/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     <!-- Add reCAPTCHA for Hostinger -->
-    <script src="https://www.google.com/recaptcha/api.js?render=<?php echo RECAPTCHA_SITE_KEY; ?>"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
     :root {
         --primary: #4e73df;
@@ -244,7 +246,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flex-direction: column;
         justify-content: center;
     }
+/* reCAPTCHA styling */
+.g-recaptcha {
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+}
 
+/* Make sure reCAPTCHA is responsive */
+@media (max-width: 768px) {
+    .g-recaptcha {
+        transform: scale(0.9);
+        transform-origin: 0 0;
+    }
+}
     .login-header {
         text-align: center;
         margin-bottom: 2rem;
@@ -540,39 +555,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
         
         <form method="POST" action="" id="loginForm" autocomplete="on">
-            <!-- Bot Protection Fields -->
-            <input type="hidden" name="form_load_time" value="<?php echo time(); ?>">
-            <input type="hidden" name="recaptcha_response" id="recaptchaResponse">
-            
-            <!-- Honeypot Field (hidden from users) -->
-            <div class="honeypot-field">
-                <label for="confirm_email">Confirm Email</label>
-                <input type="text" id="confirm_email" name="confirm_email" autocomplete="off">
-            </div>
-            
-            <div class="form-group">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" 
-                       autocomplete="username" required>
-                <i class="bi bi-person input-icon"></i>
-            </div>
-            
-            <div class="form-group" id="passwordGroup">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" 
-                       autocomplete="current-password" minlength="8">
-                <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
-            </div>
-            
-            <div class="remember-me">
-                <input type="checkbox" id="remember" name="remember">
-                <label for="remember">Remember me</label>
-            </div>
-            
-            <button type="submit" class="btn-login" id="loginButton">
-                <i class="bi bi-box-arrow-in-right"></i> Login
-            </button>
-        </form>
+    <!-- Bot Protection Fields -->
+    <input type="hidden" name="form_load_time" value="<?php echo time(); ?>">
+    
+    <!-- Honeypot Field (hidden from users) -->
+    <div class="honeypot-field">
+        <label for="confirm_email">Confirm Email</label>
+        <input type="text" id="confirm_email" name="confirm_email" autocomplete="off">
+    </div>
+    
+    <!-- Your existing form fields -->
+    <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" class="form-control" id="username" name="username" autocomplete="username" required>
+        <i class="bi bi-person input-icon"></i>
+    </div>
+    
+    <div class="form-group" id="passwordGroup">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" minlength="8">
+        <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
+    </div>
+    
+    <div class="remember-me">
+        <input type="checkbox" id="remember" name="remember">
+        <label for="remember">Remember me</label>
+    </div>
+    
+    <!-- reCAPTCHA v2 Checkbox -->
+    <div class="form-group">
+        <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
+    </div>
+    
+    <button type="submit" class="btn-login" id="loginButton">
+        <i class="bi bi-box-arrow-in-right"></i> Login
+    </button>
+</form>
         
         <div class="login-footer">
             <a href="forgot-password.php">Forgot Password?</a>
@@ -628,94 +646,26 @@ document.addEventListener('DOMContentLoaded', function() {
         usernameInput.value = savedUsername;
         passwordInput.value = savedPassword;
         rememberCheckbox.checked = true;
-        
-        // Auto-focus on login button for quick submission
         document.getElementById('loginButton').focus();
     }
     
-    // Handle form submission - FIXED VERSION
+    // Handle form submission
     document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        console.log('Form submission started...');
+        // Handle remember me
+        if (rememberCheckbox.checked) {
+            localStorage.setItem('rememberedUsername', usernameInput.value);
+            localStorage.setItem('rememberedPassword', passwordInput.value);
+        } else {
+            localStorage.removeItem('rememberedUsername');
+            localStorage.removeItem('rememberedPassword');
+        }
         
-        // Show loading state on button
-        const loginButton = document.getElementById('loginButton');
-        const originalText = loginButton.innerHTML;
-        loginButton.innerHTML = '<i class="bi bi-arrow-repeat spinner"></i> Processing...';
-        loginButton.disabled = true;
-        
-        // Get reCAPTCHA token
-        grecaptcha.ready(function() {
-            console.log('reCAPTCHA ready...');
-            grecaptcha.execute('<?php echo RECAPTCHA_SITE_KEY; ?>', {action: 'login'})
-                .then(function(token) {
-                    console.log('reCAPTCHA token received:', token);
-                    
-                    // Set the token in hidden field
-                    document.getElementById('recaptchaResponse').value = token;
-                    
-                    // Handle remember me
-                    if (rememberCheckbox.checked) {
-                        // Save credentials
-                        localStorage.setItem('rememberedUsername', usernameInput.value);
-                        localStorage.setItem('rememberedPassword', passwordInput.value);
-                    } else {
-                        // Clear saved credentials
-                        localStorage.removeItem('rememberedUsername');
-                        localStorage.removeItem('rememberedPassword');
-                    }
-                    
-                    // Submit the form programmatically
-                    console.log('Submitting form...');
-                    const form = document.getElementById('loginForm');
-                    
-                    // Create a new form submission without the event listener
-                    const newForm = document.createElement('form');
-                    newForm.method = 'POST';
-                    newForm.action = '';
-                    
-                    // Copy all form data
-                    const formData = new FormData(form);
-                    for (let [key, value] of formData.entries()) {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = key;
-                        input.value = value;
-                        newForm.appendChild(input);
-                    }
-                    
-                    // Add the reCAPTCHA token
-                    const recaptchaInput = document.createElement('input');
-                    recaptchaInput.type = 'hidden';
-                    recaptchaInput.name = 'recaptcha_response';
-                    recaptchaInput.value = token;
-                    newForm.appendChild(recaptchaInput);
-                    
-                    document.body.appendChild(newForm);
-                    newForm.submit();
-                    
-                })
-                .catch(function(error) {
-                    console.error('reCAPTCHA error:', error);
-                    // Fallback: submit form without reCAPTCHA
-                    alert('reCAPTCHA failed. Please try again.');
-                    loginButton.innerHTML = originalText;
-                    loginButton.disabled = false;
-                });
-        });
+        // Form will submit normally with reCAPTCHA v2
+        return true;
     });
 });
 
-// Alternative simpler approach - uncomment if above doesn't work
-/*
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    // Just let the form submit normally for now
-    console.log('Form submitting normally...');
-    return true;
-});
-*/
-
-// Update the username blur event to make an AJAX call to check user type
+// Update the username blur event to check user type
 document.getElementById('username').addEventListener('blur', function() {
     const username = this.value.trim();
     if (username) {
@@ -748,25 +698,21 @@ document.getElementById('username').addEventListener('blur', function() {
         modalMessage.textContent = "<?php echo addslashes($error); ?>";
         
         <?php if (isset($user) && isset($_SESSION['login_blocked_users'][$user['id']])): ?>
-            // Show countdown timer for blocked case (don't auto-hide)
             countdownTimer.style.display = 'block';
             attemptsInfo.textContent = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។";
             
-            // Start countdown
             const blockedUntil = <?php echo isset($user) ? $_SESSION['login_blocked_users'][$user['id']] : 0; ?>;
             const now = <?php echo time(); ?>;
             let remaining = blockedUntil - now;
             
             const updateCountdown = () => {
                 remaining--;
-                
                 if (remaining <= 0) {
                     clearInterval(countdownInterval);
                     countdownTimer.style.display = 'none';
                     window.location.reload();
                     return;
                 }
-                
                 const minutes = Math.floor(remaining / 60);
                 const seconds = remaining % 60;
                 document.getElementById('countdown').textContent = 
@@ -775,46 +721,15 @@ document.getElementById('username').addEventListener('blur', function() {
             
             updateCountdown();
             const countdownInterval = setInterval(updateCountdown, 1000);
-        <?php else: ?>
-            // Show attempts info for regular errors
-            const attempts = <?php echo isset($_SESSION['login_attempts']) ? $_SESSION['login_attempts'] : 0; ?>;
-            if (attempts > 0) {
-                attemptsInfo.textContent = `អ្នកមាន ${3 - attempts} ដងទៀតដើម្បីព្យាយាម។`;
-                
-                // Don't auto-hide for password/attempts messages
-                const isPasswordError = "<?php echo addslashes($error); ?>".includes("ពាក្យសម្ងាត់មិនត្រឹមត្រូវ") || 
-                                      "<?php echo addslashes($error); ?>".includes("ឈ្មោះអ្នកប្រើប្រាស់");
-                
-                if (!isPasswordError) {
-                    // Auto-hide after 5 seconds for other error messages
-                    setTimeout(() => {
-                        modal.classList.remove('active');
-                    }, 5000);
-                }
-            }
         <?php endif; ?>
         
         modal.classList.add('active');
         
-        // Close modal when button is clicked
         document.getElementById('modalButton').addEventListener('click', function() {
             modal.classList.remove('active');
         });
     });
 <?php endif; ?>
-
-// Add spinner CSS
-const style = document.createElement('style');
-style.textContent = `
-    .spinner {
-        animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-`;
-document.head.appendChild(style);
 </script>
 
 </body>
