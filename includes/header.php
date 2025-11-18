@@ -38,6 +38,7 @@ $hasAvatar = ($userPicture !== null);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
     <title><?php echo isset($page_title) ? $page_title : t('system_title'); ?></title>
     <link href="../assets/css/style.css" rel="stylesheet">
     <!-- Favicon -->
@@ -53,6 +54,7 @@ $hasAvatar = ($userPicture !== null);
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+
 </head>
 <style>
     body {
