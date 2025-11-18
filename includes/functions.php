@@ -100,7 +100,36 @@ function checkLowStock() {
         logActivity(null, 'System', "Low Stock Alert: {$item['name']} ({$item['quantity']} {$item['size']}) at {$item['location']}");
     }
 }
-
+function verifyRecaptcha($secretKey, $token) {
+    $url = 'https://www.google.com/recaptcha/api/siteverify';
+    $data = [
+        'secret' => $secretKey,
+        'response' => $token
+    ];
+    
+    $options = [
+        'http' => [
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method' => 'POST',
+            'content' => http_build_query($data)
+        ]
+    ];
+    
+    $context = stream_context_create($options);
+    $result = file_get_contents($url, false, $context);
+    
+    if ($result === FALSE) {
+        error_log("reCAPTCHA verification failed: Unable to connect to Google");
+        return false;
+    }
+    
+    $response = json_decode($result);
+    
+    // Log reCAPTCHA response for debugging
+    error_log("reCAPTCHA Response: " . print_r($response, true));
+    
+    return $response->success && $response->score > 0.3; // Lower threshold for flexibility
+}
 function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)));
 }

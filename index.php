@@ -1,6 +1,7 @@
 <?php
 // Include configuration and functions first
 require_once 'config/database.php';
+require_once 'config/recaptcha.php';
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
 require_once 'includes/forgot.php';
@@ -19,59 +20,60 @@ $error = '';
 
 // Regular login processing
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = sanitizeInput($_POST['username']);
-    $password = $_POST['password'] ?? ''; // Make password optional
+    // Bot Protection Checks
+    $bot_detected = false;
     
-    // First check if user exists
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    // 1. Honeypot check
+    if (!empty($_POST['confirm_email'])) {
+        $bot_detected = true;
+        error_log("Bot detected: Honeypot field filled");
+    }
     
-    if ($user) {
-        // Check if user is blocked
-        if ($user['is_blocked']) {
-            $error = "គណនីអ្នកត្រូវបានរារាំង។ សូមទាក់ទងអ្នកគ្រប់គ្រង។";
-        } 
-        // Check if user is temporarily blocked
-        else if (isset($_SESSION['login_blocked_users'][$user['id']])) {
-            $block_time = $_SESSION['login_blocked_users'][$user['id']];
-            if ($block_time > time()) {
-                $remaining_time = $block_time - time();
-                $minutes = ceil($remaining_time / 60);
-                $error = "សូមរង់ចាំ $minutes នាទី មុនពេលព្យាយាមម្តងទៀត។";
+    // 2. Time-based check (prevent instant submission)
+    $formLoadTime = $_POST['form_load_time'] ?? 0;
+    $submitTime = time();
+    if (($submitTime - $formLoadTime) < 2) {
+        $bot_detected = true;
+        error_log("Bot detected: Form submitted too quickly");
+    }
+    
+    // 3. reCAPTCHA verification
+    $recaptchaToken = $_POST['recaptcha_response'] ?? '';
+    if (!$bot_detected && !verifyRecaptcha(RECAPTCHA_SECRET_KEY, $recaptchaToken)) {
+        $bot_detected = true;
+        error_log("Bot detected: reCAPTCHA failed");
+    }
+    
+    if ($bot_detected) {
+        $error = "សូមព្យាយាមម្តងទៀត។ ការផ្ទៀងផ្ទាត់សុវត្ថិភាពបរាជ័យ។";
+    } else {
+        // Continue with normal login processing
+        $username = sanitizeInput($_POST['username']);
+        $password = $_POST['password'] ?? ''; // Make password optional
+        
+        // First check if user exists
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($user) {
+            // Check if user is blocked
+            if ($user['is_blocked']) {
+                $error = "គណនីអ្នកត្រូវបានរារាំង។ សូមទាក់ទងអ្នកគ្រប់គ្រង។";
+            } 
+            // Check if user is temporarily blocked
+            else if (isset($_SESSION['login_blocked_users'][$user['id']])) {
+                $block_time = $_SESSION['login_blocked_users'][$user['id']];
+                if ($block_time > time()) {
+                    $remaining_time = $block_time - time();
+                    $minutes = ceil($remaining_time / 60);
+                    $error = "សូមរង់ចាំ $minutes នាទី មុនពេលព្យាយាមម្តងទៀត។";
+                } else {
+                    unset($_SESSION['login_blocked_users'][$user['id']]);
+                }
             } else {
-                unset($_SESSION['login_blocked_users'][$user['id']]);
-            }
-        } else {
-            // Handle guest login (no password required)
-            if ($user['user_type'] === 'guest') {
-                // Set session variables
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['user_type'] = $user['user_type'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['picture'] = $user['picture'];
-                $_SESSION['show_welcome'] = true;
-                logActivity($user['id'], 'Login', "Guest user logged in: {$username} ");
-                
-                // Redirect guest to stock-in.php
-                header("Location: Guest/remaining.php");
-                exit();
-            }
-            // Handle regular users (with password)
-            else {
-                // Password is required for non-guest users
-                if (empty($password)) {
-                    $error = "សូមបញ្ចូលពាក្យសម្ងាត់។";
-                } 
-                // Validate password length
-                else if (strlen($password) < 8) {
-                    $error = "ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងហោចណាស់ ៨ តួអក្សរ។";
-                } else if (password_verify($password, $user['password'])) {
-                    // Reset login attempts for this user in database
-                    $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
-                    $resetStmt->execute([$user['id']]);
-                    
+                // Handle guest login (no password required)
+                if ($user['user_type'] === 'guest') {
                     // Set session variables
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['username'];
@@ -79,59 +81,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['email'] = $user['email'];
                     $_SESSION['picture'] = $user['picture'];
                     $_SESSION['show_welcome'] = true;
-                    logActivity($user['id'], 'Login', "User logged in: {$username} ");
+                    logActivity($user['id'], 'Login', "Guest user logged in: {$username} ");
                     
-                    // Redirect based on user type
-                    $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
-                    
-                    if (isset($_SESSION['redirect_url'])) {
-                        $redirect_url = $_SESSION['redirect_url'];
-                        unset($_SESSION['redirect_url']);
-                        header("Location: $redirect_url");
-                    } else {
-                        header("Location: $dashboard");
-                    }
+                    // Redirect guest to stock-in.php
+                    header("Location: Guest/remaining.php");
                     exit();
-                } else {
-                    // INCORRECT PASSWORD - Increment login attempts and show error
-                    $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";
-                    
-                    // Increment login attempts in database
-                    $updateStmt = $pdo->prepare("UPDATE users SET login_attempts = login_attempts + 1, last_attempt_time = NOW() WHERE id = ?");
-                    $updateStmt->execute([$user['id']]);
-                    
-                    // Check if user should be blocked due to too many attempts
-                    $stmt = $pdo->prepare("SELECT login_attempts FROM users WHERE id = ?");
-                    $stmt->execute([$user['id']]);
-                    $attempts = $stmt->fetchColumn();
-                    
-                    if ($attempts >= 3) {
-                        // Block user for 5 minutes after 3 failed attempts
-                        $_SESSION['login_blocked_users'][$user['id']] = time() + 300; // 5 minutes
-                        $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
+                }
+                // Handle regular users (with password)
+                else {
+                    // Password is required for non-guest users
+                    if (empty($password)) {
+                        $error = "សូមបញ្ចូលពាក្យសម្ងាត់។";
+                    } 
+                    // Validate password length
+                    else if (strlen($password) < 8) {
+                        $error = "ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងហោចណាស់ ៨ តួអក្សរ។";
+                    } else if (password_verify($password, $user['password'])) {
+                        // Reset login attempts for this user in database
+                        $resetStmt = $pdo->prepare("UPDATE users SET login_attempts = 0, last_attempt_time = NULL WHERE id = ?");
+                        $resetStmt->execute([$user['id']]);
+                        
+                        // Set session variables
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['user_type'] = $user['user_type'];
+                        $_SESSION['email'] = $user['email'];
+                        $_SESSION['picture'] = $user['picture'];
+                        $_SESSION['show_welcome'] = true;
+                        logActivity($user['id'], 'Login', "User logged in: {$username} ");
+                        
+                        // Redirect based on user type
+                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
+                        
+                        if (isset($_SESSION['redirect_url'])) {
+                            $redirect_url = $_SESSION['redirect_url'];
+                            unset($_SESSION['redirect_url']);
+                            header("Location: $redirect_url");
+                        } else {
+                            header("Location: $dashboard");
+                        }
+                        exit();
+                    } else {
+                        // INCORRECT PASSWORD - Increment login attempts and show error
+                        $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";
+                        
+                        // Increment login attempts in database
+                        $updateStmt = $pdo->prepare("UPDATE users SET login_attempts = login_attempts + 1, last_attempt_time = NOW() WHERE id = ?");
+                        $updateStmt->execute([$user['id']]);
+                        
+                        // Check if user should be blocked due to too many attempts
+                        $stmt = $pdo->prepare("SELECT login_attempts FROM users WHERE id = ?");
+                        $stmt->execute([$user['id']]);
+                        $attempts = $stmt->fetchColumn();
+                        
+                        if ($attempts >= 3) {
+                            // Block user for 5 minutes after 3 failed attempts
+                            $_SESSION['login_blocked_users'][$user['id']] = time() + 300; // 5 minutes
+                            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
+                        }
                     }
                 }
             }
-        }
-    } else {
-        // User doesn't exist - we can't track attempts in DB for non-existent users
-        // So we'll use session for unknown usernames
-        if (!isset($_SESSION['unknown_user_attempts'][$username])) {
-            $_SESSION['unknown_user_attempts'][$username] = 0;
-        }
-        $_SESSION['unknown_user_attempts'][$username]++;
-        $current_attempts = $_SESSION['unknown_user_attempts'][$username];
-        
-        if ($current_attempts > 7) {
-            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 24 ម៉ោង។";
-        } elseif ($current_attempts == 7) {
-            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
-        } elseif ($current_attempts >= 5) {
-            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 3 នាទី។";
-        } elseif ($current_attempts >= 3) {
-            $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 1 នាទី។";
         } else {
-            $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។ អ្នកមាន ".(3 - $current_attempts)." ដងទៀតដើម្បីព្យាយាម។";
+            // User doesn't exist - we can't track attempts in DB for non-existent users
+            // So we'll use session for unknown usernames
+            if (!isset($_SESSION['unknown_user_attempts'][$username])) {
+                $_SESSION['unknown_user_attempts'][$username] = 0;
+            }
+            $_SESSION['unknown_user_attempts'][$username]++;
+            $current_attempts = $_SESSION['unknown_user_attempts'][$username];
+            
+            if ($current_attempts > 7) {
+                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 24 ម៉ោង។";
+            } elseif ($current_attempts == 7) {
+                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 5 នាទី។";
+            } elseif ($current_attempts >= 5) {
+                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 3 នាទី។";
+            } elseif ($current_attempts >= 3) {
+                $error = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។ សូមរង់ចាំ 1 នាទី។";
+            } else {
+                $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។ អ្នកមាន ".(3 - $current_attempts)." ដងទៀតដើម្បីព្យាយាម។";
+            }
         }
     }
 }
@@ -144,6 +174,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>ចូលប្រព័ន្ធ | ប្រព័ន្ធគ្រប់គ្រងឃ្លាំង</title>
     <link href="assets/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <!-- Add reCAPTCHA for Hostinger -->
+    <script src="https://www.google.com/recaptcha/api.js?render=<?php echo RECAPTCHA_SITE_KEY; ?>"></script>
     <style>
     :root {
         --primary: #4e73df;
@@ -190,13 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         text-align: center;
         height: 500px;
         margin-top:50px;
-       
-        
     }
-
-  
-       
-   
 
     .login-left h2 {
         margin: 0;
@@ -383,6 +409,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         transform: translateY(-2px);
     }
 
+    /* Honeypot field - completely hidden */
+    .honeypot-field {
+        position: absolute;
+        left: -9999px;
+        opacity: 0;
+        height: 0;
+        width: 0;
+        overflow: hidden;
+    }
+
     @media (max-width: 768px) {
         .login-container {
             flex-direction: column;
@@ -490,14 +526,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <div class="login-container">
-   
-     <img src="assets/images/login.png" alt="">
-    
+    <img src="assets/images/login.png" alt="">
     
     <div class="login-right">
         <div class="login-header">
             <h3>Login</h3>
-            
         </div>
         
         <?php if ($error): ?>
@@ -506,37 +539,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
         
-      <!-- Modify your form to help browsers recognize it as a login form -->
-<form method="POST" action="" id="loginForm" autocomplete="on">
-    <div class="form-group">
-        <label for="username" class="form-label">Username</label>
-        <input type="text" class="form-control" id="username" name="username" 
-               autocomplete="username" required>
-        <i class="bi bi-person input-icon"></i>
-    </div>
-    
-    <div class="form-group" id="passwordGroup">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" id="password" name="password" 
-               autocomplete="current-password" minlength="8">
-        <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
-    </div>
-    
-    <div class="remember-me">
-        <input type="checkbox" id="remember" name="remember">
-        <label for="remember">Remember me</label>
-    </div>
-    
-    <button type="submit" class="btn-login" id="loginButton">
-        <i class="bi bi-box-arrow-in-right"></i> Login
-    </button>
-</form>
-        
-<div class="login-footer">
-                <a href="forgot-password.php">Forgot Password?</a>
-              
+        <form method="POST" action="" id="loginForm" autocomplete="on">
+            <!-- Bot Protection Fields -->
+            <input type="hidden" name="form_load_time" value="<?php echo time(); ?>">
+            <input type="hidden" name="recaptcha_response" id="recaptchaResponse">
+            
+            <!-- Honeypot Field (hidden from users) -->
+            <div class="honeypot-field">
+                <label for="confirm_email">Confirm Email</label>
+                <input type="text" id="confirm_email" name="confirm_email" autocomplete="off">
             </div>
-
+            
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" 
+                       autocomplete="username" required>
+                <i class="bi bi-person input-icon"></i>
+            </div>
+            
+            <div class="form-group" id="passwordGroup">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" 
+                       autocomplete="current-password" minlength="8">
+                <i class="bi bi-eye-slash input-icon" id="togglePassword"></i>
+            </div>
+            
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Remember me</label>
+            </div>
+            
+            <button type="submit" class="btn-login" id="loginButton">
+                <i class="bi bi-box-arrow-in-right"></i> Login
+            </button>
+        </form>
+        
+        <div class="login-footer">
+            <a href="forgot-password.php">Forgot Password?</a>
         </div>
     </div>
 </div>
@@ -557,24 +596,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-    <script src="assets/js/bootstrap.bundle.min.js"></script>
-    <script>
-    // Toggle password visibility
-    document.getElementById('togglePassword').addEventListener('click', function() {
-        const passwordInput = document.getElementById('password');
-        const icon = this;
-        
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
-        } else {
-            passwordInput.type = 'password';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
-        }
-    });
-// Add this JavaScript
+<script src="assets/js/bootstrap.bundle.min.js"></script>
+<script>
+// Toggle password visibility
+document.getElementById('togglePassword').addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    const icon = this;
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    }
+});
+
+// Remember me functionality
 document.addEventListener('DOMContentLoaded', function() {
     const rememberCheckbox = document.getElementById('remember');
     const usernameInput = document.getElementById('username');
@@ -594,19 +634,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle form submission
-    document.getElementById('loginForm').addEventListener('submit', function() {
-        if (rememberCheckbox.checked) {
-            // Save credentials
-            localStorage.setItem('rememberedUsername', usernameInput.value);
-            localStorage.setItem('rememberedPassword', passwordInput.value);
-        } else {
-            // Clear saved credentials
-            localStorage.removeItem('rememberedUsername');
-            localStorage.removeItem('rememberedPassword');
-        }
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get reCAPTCHA token first
+        grecaptcha.ready(function() {
+            grecaptcha.execute('<?php echo RECAPTCHA_SITE_KEY; ?>', {action: 'login'}).then(function(token) {
+                // Set the token in hidden field
+                document.getElementById('recaptchaResponse').value = token;
+                
+                // Handle remember me
+                if (rememberCheckbox.checked) {
+                    // Save credentials
+                    localStorage.setItem('rememberedUsername', usernameInput.value);
+                    localStorage.setItem('rememberedPassword', passwordInput.value);
+                } else {
+                    // Clear saved credentials
+                    localStorage.removeItem('rememberedUsername');
+                    localStorage.removeItem('rememberedPassword');
+                }
+                
+                // Submit the form
+                document.getElementById('loginForm').submit();
+            });
+        });
     });
 });
- // Update the username blur event to make an AJAX call to check user type
+
+// Update the username blur event to make an AJAX call to check user type
 document.getElementById('username').addEventListener('blur', function() {
     const username = this.value.trim();
     if (username) {
@@ -628,71 +683,71 @@ document.getElementById('username').addEventListener('blur', function() {
     }
 });
 
-    // Show modal if there's an error
-    <?php if ($error): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('errorModal');
-            const modalMessage = document.getElementById('modalMessage');
-            const countdownTimer = document.getElementById('countdownTimer');
-            const attemptsInfo = document.getElementById('attemptsInfo');
+// Show modal if there's an error
+<?php if ($error): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('errorModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const countdownTimer = document.getElementById('countdownTimer');
+        const attemptsInfo = document.getElementById('attemptsInfo');
+        
+        modalMessage.textContent = "<?php echo addslashes($error); ?>";
+        
+        <?php if (isset($user) && isset($_SESSION['login_blocked_users'][$user['id']])): ?>
+            // Show countdown timer for blocked case (don't auto-hide)
+            countdownTimer.style.display = 'block';
+            attemptsInfo.textContent = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។";
             
-            modalMessage.textContent = "<?php echo addslashes($error); ?>";
+            // Start countdown
+            const blockedUntil = <?php echo isset($user) ? $_SESSION['login_blocked_users'][$user['id']] : 0; ?>;
+            const now = <?php echo time(); ?>;
+            let remaining = blockedUntil - now;
             
-            <?php if (isset($user) && isset($_SESSION['login_blocked_users'][$user['id']])): ?>
-                // Show countdown timer for blocked case (don't auto-hide)
-                countdownTimer.style.display = 'block';
-                attemptsInfo.textContent = "អ្នកបានព្យាយាមចូលច្រើនដងពេក។";
+            const updateCountdown = () => {
+                remaining--;
                 
-                // Start countdown
-                const blockedUntil = <?php echo isset($user) ? $_SESSION['login_blocked_users'][$user['id']] : 0; ?>;
-                const now = <?php echo time(); ?>;
-                let remaining = blockedUntil - now;
-                
-                const updateCountdown = () => {
-                    remaining--;
-                    
-                    if (remaining <= 0) {
-                        clearInterval(countdownInterval);
-                        countdownTimer.style.display = 'none';
-                        window.location.reload();
-                        return;
-                    }
-                    
-                    const minutes = Math.floor(remaining / 60);
-                    const seconds = remaining % 60;
-                    document.getElementById('countdown').textContent = 
-                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                };
-                
-                updateCountdown();
-                const countdownInterval = setInterval(updateCountdown, 1000);
-            <?php else: ?>
-                // Show attempts info for regular errors
-                const attempts = <?php echo isset($_SESSION['login_attempts']) ? $_SESSION['login_attempts'] : 0; ?>;
-                if (attempts > 0) {
-                    attemptsInfo.textContent = `អ្នកមាន ${3 - attempts} ដងទៀតដើម្បីព្យាយាម។`;
-                    
-                    // Don't auto-hide for password/attempts messages
-                    const isPasswordError = "<?php echo addslashes($error); ?>".includes("ពាក្យសម្ងាត់មិនត្រឹមត្រូវ") || 
-                                          "<?php echo addslashes($error); ?>".includes("ឈ្មោះអ្នកប្រើប្រាស់");
-                    
-                    if (!isPasswordError) {
-                        // Auto-hide after 5 seconds for other error messages
-                        setTimeout(() => {
-                            modal.classList.remove('active');
-                        }, 5000);
-                    }
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownTimer.style.display = 'none';
+                    window.location.reload();
+                    return;
                 }
-            <?php endif; ?>
+                
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                document.getElementById('countdown').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            };
             
-            modal.classList.add('active');
-            
-            // Close modal when button is clicked
-            document.getElementById('modalButton').addEventListener('click', function() {
-                modal.classList.remove('active');
-            });
+            updateCountdown();
+            const countdownInterval = setInterval(updateCountdown, 1000);
+        <?php else: ?>
+            // Show attempts info for regular errors
+            const attempts = <?php echo isset($_SESSION['login_attempts']) ? $_SESSION['login_attempts'] : 0; ?>;
+            if (attempts > 0) {
+                attemptsInfo.textContent = `អ្នកមាន ${3 - attempts} ដងទៀតដើម្បីព្យាយាម។`;
+                
+                // Don't auto-hide for password/attempts messages
+                const isPasswordError = "<?php echo addslashes($error); ?>".includes("ពាក្យសម្ងាត់មិនត្រឹមត្រូវ") || 
+                                      "<?php echo addslashes($error); ?>".includes("ឈ្មោះអ្នកប្រើប្រាស់");
+                
+                if (!isPasswordError) {
+                    // Auto-hide after 5 seconds for other error messages
+                    setTimeout(() => {
+                        modal.classList.remove('active');
+                    }, 5000);
+                }
+            }
+        <?php endif; ?>
+        
+        modal.classList.add('active');
+        
+        // Close modal when button is clicked
+        document.getElementById('modalButton').addEventListener('click', function() {
+            modal.classList.remove('active');
         });
-    <?php endif; ?>
-    </script>
+    });
+<?php endif; ?>
+</script>
 </body>
 </html>
