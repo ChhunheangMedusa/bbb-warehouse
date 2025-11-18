@@ -633,33 +633,87 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('loginButton').focus();
     }
     
-    // Handle form submission
+    // Handle form submission - FIXED VERSION
     document.getElementById('loginForm').addEventListener('submit', function(e) {
         e.preventDefault();
+        console.log('Form submission started...');
         
-        // Get reCAPTCHA token first
+        // Show loading state on button
+        const loginButton = document.getElementById('loginButton');
+        const originalText = loginButton.innerHTML;
+        loginButton.innerHTML = '<i class="bi bi-arrow-repeat spinner"></i> Processing...';
+        loginButton.disabled = true;
+        
+        // Get reCAPTCHA token
         grecaptcha.ready(function() {
-            grecaptcha.execute('<?php echo RECAPTCHA_SITE_KEY; ?>', {action: 'login'}).then(function(token) {
-                // Set the token in hidden field
-                document.getElementById('recaptchaResponse').value = token;
-                
-                // Handle remember me
-                if (rememberCheckbox.checked) {
-                    // Save credentials
-                    localStorage.setItem('rememberedUsername', usernameInput.value);
-                    localStorage.setItem('rememberedPassword', passwordInput.value);
-                } else {
-                    // Clear saved credentials
-                    localStorage.removeItem('rememberedUsername');
-                    localStorage.removeItem('rememberedPassword');
-                }
-                
-                // Submit the form
-                document.getElementById('loginForm').submit();
-            });
+            console.log('reCAPTCHA ready...');
+            grecaptcha.execute('<?php echo RECAPTCHA_SITE_KEY; ?>', {action: 'login'})
+                .then(function(token) {
+                    console.log('reCAPTCHA token received:', token);
+                    
+                    // Set the token in hidden field
+                    document.getElementById('recaptchaResponse').value = token;
+                    
+                    // Handle remember me
+                    if (rememberCheckbox.checked) {
+                        // Save credentials
+                        localStorage.setItem('rememberedUsername', usernameInput.value);
+                        localStorage.setItem('rememberedPassword', passwordInput.value);
+                    } else {
+                        // Clear saved credentials
+                        localStorage.removeItem('rememberedUsername');
+                        localStorage.removeItem('rememberedPassword');
+                    }
+                    
+                    // Submit the form programmatically
+                    console.log('Submitting form...');
+                    const form = document.getElementById('loginForm');
+                    
+                    // Create a new form submission without the event listener
+                    const newForm = document.createElement('form');
+                    newForm.method = 'POST';
+                    newForm.action = '';
+                    
+                    // Copy all form data
+                    const formData = new FormData(form);
+                    for (let [key, value] of formData.entries()) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = value;
+                        newForm.appendChild(input);
+                    }
+                    
+                    // Add the reCAPTCHA token
+                    const recaptchaInput = document.createElement('input');
+                    recaptchaInput.type = 'hidden';
+                    recaptchaInput.name = 'recaptcha_response';
+                    recaptchaInput.value = token;
+                    newForm.appendChild(recaptchaInput);
+                    
+                    document.body.appendChild(newForm);
+                    newForm.submit();
+                    
+                })
+                .catch(function(error) {
+                    console.error('reCAPTCHA error:', error);
+                    // Fallback: submit form without reCAPTCHA
+                    alert('reCAPTCHA failed. Please try again.');
+                    loginButton.innerHTML = originalText;
+                    loginButton.disabled = false;
+                });
         });
     });
 });
+
+// Alternative simpler approach - uncomment if above doesn't work
+/*
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    // Just let the form submit normally for now
+    console.log('Form submitting normally...');
+    return true;
+});
+*/
 
 // Update the username blur event to make an AJAX call to check user type
 document.getElementById('username').addEventListener('blur', function() {
@@ -748,6 +802,20 @@ document.getElementById('username').addEventListener('blur', function() {
         });
     });
 <?php endif; ?>
+
+// Add spinner CSS
+const style = document.createElement('style');
+style.textContent = `
+    .spinner {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
 </script>
+
 </body>
 </html>
