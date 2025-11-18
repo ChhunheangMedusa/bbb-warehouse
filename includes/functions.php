@@ -102,6 +102,7 @@ function checkLowStock() {
 }
 function verifyRecaptcha($secretKey, $response) {
     if (empty($response)) {
+        error_log("reCAPTCHA: Empty response received");
         return false;
     }
     
@@ -116,21 +117,37 @@ function verifyRecaptcha($secretKey, $response) {
         'http' => [
             'header' => "Content-type: application/x-www-form-urlencoded\r\n",
             'method' => 'POST',
-            'content' => http_build_query($data)
+            'content' => http_build_query($data),
+            'timeout' => 10 // 10 second timeout
         ]
     ];
     
-    $context = stream_context_create($options);
-    $result = file_get_contents($url, false, $context);
-    
-    if ($result === FALSE) {
-        error_log("reCAPTCHA verification failed: Unable to connect to Google");
+    try {
+        $context = stream_context_create($options);
+        $result = file_get_contents($url, false, $context);
+        
+        if ($result === FALSE) {
+            error_log("reCAPTCHA: Unable to connect to Google API");
+            return false;
+        }
+        
+        $responseData = json_decode($result, true);
+        
+        error_log("reCAPTCHA API Response: " . print_r($responseData, true));
+        
+        if (isset($responseData['success']) && $responseData['success'] === true) {
+            error_log("reCAPTCHA: Verification successful");
+            return true;
+        } else {
+            error_log("reCAPTCHA: Verification failed - " . ($responseData['error-codes'][0] ?? 'Unknown error'));
+            return false;
+        }
+    } catch (Exception $e) {
+        error_log("reCAPTCHA Exception: " . $e->getMessage());
         return false;
     }
-    
-    $responseData = json_decode($result);
-    return $responseData->success;
 }
+
 function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)));
 }

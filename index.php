@@ -20,6 +20,10 @@ $error = '';
 
 // Regular login processing
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // DEBUG: Check what's in the POST data
+    error_log("POST data: " . print_r($_POST, true));
+    error_log("reCAPTCHA response: " . ($_POST['g-recaptcha-response'] ?? 'NOT SET'));
+    
     // Bot Protection Checks
     $bot_detected = false;
     
@@ -37,21 +41,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log("Bot detected: Form submitted too quickly");
     }
     
-    // 3. reCAPTCHA verification
-    $recaptchaResponse = $_POST['recaptcha_response'] ?? '';
-    if (!$bot_detected && !verifyRecaptcha(RECAPTCHA_SECRET_KEY, $recaptchaResponse)) {
-        $bot_detected = true;
+    // 3. reCAPTCHA v2 verification
+    $recaptchaResponse = $_POST['g-recaptcha-response'] ?? '';
+    
+    // Check if reCAPTCHA response is empty
+    if (empty($recaptchaResponse)) {
         $error = "សូមបញ្ជាក់ថាអ្នកមិនមែនជារូបយន្ត។";
-        error_log("Bot detected: reCAPTCHA failed");
+        $bot_detected = true;
+        error_log("reCAPTCHA response is empty");
+    } else if (!$bot_detected) {
+        // Verify reCAPTCHA
+        if (!verifyRecaptcha(RECAPTCHA_SECRET_KEY, $recaptchaResponse)) {
+            $bot_detected = true;
+            $error = "ការផ្ទៀងផ្ទាត់ reCAPTCHA បរាជ័យ។ សូមព្យាយាមម្តងទៀត។";
+            error_log("reCAPTCHA verification failed");
+        } else {
+            error_log("reCAPTCHA verification successful");
+        }
     }
+    
     if ($bot_detected && empty($error)) {
         $error = "សូមព្យាយាមម្តងទៀត។ ការផ្ទៀងផ្ទាត់សុវត្ថិភាពបរាជ័យ។";
-    } 
-
-     else if (!$bot_detected){
+    } else if (!$bot_detected) {
         // Continue with normal login processing
         $username = sanitizeInput($_POST['username']);
-        $password = $_POST['password'] ?? ''; // Make password optional
+        $password = $_POST['password'] ?? '';
         
         // First check if user exists
         $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
