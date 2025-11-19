@@ -63,38 +63,41 @@
     <script>
         // Toggle chat
         function toggleAIChat() {
-            const win = document.getElementById('aiChatWindow');
-            win.style.display = (win.style.display === 'none' || win.style.display === '') ? 'block' : 'none';
-        }
+        const win = document.getElementById('aiChatWindow');
+        win.style.display = (win.style.display === 'none' || win.style.display === '') ? 'block' : 'none';
+    }
 
         // Add message to chat
         function addMessage(text, isUser = false) {
-            const div = document.createElement('div');
-            div.className = isUser ? 'text-end mb-3' : 'text-start mb-3';
-            div.innerHTML = `<div class="${isUser?'bg-warning text-dark':'bg-light'} rounded-3 px-4 py-3 d-inline-block" style="max-width:85%; box-shadow:0 2px 8px rgba(0,0,0,0.1); word-wrap:break-word;">
-                ${text.replace(/\n/g, '<br>')}
-            </div>`;
-            document.getElementById('aiMessages').appendChild(div);
-            div.scrollIntoView({behavior: 'smooth'});
-        }
+        const div = document.createElement('div');
+        div.className = isUser ? 'text-end mb-3' : 'text-start mb-3';
+        div.innerHTML = `<div class="${isUser?'bg-warning text-dark':'bg-light'} rounded-3 px-4 py-3 d-inline-block" style="max-width:85%; box-shadow:0 2px 8px rgba(0,0,0,0.1); word-wrap:break-word;">
+            ${text.replace(/\n/g, '<br>')}
+        </div>`;
+        document.getElementById('aiMessages').appendChild(div);
+        div.scrollIntoView({behavior: 'smooth'});
+    }
 
-        // Send message to ai_chat.php
-        function sendMessage() {
-            const input = document.getElementById('aiInput');
-            const msg = input.value.trim();
-            if (!msg) return;
-            addMessage(msg, true);
-            input.value = '';
+    function sendMessage() {
+        const input = document.getElementById('aiInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+        addMessage(msg, true);
+        input.value = '';
 
-            fetch('../ai_chat.php', {  // ← works from any folder
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'message=' + encodeURIComponent(msg)
-            })
-            .then(r => r.json())
-            .then(data => addMessage(data.reply))
-            .catch(() => addMessage('មានបញ្ហាបន្តិច។ សាកម្តងទៀតបានទេ? 🙏'));
-        }
+        // THIS LINE FIXED – works from ANY folder
+        fetch(`${window.location.origin}/ai_chat.php`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'message=' + encodeURIComponent(msg)
+        })
+        .then(r => r.json())
+        .then(data => addMessage(data.reply))
+        .catch(err => {
+            console.error(err);
+            addMessage('មានបញ្ហាបណ្តាញ។ ព្យាយាមម្តងទៀតបានទេ?');
+        });
+    }
 
         // Voice recognition (Khmer)
         function startVoice() {
@@ -113,13 +116,12 @@
         }
 
         // Welcome message (only show after login)
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if (isset($_SESSION['user_id'])): ?>  // ← only logged-in users see it
-                setTimeout(() => {
-                    addMessage('សួស្តីបង <?php echo $_SESSION['username'] ?? ""; ?>! 🏗️<br>សួរឈ្មោះសម្ភារៈអ្វីក៏បាន<br>• នៅណា?<br>• ពី supplier ណា?<br>• ជិតអស់អត់?<br>• មានអ្វីខូចទេ?');
-                }, 1000);
-            <?php endif; ?>
-        });
+        function startVoice() { ... } // keep your voice code
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if (isset($_SESSION['user_id'])): ?>
+            setTimeout(() => addMessage('សួស្តីបង! 🏗️<br>សួរឈ្មោះសម្ភារៈអ្វីក៏បាន<br>ខ្ញុំប្រាប់ភ្លាម!'), 1000);
+        <?php endif; ?>
+    });
 
         // Keyboard shortcut Ctrl+K
         document.addEventListener('keydown', function(e) {
