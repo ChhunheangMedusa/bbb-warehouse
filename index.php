@@ -1,7 +1,6 @@
 <?php
 // Include configuration and functions first
 require_once 'config/database.php';
-require_once 'config/recaptcha.php';
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
 require_once 'includes/forgot.php';
@@ -594,11 +593,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="remember-me">
         <input type="checkbox" id="remember" name="remember">
         <label for="remember">Remember me</label>
-    </div>
-    
-    <!-- reCAPTCHA v2 Checkbox -->
-    <div class="form-group">
-        <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
     </div>
     
     <button type="submit" class="btn-login" id="loginButton">
