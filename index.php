@@ -575,10 +575,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="remember">Remember me</label>
     </div>
     
-    <!-- reCAPTCHA v2 Checkbox -->
-    <div class="form-group">
-        <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
-    </div>
+
     
     <button type="submit" class="btn-login" id="loginButton">
         <i class="bi bi-box-arrow-in-right"></i> Login
