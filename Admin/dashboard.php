@@ -1220,7 +1220,7 @@ body {
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title"><?php echo t('new_items_card'); ?></h5>
+                        <h5 class="card-title"><?php echo t('new_items_cards'); ?></h5>
                         <h2 class="mb-0"><?php echo $total_items; ?></h2>
                     </div>
                     <i class="bi bi-box-seam fs-1"></i>
