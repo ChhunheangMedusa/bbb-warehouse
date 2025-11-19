@@ -21,7 +21,6 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // DEBUG: Check what's in the POST data
     error_log("POST data: " . print_r($_POST, true));
-    error_log("reCAPTCHA response: " . ($_POST['g-recaptcha-response'] ?? 'NOT SET'));
     
     // Bot Protection Checks
     $bot_detected = false;
@@ -38,25 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (($submitTime - $formLoadTime) < 2) {
         $bot_detected = true;
         error_log("Bot detected: Form submitted too quickly");
-    }
-    
-    // 3. reCAPTCHA v2 verification
-    $recaptchaResponse = $_POST['g-recaptcha-response'] ?? '';
-    
-    // Check if reCAPTCHA response is empty
-    if (empty($recaptchaResponse)) {
-        $error = "សូមបញ្ជាក់ថាអ្នកមិនមែនជារូបយន្ត។";
-        $bot_detected = true;
-        error_log("reCAPTCHA response is empty");
-    } else if (!$bot_detected) {
-        // Verify reCAPTCHA
-        if (!verifyRecaptcha(RECAPTCHA_SECRET_KEY, $recaptchaResponse)) {
-            $bot_detected = true;
-            $error = "ការផ្ទៀងផ្ទាត់ reCAPTCHA បរាជ័យ។ សូមព្យាយាមម្តងទៀត។";
-            error_log("reCAPTCHA verification failed");
-        } else {
-            error_log("reCAPTCHA verification successful");
-        }
     }
     
     if ($bot_detected && empty($error)) {
@@ -593,6 +573,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="remember-me">
         <input type="checkbox" id="remember" name="remember">
         <label for="remember">Remember me</label>
+    </div>
+    
+    <!-- reCAPTCHA v2 Checkbox -->
+    <div class="form-group">
+        <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
     </div>
     
     <button type="submit" class="btn-login" id="loginButton">
