@@ -18,7 +18,6 @@ checkAdminAccess();
 
 
 
-
 // Get filter parameters
 $username_filter = isset($_GET['username']) ? sanitizeInput($_GET['username']) : '';
 $type_filter = isset($_GET['type']) ? sanitizeInput($_GET['type']) : '';
