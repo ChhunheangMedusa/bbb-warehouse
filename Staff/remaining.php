@@ -1922,6 +1922,7 @@ table th{
                             <th><?php echo t('item_invoice');?></th>
                             <th><?php echo t('item_date');?></th>
                             <th><?php echo t('item_name');?></th>
+                            <th><?php echo t('item_status');?></th>
                             <th><?php echo t('item_qty');?></th>
                             <th><?php echo t('item_size');?></th>
                             <th><?php echo t('deporty');?></th>
@@ -1945,15 +1946,14 @@ table th{
                                     <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                     <td><?php echo $item['invoice_no']; ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                    <td><?php echo $item['name']; ?>
-    <?php if ($item['action_type'] === 'new'): ?>
+                                    <td><?php echo $item['name']; ?></td>
+                                    <td><?php if ($item['action_type'] === 'new'): ?>
         <span class="badge bg-primary"><?php echo t('status_new'); ?></span>
     <?php elseif ($item['action_type'] === 'add'): ?>
         <span class="badge bg-success"><?php echo t('status_add'); ?></span>
     <?php elseif ($item['action_type'] === 'broken'): ?>
         <span class="badge bg-danger"><?php echo t('status_broken'); ?></span>
-    <?php endif; ?>
-</td>
+    <?php endif; ?></td>
                                     <td class="<?php echo $item['quantity'] <= $item['alert_quantity'] ? 'text-danger fw-bold' : ''; ?>">
                                         <?php echo $item['quantity']; ?>
                                         <?php if ($item['quantity'] <= $item['alert_quantity']): ?>
