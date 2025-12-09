@@ -465,10 +465,12 @@ $translations = [
 'status_transfer'=>'ផ្ទេរ',
 'no_users_found'=>'មិនមានអ្នកប្រើប្រាស់ត្រូវបានរកឃើញនោះទេ',
 'no_items_found'=>'មិនមានសម្ភារៈត្រូវបានរកឃើញនោះទេ',
+'item_status'=>'Status'
     ],
 
 
     'en' => [
+        'item_status'=>'Status',
         'no_items_found'=>'No items found',
         'no_users_found'=>'No user found',
         'status_transfer'=>'Transfer',
