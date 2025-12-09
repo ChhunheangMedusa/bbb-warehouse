@@ -1562,7 +1562,7 @@ table th{
                                 <td><?php echo $item['invoice_no']; ?></td>
                                 <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
                                 <td><?php echo $item['name']; ?>
-                                    <span class="badge bg-danger"><?php echo t('status_broken'); ?></span>
+                                   
                                 </td>
                                 <td class="text-danger"><?php echo $item['broken_quantity']; ?></td>
                                 <td><?php echo $item['size']; ?></td>
