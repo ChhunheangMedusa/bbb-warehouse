@@ -2514,6 +2514,7 @@ input[name="invoice_no"] {
                                     <th><?php echo t('item_invoice'); ?></th>
                                     <th><?php echo t('item_date'); ?></th>
                                     <th><?php echo t('item_name'); ?></th>
+                                    <th><?php echo t('item_status'); ?></th>
                                     <th><?php echo t('history_qty'); ?></th>
                                     <th><?php echo t('item_size'); ?></th>
                                     <th><?php echo t('item_location'); ?></th>
@@ -2536,8 +2537,8 @@ input[name="invoice_no"] {
                                             <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                             <td><?php echo $item['invoice_no']; ?></td>
                                             <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                            <td><?php echo $item['name']; ?>
-                                            <span class="badge bg-danger">
+                                            <td><?php echo $item['name']; ?></td>
+                                            <td><span class="badge bg-danger">
     <?php 
     if ($item['action_type'] === 'deduct') {
         echo t('status_deduct');
@@ -2545,8 +2546,7 @@ input[name="invoice_no"] {
         echo ucfirst($item['action_type']);
     }
     ?>
-</span>
-                                        </td>
+</span></td>
                                             <td class="text-danger">-<?php echo $item['action_quantity']; ?></td>
                                             <td><?php echo $item['size']; ?></td>
                                             <td><?php echo $item['location_name']; ?></td>

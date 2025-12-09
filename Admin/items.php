@@ -2211,6 +2211,7 @@ input[name="invoice_no"] {
                                     <th><?php echo t('item_invoice'); ?></th>
                                     <th><?php echo t('item_date'); ?></th>
                                     <th><?php echo t('item_name'); ?></th>
+                                    <th><?php echo t('item_status'); ?></th>
                                     <th><?php echo t('history_qty'); ?></th>
                                     <th><?php echo t('item_size'); ?></th>
                                     <th><?php echo t('deporty'); ?></th>
@@ -2234,8 +2235,9 @@ input[name="invoice_no"] {
                                             <td><?php echo $item['category_name'] ?: 'N/A'; ?></td>
                                             <td><?php echo $item['invoice_no']; ?></td>
                                             <td><?php echo date('d/m/Y', strtotime($item['date'])); ?></td>
-                                            <td><?php echo $item['name']; ?>
-<span class="badge bg-<?php 
+                                            <td><?php echo $item['name']; ?></td>
+                                            <td>
+                                            <span class="badge bg-<?php 
     if ($item['action_type'] === 'new') {
         echo 'primary';
     } elseif ($item['action_type'] === 'add') {
@@ -2258,7 +2260,7 @@ input[name="invoice_no"] {
     }
     ?>
 </span>
-</td>
+                                            </td>
                                             <td class="text-success">+<?php echo $item['action_quantity']; ?></td>
                                             <td><?php echo $item['size']; ?></td>
                                             <td><?php echo $item['deporty_name'] ?: 'N/A'; ?></td>
