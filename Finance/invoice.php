@@ -7,15 +7,15 @@ require_once '../includes/functions.php';
 require_once 'translate.php';
 
 
-// Check if user is authenticated
-checkAuth();
+
 // Check if user has permission (admin or finance staff only)
 if (!isAdmin() && !isFinanceStaff()) {
     $_SESSION['error'] = "You don't have permission to access this page";
     header('Location: ../index.php'); // Redirect to login or home page
     exit();
 }
-
+// Check if user is authenticated
+checkAuth();
 
 
 // Get all locations from finance_location table
