@@ -112,11 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $redirect_url = 'Finance/dashboard.php';
                                 break;
                             case 'warehouse_staff':
-                                $redirect_url = 'Staff/dashboard.php';
-                                break;
-                            case 'staff': // 如果还有普通的staff类型，保持原有逻辑
-                            default:
-                                $redirect_url = 'Staff/dashboard.php';
+                                $redirect_url = 'Staff/dashboard-staff.php';
                                 break;
                         }
                         
@@ -125,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             unset($_SESSION['redirect_url']);
                         }
                         
-                        header("Location: $redirect_url");
+                        header("Location: select-destination.php");
                         exit();
                         
                     } else {
