@@ -106,30 +106,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
                         
                         // Redirect based on user type
-                        switch ($user['user_type']) {
-                            case 'admin':
-                                $redirect_url = 'Admin/dashboard.php';
-                                break;
-                            case 'finance_staff':
-                                $redirect_url = 'Finance/dashboard.php';
-                                break;
-                                case 'warehouse_staff':
-                                    $redirect_url = 'Staff/dashboard-staff.php';  // Changed from dashboard.php
-                                    break;
-                                    default:
-                                    $redirect_url = 'index.php'; // Redirect back to login
-                                    logActivity($user['id'], 'Login Error', "Invalid user type: {$user['user_type']}");
-                                    break;
-      
-                        }
-                        
-                        if (isset($_SESSION['redirect_url'])) {
-                            $redirect_url = $_SESSION['redirect_url'];
-                            unset($_SESSION['redirect_url']);
-                        }
-                        
-                        header("Location: select-destination.php");
-                        exit();
+                        // Redirect based on user type
+switch ($user['user_type']) {
+    case 'admin':
+        // Admin goes to select-destination.php to choose system
+        header("Location: select-destination.php");
+        break;
+    case 'finance_staff':
+        // Finance staff goes directly to finance dashboard
+        header("Location: Finance/dashboard.php");
+        break;
+    case 'warehouse_staff':
+        // Warehouse staff goes directly to staff dashboard
+        header("Location: Staff/dashboard-staff.php");
+        break;
+    case 'guest':
+        // Guest goes to remaining page
+        header("Location: Guest/remaining.php");
+        break;
+    default:
+        logActivity($user['id'], 'Login Error', "Invalid user type: {$user['user_type']}");
+        $error = "មានបញ្ហាជាមួយប្រភេទអ្នកប្រើប្រាស់។ សូមទាក់ទងអ្នកគ្រប់គ្រង។";
+        break;
+}
+exit();
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
                         $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";
