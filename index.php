@@ -105,35 +105,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['show_welcome'] = true;
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
                         
-                        // Redirect based on user type
-// Redirect based on user type
-$user_type = $user['user_type'];
-
-if (isset($_SESSION['redirect_url'])) {
-    $redirect_url = $_SESSION['redirect_url'];
-    unset($_SESSION['redirect_url']);
-    header("Location: $redirect_url");
-    exit();
-} else {
-    if ($user_type == 'admin') {
-        header("Location: Admin/dashboard.php");
-    } elseif ($user_type == 'warehouse_staff') {
-        header("Location: Staff/dashboard-staff.php");
-    } elseif ($user_type == 'finance_staff') {
-        // Adjust this based on where finance staff should go
-        header("Location: Finance/dashboard.php");
-    } 
-    exit();
-}
+                        // Redirect based on user type - FIXED VERSION
+                        $user_type = $user['user_type'];
                         
                         if (isset($_SESSION['redirect_url'])) {
                             $redirect_url = $_SESSION['redirect_url'];
                             unset($_SESSION['redirect_url']);
                             header("Location: $redirect_url");
+                            exit();
                         } else {
-                            header("Location: $dashboard");
+                            if ($user_type == 'admin') {
+                                header("Location: Admin/dashboard.php");
+                            } elseif ($user_type == 'warehouse_staff') {
+                                header("Location: Staff/dashboard-staff.php");  // This should work
+                            } elseif ($user_type == 'finance_staff') {
+                                header("Location: Finance/dashboard.php");
+                            } else {
+                                // Default fallback
+                                header("Location: dashboard.php");
+                            }
+                            exit();
                         }
-                        exit();
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
                         $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";
