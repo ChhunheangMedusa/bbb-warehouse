@@ -17,7 +17,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Handle form submission
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
     $destination = $_POST['destination'];
     
@@ -25,55 +24,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
     $_SESSION['selected_destination'] = $destination;
     
     // Redirect based on selection AND user type
-    if ($destination === 'stock') {
-        // Redirect based on user type
-        switch ($_SESSION['user_type']) {
-            case 'admin':
+    switch ($_SESSION['user_type']) {
+        case 'admin':
+            if ($destination === 'stock') {
                 header("Location: Admin/dashboard.php");
-                break;
-            case 'finance_staff':
+            } else { // 'other' (financial system)
                 header("Location: Finance/dashboard.php");
-                break;
-            case 'warehouse_staff':
-            case 'staff':
-            default:
-                header("Location: Staff/dashboard-staff.php");
-                break;
-        }
-        exit();
-    } elseif ($destination === 'other') {
-        // For financial system, redirect to Finance dashboard
-        // Note: If financial staff selects "other", they'll go to Finance/dashboard.php
-        header("Location: Finance/dashboard.php");
-        exit();
+            }
+            break;
+            
+        case 'warehouse_staff':
+        case 'staff':
+            // These users should only see stock option
+            header("Location: Staff/dashboard-staff.php");
+            break;
+            
+        case 'finance_staff':
+            // These users should only see financial option
+            header("Location: Finance/dashboard.php");
+            break;
+            
+        default:
+            header("Location: index.php");
+            break;
     }
+    exit();
 }
-
-
 
 // If user has already made a selection and is coming back, redirect them
 if (isset($_SESSION['selected_destination'])) {
-    if ($_SESSION['selected_destination'] === 'stock') {
-        // Redirect based on user type
-        switch ($_SESSION['user_type']) {
-            case 'admin':
+    switch ($_SESSION['user_type']) {
+        case 'admin':
+            if ($_SESSION['selected_destination'] === 'stock') {
                 header("Location: Admin/dashboard.php");
-                break;
-            case 'finance_staff':
+            } else {
                 header("Location: Finance/dashboard.php");
-                break;
-            case 'warehouse_staff':
-            case 'staff':
-            default:
-                header("Location: Staff/dashboard-staff.php");
-                break;
-        }
-        exit();
-    } else {
-        // For financial system
-        header("Location: Finance/dashboard.php");
-        exit();
+            }
+            break;
+            
+        case 'warehouse_staff':
+        case 'staff':
+            header("Location: Staff/dashboard-staff.php");
+            break;
+            
+        case 'finance_staff':
+            header("Location: Finance/dashboard.php");
+            break;
+            
+        default:
+            header("Location: index.php");
+            break;
     }
+    exit();
+}
+
+// Determine which options to show based on user type
+$show_stock_option = true;
+$show_finance_option = true;
+
+switch ($_SESSION['user_type']) {
+    case 'warehouse_staff':
+    case 'staff':
+        $show_finance_option = false;
+        break;
+        
+    case 'finance_staff':
+        $show_stock_option = false;
+        break;
+        
+    case 'admin':
+        // Show both options
+        $show_stock_option = true;
+        $show_finance_option = true;
+        break;
+        
+    default:
+        // For other users, show both options by default
+        $show_stock_option = true;
+        $show_finance_option = true;
+        break;
 }
 ?>
 <!DOCTYPE html>
@@ -321,6 +350,17 @@ if (isset($_SESSION['selected_destination'])) {
             padding: 2.5rem;
         }
         
+        /* Single option layout */
+        .single-option {
+            grid-template-columns: 1fr !important;
+            justify-content: center;
+        }
+        
+        .single-option .option-card {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
         .option-card {
             background: white;
             border-radius: 14px;
@@ -383,10 +423,6 @@ if (isset($_SESSION['selected_destination'])) {
             background: linear-gradient(135deg, var(--secondary-color), #ff8e8e);
         }
         
-        .option-card:nth-child(3) .option-icon {
-            background: linear-gradient(135deg, #4CAF50, #66BB6A);
-        }
-        
         .option-title {
             font-size: 1.4rem;
             font-weight: 700;
@@ -430,6 +466,11 @@ if (isset($_SESSION['selected_destination'])) {
         
         .option-radio {
             display: none;
+        }
+        
+        /* Hidden option */
+        .option-hidden {
+            display: none !important;
         }
         
         /* Action Button */
@@ -476,6 +517,11 @@ if (isset($_SESSION['selected_destination'])) {
         
         .continue-btn:hover i {
             transform: translateX(5px);
+        }
+        
+        /* Single option auto-select */
+        .auto-selected {
+            animation: pulse 2s infinite;
         }
         
         /* Animations */
@@ -556,34 +602,34 @@ if (isset($_SESSION['selected_destination'])) {
                     </div>
                     
                     <div class="user-card">
-    <div class="user-avatar">
-        <?php echo strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1)); ?>
-    </div>
-    <h4>Hello, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>!</h4>
-    <?php
-    $role_display = $_SESSION['user_type'] ?? 'User';
-    // Convert role to display name
-    switch ($role_display) {
-        case 'admin':
-            $role_display = 'Administrator';
-            break;
-        case 'finance_staff':
-            $role_display = 'Finance Staff';
-            break;
-        case 'warehouse_staff':
-            $role_display = 'Warehouse Staff';
-            break;
-        case 'staff':
-            $role_display = 'Staff';
-            break;
-        case 'guest':
-            $role_display = 'Guest';
-            break;
-    }
-    ?>
-    <p><i class="bi bi-person-badge"></i> Role: <?php echo htmlspecialchars($role_display); ?></p>
-    <p><i class="bi bi-calendar-check"></i> <?php echo date('F j, Y'); ?></p>
-</div>
+                        <div class="user-avatar">
+                            <?php echo strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1)); ?>
+                        </div>
+                        <h4>Hello, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>!</h4>
+                        <?php
+                        $role_display = $_SESSION['user_type'] ?? 'User';
+                        // Convert role to display name
+                        switch ($role_display) {
+                            case 'admin':
+                                $role_display = 'Administrator';
+                                break;
+                            case 'finance_staff':
+                                $role_display = 'Finance Staff';
+                                break;
+                            case 'warehouse_staff':
+                                $role_display = 'Warehouse Staff';
+                                break;
+                            case 'staff':
+                                $role_display = 'Staff';
+                                break;
+                            case 'guest':
+                                $role_display = 'Guest';
+                                break;
+                        }
+                        ?>
+                        <p><i class="bi bi-person-badge"></i> Role: <?php echo htmlspecialchars($role_display); ?></p>
+                        <p><i class="bi bi-calendar-check"></i> <?php echo date('F j, Y'); ?></p>
+                    </div>
                     
                     <div class="info-section">
                         <div class="info-item">
@@ -617,10 +663,11 @@ if (isset($_SESSION['selected_destination'])) {
                 </div>
                 
                 <form method="POST" action="" id="destinationForm">
-                    <div class="options-grid">
+                    <div class="options-grid <?php echo ($show_stock_option && !$show_finance_option) || (!$show_stock_option && $show_finance_option) ? 'single-option' : ''; ?>">
                         <!-- Option 1: Stock Management -->
-                        <label class="option-card" for="option1">
-                            <input type="radio" class="option-radio" id="option1" name="destination" value="stock" required>
+                        <?php if ($show_stock_option): ?>
+                        <label class="option-card <?php echo (!$show_finance_option && $show_stock_option) ? 'auto-selected' : ''; ?>" for="option1">
+                            <input type="radio" class="option-radio" id="option1" name="destination" value="stock" required <?php echo (!$show_finance_option && $show_stock_option) ? 'checked' : ''; ?>>
                             <div class="option-icon">
                                 <i class="bi bi-boxes"></i>
                             </div>
@@ -636,10 +683,12 @@ if (isset($_SESSION['selected_destination'])) {
                                 </ul>
                             </div>
                         </label>
+                        <?php endif; ?>
                         
                         <!-- Option 2: Financial System -->
-                        <label class="option-card" for="option2">
-                            <input type="radio" class="option-radio" id="option2" name="destination" value="other" required>
+                        <?php if ($show_finance_option): ?>
+                        <label class="option-card <?php echo (!$show_stock_option && $show_finance_option) ? 'auto-selected' : ''; ?>" for="option2">
+                            <input type="radio" class="option-radio" id="option2" name="destination" value="other" required <?php echo (!$show_stock_option && $show_finance_option) ? 'checked' : ''; ?>>
                             <div class="option-icon">
                                 <i class="bi bi-cash-stack"></i>
                             </div>
@@ -655,13 +704,24 @@ if (isset($_SESSION['selected_destination'])) {
                                 </ul>
                             </div>
                         </label>
-                        
-                        <!-- Option 3: Analytics Dashboard (Optional) -->
-                        
+                        <?php endif; ?>
                     </div>
                     
                     <div class="action-area">
-                        <button type="submit" class="continue-btn" id="continueBtn" disabled>
+                        <?php if ((!$show_finance_option && $show_stock_option) || (!$show_stock_option && $show_finance_option)): ?>
+                            <p style="color: #0A7885; margin-bottom: 1rem; font-weight: 500;">
+                                <i class="bi bi-info-circle"></i> 
+                                <?php 
+                                if ($_SESSION['user_type'] === 'warehouse_staff' || $_SESSION['user_type'] === 'staff') {
+                                    echo "Stock Management auto-selected for warehouse staff";
+                                } elseif ($_SESSION['user_type'] === 'finance_staff') {
+                                    echo "Financial System auto-selected for finance staff";
+                                }
+                                ?>
+                            </p>
+                        <?php endif; ?>
+                        
+                        <button type="submit" class="continue-btn" id="continueBtn" <?php echo ((!$show_finance_option && $show_stock_option) || (!$show_stock_option && $show_finance_option)) ? '' : 'disabled'; ?>>
                             Continue to Selected System <i class="bi bi-arrow-right"></i>
                         </button>
                     </div>
@@ -675,119 +735,110 @@ if (isset($_SESSION['selected_destination'])) {
         document.addEventListener('DOMContentLoaded', function() {
             const optionCards = document.querySelectorAll('.option-card');
             const continueBtn = document.getElementById('continueBtn');
+            const optionsGrid = document.querySelector('.options-grid');
             
-            // Initialize selection if returning user
-            const selectedDestination = '<?php echo $_SESSION['selected_destination'] ?? ''; ?>';
-            if (selectedDestination) {
-                const radio = document.querySelector(`input[value="${selectedDestination}"]`);
+            // If there's only one option, auto-enable the continue button
+            const optionCount = optionCards.length;
+            const userType = '<?php echo $_SESSION['user_type'] ?? ''; ?>';
+            
+            console.log('User type:', userType);
+            console.log('Option count:', optionCount);
+            
+            if (optionCount === 1) {
+                // Auto-select the single option
+                const singleCard = optionCards[0];
+                const radio = singleCard.querySelector('.option-radio');
+                
                 if (radio) {
                     radio.checked = true;
-                    radio.parentElement.classList.add('selected');
+                    singleCard.classList.add('selected');
                     continueBtn.disabled = false;
+                    
+                    // Auto-submit after 3 seconds if user doesn't click
+                    setTimeout(() => {
+                        if (radio.checked && !document.querySelector('.option-card:hover')) {
+                            const note = document.createElement('div');
+                            note.style.cssText = 'text-align:center; margin-bottom:1rem; color:#0A7885; font-size:0.9rem; font-weight:500;';
+                            note.innerHTML = '<i class="bi bi-clock"></i> Auto-continuing in <span id="countdown">3</span> seconds...';
+                            document.querySelector('.action-area').prepend(note);
+                            
+                            let countdown = 3;
+                            const countdownElement = document.getElementById('countdown');
+                            const countdownInterval = setInterval(() => {
+                                countdown--;
+                                if (countdownElement) countdownElement.textContent = countdown;
+                                
+                                if (countdown <= 0) {
+                                    clearInterval(countdownInterval);
+                                    document.getElementById('destinationForm').submit();
+                                }
+                            }, 1000);
+                        }
+                    }, 1000);
                 }
+            } else if (optionCount > 1) {
+                // Multiple options - normal selection logic
+                optionCards.forEach(card => {
+                    card.addEventListener('click', function() {
+                        // Remove selected class from all cards
+                        optionCards.forEach(c => c.classList.remove('selected'));
+                        
+                        // Add selected class to clicked card
+                        this.classList.add('selected');
+                        
+                        // Check the radio button inside
+                        const radio = this.querySelector('.option-radio');
+                        radio.checked = true;
+                        
+                        // Enable continue button
+                        continueBtn.disabled = false;
+                        
+                        // Add subtle animation to button
+                        continueBtn.classList.add('pulse');
+                        setTimeout(() => {
+                            continueBtn.classList.remove('pulse');
+                        }, 500);
+                    });
+                });
+                
+                // Initialize selection if returning user
+                const selectedDestination = '<?php echo $_SESSION['selected_destination'] ?? ''; ?>';
+                if (selectedDestination) {
+                    const radio = document.querySelector(`input[value="${selectedDestination}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                        radio.parentElement.classList.add('selected');
+                        continueBtn.disabled = false;
+                    }
+                }
+                
+                // Handle form submission
+                document.getElementById('destinationForm').addEventListener('submit', function(e) {
+                    const selectedOption = document.querySelector('input[name="destination"]:checked');
+                    if (!selectedOption) {
+                        e.preventDefault();
+                        // Show visual feedback
+                        optionCards.forEach(card => {
+                            card.style.animation = 'none';
+                            setTimeout(() => {
+                                card.style.animation = 'pulse 0.5s';
+                            }, 10);
+                        });
+                        
+                        // Show message
+                        const header = document.querySelector('.content-header p');
+                        const originalText = header.textContent;
+                        header.innerHTML = '<span style="color:#FF6B6B">Please select a destination to continue</span>';
+                        header.style.fontWeight = '600';
+                        
+                        setTimeout(() => {
+                            header.textContent = originalText;
+                            header.style.fontWeight = '';
+                        }, 3000);
+                    }
+                });
             }
             
-            optionCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    // Remove selected class from all cards
-                    optionCards.forEach(c => c.classList.remove('selected'));
-                    
-                    // Add selected class to clicked card
-                    this.classList.add('selected');
-                    
-                    // Check the radio button inside
-                    const radio = this.querySelector('.option-radio');
-                    radio.checked = true;
-                    
-                    // Enable continue button
-                    continueBtn.disabled = false;
-                    
-                    // Add subtle animation to button
-                    continueBtn.classList.add('pulse');
-                    setTimeout(() => {
-                        continueBtn.classList.remove('pulse');
-                    }, 500);
-                });
-            });
-            
-            // Handle form submission
-            document.getElementById('destinationForm').addEventListener('submit', function(e) {
-                const selectedOption = document.querySelector('input[name="destination"]:checked');
-                if (!selectedOption) {
-                    e.preventDefault();
-                    // Show visual feedback
-                    optionCards.forEach(card => {
-                        card.style.animation = 'none';
-                        setTimeout(() => {
-                            card.style.animation = 'pulse 0.5s';
-                        }, 10);
-                    });
-                    
-                    // Show message
-                    const header = document.querySelector('.content-header p');
-                    const originalText = header.textContent;
-                    header.innerHTML = '<span style="color:#FF6B6B">Please select a destination to continue</span>';
-                    header.style.fontWeight = '600';
-                    
-                    setTimeout(() => {
-                        header.textContent = originalText;
-                        header.style.fontWeight = '';
-                    }, 3000);
-                }
-            });
-            
-           // Auto-select based on user type
-const userType = '<?php echo $_SESSION['user_type'] ?? ''; ?>';
-const username = '<?php echo $_SESSION['username'] ?? ''; ?>';
-
-// Set avatar to first letter of username
-const avatar = document.querySelector('.user-avatar');
-if (username && avatar) {
-    avatar.textContent = username.charAt(0).toUpperCase();
-}
-
-// Auto-select based on user type
-// Auto-select based on user type
-if (userType === 'warehouse_staff' || userType === 'staff') {
-    // Warehouse staff and regular staff default to stock management
-    document.getElementById('option1').checked = true;
-    document.getElementById('option1').parentElement.classList.add('selected');
-    continueBtn.disabled = false;
-    
-    // Show tooltip
-    const note = document.createElement('div');
-    note.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
-    
-    if (userType === 'warehouse_staff') {
-        note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected for warehouse staff';
-    } else {
-        note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected';
-    }
-    
-    document.querySelector('.action-area').prepend(note);
-}
-
-// If user is finance_staff, auto-select financial system
-if (userType === 'finance_staff') {
-    document.getElementById('option2').checked = true;
-    document.getElementById('option2').parentElement.classList.add('selected');
-    continueBtn.disabled = false;
-    
-    // Show tooltip
-    const financeNote = document.createElement('div');
-    financeNote.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
-    financeNote.innerHTML = '<i class="bi bi-info-circle"></i> Financial system auto-selected for finance staff';
-    document.querySelector('.action-area').prepend(financeNote);
-}
-
-
-
-// If user is guest, auto-select financial system
-if (userType === 'guest') {
-    document.getElementById('option2').checked = true;
-    document.getElementById('option2').parentElement.classList.add('selected');
-    continueBtn.disabled = false;
-}
             // Add hover effects to cards
             optionCards.forEach(card => {
                 const icon = card.querySelector('.option-icon');
