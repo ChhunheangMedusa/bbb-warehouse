@@ -106,13 +106,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
                         
                         // Redirect based on user type
-                     // Redirect based on user type
+// Redirect based on user type
 $user_type = $user['user_type'];
 
 if (isset($_SESSION['redirect_url'])) {
     $redirect_url = $_SESSION['redirect_url'];
     unset($_SESSION['redirect_url']);
     header("Location: $redirect_url");
+    exit();
 } else {
     if ($user_type == 'admin') {
         header("Location: Admin/dashboard.php");
