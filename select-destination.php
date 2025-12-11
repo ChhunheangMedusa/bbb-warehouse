@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
             case 'warehouse_staff':
             case 'staff':
             default:
-                header("Location: Staff/dashboard.php");
+                header("Location: Staff/dashboard-staff.php");
                 break;
         }
         exit();
