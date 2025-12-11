@@ -74,14 +74,12 @@ function isAdmin() {
 }
 
 function isStaff() {
-    return isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'staff';
+    return isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'warehouse_staff';
 }
 function isFinanceStaff() {
     return isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'finance_staff';
 }
-function isWarehouseStaff() {
-    return isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'warehouse_staff';
-}
+
 function checkAdminAccess() {
     if (!isAdmin()) {
         $_SESSION['error'] = "អ្នកមិនមានសិទ្ធិប្រើប្រាស់ទំព័រនេះទេ";

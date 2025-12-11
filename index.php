@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             if ($user_type == 'admin') {
                                 header("Location: Admin/dashboard.php");
                             } elseif ($user_type == 'warehouse_staff') {
-                                header("Location: Staff/dashboard-staff.php");  // This should work
+                                header("Location: Staff/dashboard.php");  // This should work
                             } elseif ($user_type == 'finance_staff') {
                                 header("Location: Finance/dashboard.php");
                             } else {
