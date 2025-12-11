@@ -127,9 +127,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $redirect_url = $_SESSION['redirect_url'];
                             unset($_SESSION['redirect_url']);
                         }
-                        
-                        header("Location: select-destination.php");
+                        if ($user['user_type'] === 'admin') {
+                            // Only admins need to select destination
+                            header("Location: select-destination.php");
+                        } else {
+                            // Other users go directly to their dashboard
+                            header("Location: " . $redirect_url);
+                        }
                         exit();
+                        
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
                         $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";
