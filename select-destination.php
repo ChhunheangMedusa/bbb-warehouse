@@ -17,39 +17,61 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Handle form submission
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
     $destination = $_POST['destination'];
     
     // Store the selection in session (optional)
     $_SESSION['selected_destination'] = $destination;
     
-    // Redirect based on selection
+    // Redirect based on selection AND user type
     if ($destination === 'stock') {
-        // Redirect to regular dashboard
-        if ($_SESSION['user_type'] == 'admin') {
-            header("Location: Admin/dashboard.php");
-        } else {
-            header("Location: Staff/dashboard-staff.php");
+        // Redirect based on user type
+        switch ($_SESSION['user_type']) {
+            case 'admin':
+                header("Location: Admin/dashboard.php");
+                break;
+            case 'finance_staff':
+                header("Location: Finance/dashboard.php");
+                break;
+            case 'warehouse_staff':
+            case 'staff':
+            default:
+                header("Location: Staff/dashboard.php");
+                break;
         }
         exit();
     } elseif ($destination === 'other') {
-        // Redirect to your other PHP file
-        header("Location: Finance/dashboard.php"); // Change this to your actual file
+        // For financial system, redirect to Finance dashboard
+        // Note: If financial staff selects "other", they'll go to Finance/dashboard.php
+        header("Location: Finance/dashboard.php");
         exit();
     }
 }
 
+
+
 // If user has already made a selection and is coming back, redirect them
 if (isset($_SESSION['selected_destination'])) {
     if ($_SESSION['selected_destination'] === 'stock') {
-        if ($_SESSION['user_type'] == 'admin') {
-            header("Location: Admin/dashboard.php");
-        } else {
-            header("Location: Staff/dashboard-staff.php");
+        // Redirect based on user type
+        switch ($_SESSION['user_type']) {
+            case 'admin':
+                header("Location: Admin/dashboard.php");
+                break;
+            case 'finance_staff':
+                header("Location: Finance/dashboard.php");
+                break;
+            case 'warehouse_staff':
+            case 'staff':
+            default:
+                header("Location: Staff/dashboard.php");
+                break;
         }
         exit();
     } else {
-        header("Location: your-other-file.php");
+        // For financial system
+        header("Location: Finance/dashboard.php");
         exit();
     }
 }
@@ -534,13 +556,34 @@ if (isset($_SESSION['selected_destination'])) {
                     </div>
                     
                     <div class="user-card">
-                        <div class="user-avatar">
-                            <?php echo strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1)); ?>
-                        </div>
-                        <h4>Hello, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>!</h4>
-                        <p><i class="bi bi-person-badge"></i> Role: <?php echo htmlspecialchars($_SESSION['user_type'] ?? 'User'); ?></p>
-                        <p><i class="bi bi-calendar-check"></i> <?php echo date('F j, Y'); ?></p>
-                    </div>
+    <div class="user-avatar">
+        <?php echo strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1)); ?>
+    </div>
+    <h4>Hello, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>!</h4>
+    <?php
+    $role_display = $_SESSION['user_type'] ?? 'User';
+    // Convert role to display name
+    switch ($role_display) {
+        case 'admin':
+            $role_display = 'Administrator';
+            break;
+        case 'finance_staff':
+            $role_display = 'Finance Staff';
+            break;
+        case 'warehouse_staff':
+            $role_display = 'Warehouse Staff';
+            break;
+        case 'staff':
+            $role_display = 'Staff';
+            break;
+        case 'guest':
+            $role_display = 'Guest';
+            break;
+    }
+    ?>
+    <p><i class="bi bi-person-badge"></i> Role: <?php echo htmlspecialchars($role_display); ?></p>
+    <p><i class="bi bi-calendar-check"></i> <?php echo date('F j, Y'); ?></p>
+</div>
                     
                     <div class="info-section">
                         <div class="info-item">
@@ -693,36 +736,57 @@ if (isset($_SESSION['selected_destination'])) {
                 }
             });
             
-            // Auto-select based on user type
-            const userType = '<?php echo $_SESSION['user_type'] ?? ''; ?>';
-            const username = '<?php echo $_SESSION['username'] ?? ''; ?>';
-            
-            // Set avatar to first letter of username
-            const avatar = document.querySelector('.user-avatar');
-            if (username && avatar) {
-                avatar.textContent = username.charAt(0).toUpperCase();
-            }
-            
-            // If user is admin, auto-select stock management
-            if (userType === 'admin') {
-                document.getElementById('option1').checked = true;
-                document.getElementById('option1').parentElement.classList.add('selected');
-                continueBtn.disabled = false;
-                
-                // Show tooltip
-                const adminNote = document.createElement('div');
-                adminNote.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
-                adminNote.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected for admin';
-                document.querySelector('.action-area').prepend(adminNote);
-            }
-            
-            // If user is guest, auto-select financial system
-            if (userType === 'guest') {
-                document.getElementById('option2').checked = true;
-                document.getElementById('option2').parentElement.classList.add('selected');
-                continueBtn.disabled = false;
-            }
-            
+           // Auto-select based on user type
+const userType = '<?php echo $_SESSION['user_type'] ?? ''; ?>';
+const username = '<?php echo $_SESSION['username'] ?? ''; ?>';
+
+// Set avatar to first letter of username
+const avatar = document.querySelector('.user-avatar');
+if (username && avatar) {
+    avatar.textContent = username.charAt(0).toUpperCase();
+}
+
+// Auto-select based on user type
+if (userType === 'admin' || userType === 'warehouse_staff' || userType === 'staff') {
+    // Admin, warehouse staff, and regular staff default to stock management
+    document.getElementById('option1').checked = true;
+    document.getElementById('option1').parentElement.classList.add('selected');
+    continueBtn.disabled = false;
+    
+    // Show tooltip
+    const note = document.createElement('div');
+    note.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
+    
+    if (userType === 'admin') {
+        note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected for administrator';
+    } else if (userType === 'warehouse_staff') {
+        note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected for warehouse staff';
+    } else {
+        note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected';
+    }
+    
+    document.querySelector('.action-area').prepend(note);
+}
+
+// If user is finance_staff, auto-select financial system
+if (userType === 'finance_staff') {
+    document.getElementById('option2').checked = true;
+    document.getElementById('option2').parentElement.classList.add('selected');
+    continueBtn.disabled = false;
+    
+    // Show tooltip
+    const financeNote = document.createElement('div');
+    financeNote.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
+    financeNote.innerHTML = '<i class="bi bi-info-circle"></i> Financial system auto-selected for finance staff';
+    document.querySelector('.action-area').prepend(financeNote);
+}
+
+// If user is guest, auto-select financial system
+if (userType === 'guest') {
+    document.getElementById('option2').checked = true;
+    document.getElementById('option2').parentElement.classList.add('selected');
+    continueBtn.disabled = false;
+}
             // Add hover effects to cards
             optionCards.forEach(card => {
                 const icon = card.querySelector('.option-icon');
