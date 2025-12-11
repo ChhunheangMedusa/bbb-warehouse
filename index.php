@@ -104,28 +104,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['picture'] = $user['picture'];
                         $_SESSION['show_welcome'] = true;
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
+                        header("Location: select-destination.php");
+                      
+                      
                         
-                        // Redirect based on user type - FIXED VERSION
-                        $user_type = $user['user_type'];
+                  
+                            exit();
                         
-                        if (isset($_SESSION['redirect_url'])) {
-                            $redirect_url = $_SESSION['redirect_url'];
-                            unset($_SESSION['redirect_url']);
-                            header("Location: $redirect_url");
-                            exit();
-                        } else {
-                            if ($user_type == 'admin') {
-                                header("Location: Admin/dashboard.php");
-                            } elseif ($user_type == 'warehouse_staff') {
-                                header("Location: Staff/dashboard-staff.php");  // This should work
-                            } elseif ($user_type == 'finance_staff') {
-                                header("Location: Finance/dashboard.php");
-                            } else {
-                                // Default fallback
-                                header("Location: select-destination.php");
-                            }
-                            exit();
-                        }
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
                         $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";

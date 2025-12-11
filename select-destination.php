@@ -462,6 +462,80 @@
     </style>
 </head>
 <body>
+    <?php
+    // Start session if not already started
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: index.php");
+        exit();
+    }
+    
+    // Get user type
+    $user_type = $_SESSION['user_type'] ?? '';
+    
+    // Handle form submission
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
+        $_SESSION['selected_destination'] = $_POST['destination'];
+        
+        // Redirect based on selected destination and user type
+        $destination = $_POST['destination'];
+        
+        switch ($destination) {
+            case 'stock':
+                if ($user_type === 'admin' || $user_type === 'warehouse_staff') {
+                    header("Location: Admin/dashboard.php");
+                } else {
+                    // If finance staff somehow selects stock, redirect to their dashboard
+                    header("Location: Finance/dashboard.php");
+                }
+                exit();
+                
+            case 'other': // Financial System
+                if ($user_type === 'admin' || $user_type === 'finance_staff') {
+                    header("Location: Finance/dashboard.php");
+                } else {
+                    // If warehouse staff somehow selects finance, redirect to their dashboard
+                    header("Location: Staff/dashboard-staff.php");
+                }
+                exit();
+                
+            case 'analytics':
+                // Only admin should see this option
+                header("Location: Admin/dashboard.php");
+                exit();
+                
+            default:
+                // Default fallback
+                header("Location: dashboard.php");
+                exit();
+        }
+    }
+    
+    // Check available options based on user type
+    $available_options = [];
+    
+    switch ($user_type) {
+        case 'admin':
+            $available_options = ['stock', 'other', 'analytics']; // All options
+            break;
+        case 'warehouse_staff':
+            $available_options = ['stock']; // Only stock management
+            break;
+        case 'finance_staff':
+            $available_options = ['other']; // Only financial system
+            break;
+        case 'guest':
+            $available_options = ['stock']; // Guest can only access stock
+            break;
+        default:
+            $available_options = ['stock']; // Default to stock
+    }
+    ?>
+    
     <div class="container">
         <div class="selection-wrapper">
             <!-- Sidebar with user info -->
@@ -492,8 +566,16 @@
                                 <i class="bi bi-shield-check"></i>
                             </div>
                             <div class="info-text">
-                                <h6>Secure Access</h6>
-                                <p>Your session is protected</p>
+                                <h6>Access Level</h6>
+                                <p><?php 
+                                    switch($user_type) {
+                                        case 'admin': echo 'Full System Access'; break;
+                                        case 'warehouse_staff': echo 'Warehouse System Only'; break;
+                                        case 'finance_staff': echo 'Financial System Only'; break;
+                                        case 'guest': echo 'Limited Guest Access'; break;
+                                        default: echo 'Standard Access';
+                                    }
+                                ?></p>
                             </div>
                         </div>
                         
@@ -514,11 +596,12 @@
             <div class="main-content">
                 <div class="content-header">
                     <h1>Select Your Destination</h1>
-                    <p>Choose where you want to go in the system. Your selection will be remembered for future visits.</p>
+                    <p>Choose where you want to go in the system. Available options are based on your role (<?php echo htmlspecialchars($user_type); ?>).</p>
                 </div>
                 
                 <form method="POST" action="" id="destinationForm">
                     <div class="options-grid">
+                        <?php if (in_array('stock', $available_options)): ?>
                         <!-- Option 1: Stock Management -->
                         <label class="option-card" for="option1">
                             <input type="radio" class="option-radio" id="option1" name="destination" value="stock" required>
@@ -537,7 +620,9 @@
                                 </ul>
                             </div>
                         </label>
+                        <?php endif; ?>
                         
+                        <?php if (in_array('other', $available_options)): ?>
                         <!-- Option 2: Financial System -->
                         <label class="option-card" for="option2">
                             <input type="radio" class="option-radio" id="option2" name="destination" value="other" required>
@@ -556,8 +641,10 @@
                                 </ul>
                             </div>
                         </label>
+                        <?php endif; ?>
                         
-                        <!-- Option 3: Analytics Dashboard (Optional) -->
+                        <?php if (in_array('analytics', $available_options)): ?>
+                        <!-- Option 3: Analytics Dashboard (Only for Admin) -->
                         <label class="option-card" for="option3">
                             <input type="radio" class="option-radio" id="option3" name="destination" value="analytics" required>
                             <div class="option-icon">
@@ -575,6 +662,28 @@
                                 </ul>
                             </div>
                         </label>
+                        <?php endif; ?>
+                        
+                        <?php if (count($available_options) === 1): ?>
+                        <!-- If user only has one option, auto-select it and hide others -->
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const onlyOption = document.querySelector('.option-radio');
+                                if (onlyOption) {
+                                    onlyOption.checked = true;
+                                    onlyOption.parentElement.classList.add('selected');
+                                    document.getElementById('continueBtn').disabled = false;
+                                    
+                                    // Show auto-selection message
+                                    const actionArea = document.querySelector('.action-area');
+                                    const autoSelectMsg = document.createElement('div');
+                                    autoSelectMsg.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
+                                    autoSelectMsg.innerHTML = '<i class="bi bi-info-circle"></i> Auto-selected based on your role';
+                                    actionArea.insertBefore(autoSelectMsg, document.getElementById('continueBtn'));
+                                }
+                            });
+                        </script>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="action-area">
@@ -600,6 +709,20 @@
                 if (radio) {
                     radio.checked = true;
                     radio.parentElement.classList.add('selected');
+                    continueBtn.disabled = false;
+                }
+            }
+            
+            // Auto-select based on user type if only one option
+            const userType = '<?php echo $user_type; ?>';
+            const availableOptions = <?php echo json_encode($available_options); ?>;
+            
+            // If user has only one option, auto-select it
+            if (availableOptions.length === 1 && !selectedDestination) {
+                const autoOption = document.querySelector(`input[value="${availableOptions[0]}"]`);
+                if (autoOption) {
+                    autoOption.checked = true;
+                    autoOption.parentElement.classList.add('selected');
                     continueBtn.disabled = false;
                 }
             }
@@ -653,34 +776,11 @@
                 }
             });
             
-            // Auto-select based on user type
-            const userType = '<?php echo $_SESSION['user_type'] ?? ''; ?>';
-            const username = '<?php echo $_SESSION['username'] ?? ''; ?>';
-            
             // Set avatar to first letter of username
+            const username = '<?php echo $_SESSION['username'] ?? ''; ?>';
             const avatar = document.querySelector('.user-avatar');
             if (username && avatar) {
                 avatar.textContent = username.charAt(0).toUpperCase();
-            }
-            
-            // If user is admin, auto-select stock management
-            if (userType === 'admin') {
-                document.getElementById('option1').checked = true;
-                document.getElementById('option1').parentElement.classList.add('selected');
-                continueBtn.disabled = false;
-                
-                // Show tooltip
-                const adminNote = document.createElement('div');
-                adminNote.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
-                adminNote.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected for admin';
-                document.querySelector('.action-area').prepend(adminNote);
-            }
-            
-            // If user is guest, auto-select financial system
-            if (userType === 'guest') {
-                document.getElementById('option2').checked = true;
-                document.getElementById('option2').parentElement.classList.add('selected');
-                continueBtn.disabled = false;
             }
             
             // Add hover effects to cards
