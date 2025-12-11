@@ -65,7 +65,7 @@ if (isset($_SESSION['selected_destination'])) {
             case 'warehouse_staff':
             case 'staff':
             default:
-                header("Location: Staff/dashboard.php");
+                header("Location: Staff/dashboard-staff.php");
                 break;
         }
         exit();
