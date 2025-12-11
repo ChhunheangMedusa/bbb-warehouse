@@ -1,8 +1,11 @@
 <?php
 ob_start();
 require_once '../includes/header-finance.php';
-// Add authentication check
 require_once '../includes/auth.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once 'translate.php';
+
 
 // Check if user is authenticated
 checkAuth();
@@ -13,9 +16,7 @@ if (!isAdmin() && !isFinanceStaff()) {
     exit();
 }
 
-require_once '../config/database.php';
-require_once '../includes/functions.php';
-require_once 'translate.php';
+
 
 // Get all locations from finance_location table
 $location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
