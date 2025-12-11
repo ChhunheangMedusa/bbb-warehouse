@@ -116,26 +116,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 case 'warehouse_staff':
                                     $redirect_url = 'Staff/dashboard-staff.php';  // Changed from dashboard.php
                                     break;
-                               
                                     default:
                                     $redirect_url = 'index.php'; // Redirect back to login
                                     logActivity($user['id'], 'Login Error', "Invalid user type: {$user['user_type']}");
                                     break;
+      
                         }
                         
                         if (isset($_SESSION['redirect_url'])) {
                             $redirect_url = $_SESSION['redirect_url'];
                             unset($_SESSION['redirect_url']);
                         }
-                        if ($user['user_type'] === 'admin') {
-                            // Only admins need to select destination
-                            header("Location: select-destination.php");
-                        } else {
-                            // Other users go directly to their dashboard
-                            header("Location: " . $redirect_url);
-                        }
-                        exit();
                         
+                        header("Location: select-destination.php");
+                        exit();
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
                         $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";

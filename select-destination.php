@@ -17,6 +17,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Handle form submission
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
     $destination = $_POST['destination'];
     
@@ -33,12 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
             }
             break;
             
-            case 'warehouse_staff':
-                // These users should only see stock option
-                header("Location: Staff/dashboard-staff.php");
-                break;
-
-        
+        case 'warehouse_staff':
+            // These users should only see stock option
+            header("Location: Staff/dashboard-staff.php");  // ← Changed from dashboard.php
+            break;
             
         case 'finance_staff':
             // These users should only see financial option
@@ -52,33 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
     exit();
 }
 
-// If user has already made a selection and is coming back, redirect them
-if (isset($_SESSION['selected_destination'])) {
-    switch ($_SESSION['user_type']) {
-        case 'admin':
-            if ($_SESSION['selected_destination'] === 'stock') {
-                header("Location: Admin/dashboard.php");
-            } else {
-                header("Location: Finance/dashboard.php");
-            }
-            break;
-            
-            case 'warehouse_staff':
-                header("Location: Staff/dashboard-staff.php");
-                break;
 
-        
-            
-        case 'finance_staff':
-            header("Location: Finance/dashboard.php");
-            break;
-            
-        default:
-            header("Location: index.php");
-            break;
-    }
-    exit();
-}
 
 // Determine which options to show based on user type
 $show_stock_option = true;
