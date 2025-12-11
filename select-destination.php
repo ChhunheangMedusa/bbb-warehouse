@@ -33,11 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
             }
             break;
             
-        case 'warehouse_staff':
-        case 'staff':
-            // These users should only see stock option
-            header("Location: Staff/dashboard-staff.php");
-            break;
+            case 'warehouse_staff':
+                // These users should only see stock option
+                header("Location: Staff/dashboard-staff.php");
+                break;
+
+        
             
         case 'finance_staff':
             // These users should only see financial option
@@ -62,10 +63,11 @@ if (isset($_SESSION['selected_destination'])) {
             }
             break;
             
-        case 'warehouse_staff':
-        case 'staff':
-            header("Location: Staff/dashboard-staff.php");
-            break;
+            case 'warehouse_staff':
+                header("Location: Staff/dashboard-staff.php");
+                break;
+
+        
             
         case 'finance_staff':
             header("Location: Finance/dashboard.php");
@@ -84,7 +86,6 @@ $show_finance_option = true;
 
 switch ($_SESSION['user_type']) {
     case 'warehouse_staff':
-    case 'staff':
         $show_finance_option = false;
         break;
         
@@ -99,9 +100,9 @@ switch ($_SESSION['user_type']) {
         break;
         
     default:
-        // For other users, show both options by default
-        $show_stock_option = true;
-        $show_finance_option = true;
+        // For other users, redirect to login
+        header("Location: index.php");
+        exit();
         break;
 }
 ?>
@@ -619,12 +620,11 @@ switch ($_SESSION['user_type']) {
                             case 'warehouse_staff':
                                 $role_display = 'Warehouse Staff';
                                 break;
-                            case 'staff':
-                                $role_display = 'Staff';
-                                break;
+                           
                             case 'guest':
                                 $role_display = 'Guest';
                                 break;
+                                
                         }
                         ?>
                         <p><i class="bi bi-person-badge"></i> Role: <?php echo htmlspecialchars($role_display); ?></p>

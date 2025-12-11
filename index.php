@@ -116,9 +116,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 case 'warehouse_staff':
                                     $redirect_url = 'Staff/dashboard-staff.php';  // Changed from dashboard.php
                                     break;
-                                case 'staff': 
-                                default:
-                                    $redirect_url = 'Staff/dashboard-staff.php';  // Changed from dashboard.php
+                               
+                                    default:
+                                    $redirect_url = 'index.php'; // Redirect back to login
+                                    logActivity($user['id'], 'Login Error', "Invalid user type: {$user['user_type']}");
                                     break;
                         }
                         
