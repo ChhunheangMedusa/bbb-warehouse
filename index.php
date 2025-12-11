@@ -106,7 +106,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
                         
                         // Redirect based on user type
-                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
+                     // Redirect based on user type
+$user_type = $user['user_type'];
+
+if (isset($_SESSION['redirect_url'])) {
+    $redirect_url = $_SESSION['redirect_url'];
+    unset($_SESSION['redirect_url']);
+    header("Location: $redirect_url");
+} else {
+    if ($user_type == 'admin') {
+        header("Location: Admin/dashboard.php");
+    } elseif ($user_type == 'warehouse_staff') {
+        header("Location: Staff/dashboard-staff.php");
+    } elseif ($user_type == 'finance_staff') {
+        // Adjust this based on where finance staff should go
+        header("Location: Staff/dashboard-staff.php");
+    } else {
+        // Default fallback
+        header("Location: Staff/dashboard-staff.php");
+    }
+    exit();
+}
                         
                         if (isset($_SESSION['redirect_url'])) {
                             $redirect_url = $_SESSION['redirect_url'];
