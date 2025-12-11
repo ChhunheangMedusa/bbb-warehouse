@@ -5,7 +5,7 @@ require_once  'translate.php';
 
 if (!isStaff()) {
   $_SESSION['error'] = "You don't have permission to access this page";
-  header('Location: ../index.php');
+  header('Location: dashboard.php');
   exit();
 }
 
