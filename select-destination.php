@@ -3,7 +3,8 @@
 require_once 'config/database.php';
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
-
+// Clear previous selection when user explicitly navigates to this page
+unset($_SESSION['selected_destination']);
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
