@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['destination'])) {
         exit();
     } elseif ($destination === 'other') {
         // Redirect to your other PHP file
-        header("Location: your-other-file.php"); // Change this to your actual file
+        header("Location: Finance/dashboard.php"); // Change this to your actual file
         exit();
     }
 }
