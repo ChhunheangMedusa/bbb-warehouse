@@ -9,6 +9,7 @@ if (!isAdmin()) {
     exit();
 }
 
+
 $show_welcome = false;
 if (isset($_SESSION['show_welcome']) && $_SESSION['show_welcome']) {
     $show_welcome = true;

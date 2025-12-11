@@ -106,15 +106,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
                         
                         // Redirect based on user type
-                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
+                        switch ($user['user_type']) {
+                            case 'admin':
+                                $redirect_url = 'Admin/dashboard.php';
+                                break;
+                            case 'finance_staff':
+                                $redirect_url = 'Finance/dashboard.php';
+                                break;
+                            case 'warehouse_staff':
+                                $redirect_url = 'Staff/dashboard.php';
+                                break;
+                            case 'staff': 
+                            default:
+                                $redirect_url = 'Staff/dashboard.php';
+                                break;
+                        }
                         
                         if (isset($_SESSION['redirect_url'])) {
                             $redirect_url = $_SESSION['redirect_url'];
                             unset($_SESSION['redirect_url']);
-                            header("Location: $redirect_url");
-                        } else {
-                            header("Location: select-destination.php");
                         }
+                        
+                        header("Location: $redirect_url");
                         exit();
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
