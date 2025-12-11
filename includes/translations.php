@@ -29,9 +29,11 @@ $translations = [
         'broken_items'=>'សម្ភារៈខូច',
         'deporty_management'=>'គ្រប់គ្រងអ្នកផ្គត់ផ្គង់',
         'settings'=>'ការកំណត់',
-        'profile'=>'ជីវប្រវត្តិ'
+        'profile'=>'ជីវប្រវត្តិ',
+        'switch'=>'ផ្លាស់ប្ដូរប្រព័ន្ធ',
     ],
     'en' => [
+        'switch'=>'Switch',
         'settings'=>'Settings',
         'profile'=>'Profile',
         'deporty_management'=>'Supplier Management',

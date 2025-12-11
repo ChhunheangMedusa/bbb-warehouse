@@ -242,11 +242,11 @@ if (isset($_SESSION['selected_destination'])) {
                     <label class="option-card" for="option2">
                         <input type="radio" class="option-radio" id="option2" name="destination" value="other" required>
                         <div class="option-icon">
-                            <i class="bi bi-gear"></i>
+                            <i class="bi bi-cash-coin"></i>
                         </div>
-                        <div class="option-title">Other System</div>
+                        <div class="option-title">Financial System</div>
                         <div class="option-description">
-                            Access another system or module (replace with your actual description).
+                            Access the finacial system of expense tracking and report.
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="destination" id="otherRadio" value="other">
