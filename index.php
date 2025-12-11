@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 header("Location: Finance/dashboard.php");
                             } else {
                                 // Default fallback
-                                header("Location: dashboard.php");
+                                header("Location: select-destination.php");
                             }
                             exit();
                         }
