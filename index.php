@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             unset($_SESSION['redirect_url']);
                             header("Location: $redirect_url");
                         } else {
-                            header("Location: $dashboard");
+                            header("Location: select-destination.php");
                         }
                         exit();
                     } else {
