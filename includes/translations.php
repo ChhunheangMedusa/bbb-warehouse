@@ -31,8 +31,10 @@ $translations = [
         'settings'=>'ការកំណត់',
         'profile'=>'ជីវប្រវត្តិ',
         'switch'=>'ផ្លាស់ប្ដូរប្រព័ន្ធ',
+        'invoice'=>'វិក័យបត្រ'
     ],
     'en' => [
+        'invoice'=>'Invoice',
         'switch'=>'Switch',
         'settings'=>'Settings',
         'profile'=>'Profile',

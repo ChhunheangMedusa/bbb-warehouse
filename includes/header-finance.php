@@ -266,7 +266,16 @@ $hasAvatar = ($userPicture !== null);
                         <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard'); ?>
                     </a>
                 </li>
-               
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/invoice.php' ? 'active' : ''; ?>" href="../Finance/invoice.php">
+                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('invoice'); ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/access-log.php' ? 'active' : ''; ?>" href="../Finance/access-log.php">
+                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('logs'); ?>
+                    </a>
+                </li>
           
                 
                
