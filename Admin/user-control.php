@@ -1521,13 +1521,13 @@ body {
                             // Convert user_type to display name
                             $type_display = $type;
                             if ($type === 'admin') {
-                                $type_display = 'Admin';
+                                $type_display = t('form_admin');
                             } elseif ($type === 'warehouse_staff') {
-                                $type_display = 'Warehouse Staff';
+                                $type_display = t('form_warehouse_staff');
                             } elseif ($type === 'finance_staff') {
-                                $type_display = 'Finance Staff';
+                                $type_display = t('form_finance_staff');
                             } elseif ($type === 'guest') {
-                                $type_display = 'Guest';
+                                $type_display = t('form_guest');
                             }
                             ?>
                             <option value="<?php echo $type; ?>" <?php echo $type_filter == $type ? 'selected' : ''; ?>>
