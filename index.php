@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $redirect_url = 'Finance/dashboard.php';
                                 break;
                             case 'warehouse_staff':
-                                $redirect_url = 'Staff/dashboard.php';
+                                $redirect_url = 'Staff/dashboard-staff.php';
                                 break;
                             case 'staff': 
                             default:
