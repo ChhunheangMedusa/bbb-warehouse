@@ -30,8 +30,18 @@ $sort_option = isset($_GET['sort_option']) ? sanitizeInput($_GET['sort_option'])
 $sort_mapping = [
     'username_asc' => ['field' => 'username', 'direction' => 'ASC'],
     'username_desc' => ['field' => 'username', 'direction' => 'DESC'],
-    'type_asc' => ['field' => "CASE WHEN user_type = 'admin' THEN 1 WHEN user_type = 'guest' THEN 2 WHEN user_type = 'staff' THEN 3 ELSE 4 END", 'direction' => 'ASC'],
-    'type_desc' => ['field' => "CASE WHEN user_type = 'admin' THEN 1 WHEN user_type = 'guest' THEN 2 WHEN user_type = 'staff' THEN 3 ELSE 4 END", 'direction' => 'DESC'],
+    'type_asc' => ['field' => "CASE 
+        WHEN user_type = 'admin' THEN 1 
+        WHEN user_type = 'warehouse_staff' THEN 2 
+        WHEN user_type = 'finance_staff' THEN 3 
+        WHEN user_type = 'guest' THEN 4 
+        ELSE 5 END", 'direction' => 'ASC'],
+    'type_desc' => ['field' => "CASE 
+        WHEN user_type = 'admin' THEN 1 
+        WHEN user_type = 'warehouse_staff' THEN 2 
+        WHEN user_type = 'finance_staff' THEN 3 
+        WHEN user_type = 'guest' THEN 4 
+        ELSE 5 END", 'direction' => 'DESC'],
     'date_asc' => ['field' => 'created_at', 'direction' => 'ASC'],
     'date_desc' => ['field' => 'created_at', 'direction' => 'DESC']
 ];
@@ -1842,10 +1852,11 @@ body {
                     <div class="mb-3">
                         <label for="user_type" class="form-label"><?php echo t('form_type');?></label>
                         <select class="form-select" id="user_type" name="user_type" required>
-                            <option value="admin"><?php echo t('form_admin');?></option>
-                            <option value="staff"><?php echo t('form_staff');?></option>
-                            <option value="guest"><?php echo t('form_guest');?></option>
-                        </select>
+    <option value="admin"><?php echo t('form_admin');?></option>
+    <option value="warehouse_staff"><?php echo t('form_warehouse_staff');?></option>
+    <option value="finance_staff"><?php echo t('form_finance_staff');?></option>
+    <option value="guest"><?php echo t('form_guest');?></option>
+</select>
                     </div>
                     <div class="mb-3" id="phone_number_field">
                         <label for="phone_number" class="form-label"><?php echo t('form_phone');?></label>
@@ -1952,10 +1963,11 @@ body {
                     <div class="mb-3">
                         <label for="edit_user_type" class="form-label"><?php echo t('form_type')?></label>
                         <select class="form-select" id="edit_user_type" name="user_type" required>
-                            <option value="admin"><?php echo t('form_admin')?></option>
-                            <option value="staff"><?php echo t('form_staff')?></option>
-                            <option value="guest"><?php echo t('form_guest')?></option>
-                        </select>
+    <option value="admin"><?php echo t('form_admin')?></option>
+    <option value="warehouse_staff"><?php echo t('form_warehouse_staff')?></option>
+    <option value="finance_staff"><?php echo t('form_finance_staff')?></option>
+    <option value="guest"><?php echo t('form_guest')?></option>
+</select>
                     </div>
                     
                     <div class="mb-3" id="edit_phone_number_field">

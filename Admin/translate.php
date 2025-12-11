@@ -465,11 +465,16 @@ $translations = [
 'status_transfer'=>'ផ្ទេរ',
 'no_users_found'=>'មិនមានអ្នកប្រើប្រាស់ត្រូវបានរកឃើញនោះទេ',
 'no_items_found'=>'មិនមានសម្ភារៈត្រូវបានរកឃើញនោះទេ',
-'item_status'=>'Status'
+'item_status'=>'Status',
+'form_warehouse_staff' => 'បុគ្គលិកគ្រប់គ្រងស្តុក',
+'form_finance_staff' => 'បុគ្គលិកគណនិយ្យ',
     ],
 
 
     'en' => [
+       
+'form_warehouse_staff' => 'Warehouse Staff',
+'form_finance_staff' => 'Finance Staff',
         'item_status'=>'Status',
         'no_items_found'=>'No items found',
         'no_users_found'=>'No user found',
