@@ -113,13 +113,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             case 'finance_staff':
                                 $redirect_url = 'Finance/dashboard.php';
                                 break;
-                            case 'warehouse_staff':
-                                $redirect_url = 'Staff/dashboard-staff.php';
-                                break;
-                            case 'staff': 
-                            default:
-                                $redirect_url = 'Staff/dashboard.php';
-                                break;
+                                case 'warehouse_staff':
+                                    $redirect_url = 'Staff/dashboard-staff.php';  // Changed from dashboard.php
+                                    break;
+                                case 'staff': 
+                                default:
+                                    $redirect_url = 'Staff/dashboard-staff.php';  // Changed from dashboard.php
+                                    break;
                         }
                         
                         if (isset($_SESSION['redirect_url'])) {
