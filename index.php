@@ -104,24 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['picture'] = $user['picture'];
                         $_SESSION['show_welcome'] = true;
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
-                        switch ($user['user_type']) {
-                            case 'admin':
-                                $redirect_url = 'Admin/dashboard.php';
-                                break;
-                            case 'finance_staff':
-                                $redirect_url = 'Finance/dashboard.php';
-                                break;
-                            case 'warehouse_staff':
-                                $redirect_url = 'Staff/dashboard-staff.php';
-                                break;
-                        }
-                        
-                        if (isset($_SESSION['redirect_url'])) {
-                            $redirect_url = $_SESSION['redirect_url'];
-                            unset($_SESSION['redirect_url']);
-                        }
-                        
-                        header("Location: $redirect_url");
+           
+                        header("Location: select_type_system.php");
                         exit();
                         
                     } else {
