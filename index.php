@@ -104,7 +104,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['picture'] = $user['picture'];
                         $_SESSION['show_welcome'] = true;
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
-                        header("Location: select-destination.php");
+                        if (isset($_SESSION['redirect_url'])) {
+                            $redirect_url = $_SESSION['redirect_url'];
+                            unset($_SESSION['redirect_url']);
+                            header("Location: $redirect_url");
+                        } else {
+                            header("Location: select-destination.php");
+                        }
                       
                       
                         
