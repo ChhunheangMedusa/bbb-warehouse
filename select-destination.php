@@ -611,25 +611,8 @@ if (isset($_SESSION['selected_destination'])) {
                                 </ul>
                             </div>
                         </label>
-                        
-                        <!-- Option 3: Analytics Dashboard (Optional) -->
-                        <label class="option-card" for="option3">
-                            <input type="radio" class="option-radio" id="option3" name="destination" value="analytics" required>
-                            <div class="option-icon">
-                                <i class="bi bi-bar-chart-line"></i>
-                            </div>
-                            <div class="option-title">Analytics Dashboard</div>
-                            <div class="option-description">
-                                Business intelligence, data visualization, and performance analytics across all systems.
-                            </div>
-                            <div class="option-features">
-                                <ul>
-                                    <li><i class="bi bi-check-circle"></i> Interactive data visualization</li>
-                                    <li><i class="bi bi-check-circle"></i> Performance analytics</li>
-                                    <li><i class="bi bi-check-circle"></i> Custom report generation</li>
-                                </ul>
-                            </div>
-                        </label>
+                    
+                      
                     </div>
                     
                     <div class="action-area">
