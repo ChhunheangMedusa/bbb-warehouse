@@ -1630,7 +1630,17 @@ body {
         <?php echo $user['username']; ?>
     </a>
 </td>
-                                    <td><?php echo $user['user_type']; ?></td>
+                                    <td><?php $user_type_display = $user['user_type'];
+    if ($user['user_type'] === 'admin') {
+        $user_type_display = 'Admin';
+    } elseif ($user['user_type'] === 'warehouse_staff') {
+        $user_type_display = 'Warehouse Staff';
+    } elseif ($user['user_type'] === 'finance_staff') {
+        $user_type_display = 'Finance Staff';
+    } elseif ($user['user_type'] === 'guest') {
+        $user_type_display = 'Guest';
+    }
+    echo $user_type_display; ?></td>
                                     <td><?php echo $user['phone_number'] ?? 'N/A'; ?></td>
                                     <td><?php echo $user['email']; ?></td>
                                     <td>
