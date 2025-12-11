@@ -1499,62 +1499,73 @@ body {
 <div class="container-fluid">
     <h2 class="mb-4"><?php echo t('dashboard_titles');?></h2>
     
-    <!-- Filter Card -->
-    <div class="card mb-4">
-        <div class="card-header text-white" style="background-color:#ce7e00;">
-            <h5 class="mb-0"><?php echo t('filter_options');?></h5>
-        </div>
-        <div class="card-body">
-            <form method="GET" class="filter-form">
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('form_user');?></label>
-                        <input type="text" name="username" class="form-control" value="<?php echo htmlspecialchars($username_filter); ?>" placeholder="<?php echo t('search');?>">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('form_type');?></label>
-                        <select name="type" class="form-select">
-                            <option value="all"><?php echo t('type_all');?></option>
-                            <?php foreach ($user_types as $type): ?>
-                                <option value="<?php echo $type; ?>" <?php echo $type_filter == $type ? 'selected' : ''; ?>>
-                                    <?php echo $type; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                   
-                    <div class="filter-group">
-                        <label class="filter-label"><?php echo t('sort');?></label>
-                        <select name="sort_option" class="form-select">
-                            <option value="username_asc" <?php echo $sort_option == 'username_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('name_a_to_z'); ?>
-                            </option>
-                            <option value="username_desc" <?php echo $sort_option == 'username_desc' ? 'selected' : ''; ?>>
-                                <?php echo t('name_z_to_a'); ?>
-                            </option>
-                            <option value="type_asc" <?php echo $sort_option == 'type_asc' ? 'selected' : ''; ?>>
-                                <?php echo t('type'); ?>
-                            </option>
-                            
-                            
-                        </select>
-                    </div>
+   <!-- Filter Card -->
+<div class="card mb-4">
+    <div class="card-header text-white" style="background-color:#ce7e00;">
+        <h5 class="mb-0"><?php echo t('filter_options');?></h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="filter-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('form_user');?></label>
+                    <input type="text" name="username" class="form-control" value="<?php echo htmlspecialchars($username_filter); ?>" placeholder="<?php echo t('search');?>">
                 </div>
                 
-                <div class="action-buttons">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> <?php echo t('search');?>
-                    </button>
-                    <a href="user-control.php" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> <?php echo t('reset');?>
-                    </a>
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('form_type');?></label>
+                    <select name="type" class="form-select">
+                        <option value="all"><?php echo t('type_all');?></option>
+                        <?php foreach ($user_types as $type): ?>
+                            <?php
+                            // Convert user_type to display name
+                            $type_display = $type;
+                            if ($type === 'admin') {
+                                $type_display = 'Admin';
+                            } elseif ($type === 'warehouse_staff') {
+                                $type_display = 'Warehouse Staff';
+                            } elseif ($type === 'finance_staff') {
+                                $type_display = 'Finance Staff';
+                            } elseif ($type === 'guest') {
+                                $type_display = 'Guest';
+                            }
+                            ?>
+                            <option value="<?php echo $type; ?>" <?php echo $type_filter == $type ? 'selected' : ''; ?>>
+                                <?php echo $type_display; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 
-                <input type="hidden" name="page" value="1">
-            </form>
-        </div>
+                <div class="filter-group">
+                    <label class="filter-label"><?php echo t('sort');?></label>
+                    <select name="sort_option" class="form-select">
+                        <option value="username_asc" <?php echo $sort_option == 'username_asc' ? 'selected' : ''; ?>>
+                            <?php echo t('name_a_to_z'); ?>
+                        </option>
+                        <option value="username_desc" <?php echo $sort_option == 'username_desc' ? 'selected' : ''; ?>>
+                            <?php echo t('name_z_to_a'); ?>
+                        </option>
+                        <option value="type_asc" <?php echo $sort_option == 'type_asc' ? 'selected' : ''; ?>>
+                            <?php echo t('type'); ?>
+                        </option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> <?php echo t('search');?>
+                </button>
+                <a href="user-control.php" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> <?php echo t('reset');?>
+                </a>
+            </div>
+            
+            <input type="hidden" name="page" value="1">
+        </form>
+    </div>
+</div>
     </div>
     
     <div class="card mb-4">
