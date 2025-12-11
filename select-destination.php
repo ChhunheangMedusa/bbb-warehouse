@@ -747,8 +747,9 @@ if (username && avatar) {
 }
 
 // Auto-select based on user type
-if (userType === 'admin' || userType === 'warehouse_staff' || userType === 'staff') {
-    // Admin, warehouse staff, and regular staff default to stock management
+// Auto-select based on user type
+if (userType === 'warehouse_staff' || userType === 'staff') {
+    // Warehouse staff and regular staff default to stock management
     document.getElementById('option1').checked = true;
     document.getElementById('option1').parentElement.classList.add('selected');
     continueBtn.disabled = false;
@@ -757,9 +758,7 @@ if (userType === 'admin' || userType === 'warehouse_staff' || userType === 'staf
     const note = document.createElement('div');
     note.style.cssText = 'text-align:center; margin-top:15px; color:#0A7885; font-size:0.9rem; font-weight:500;';
     
-    if (userType === 'admin') {
-        note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected for administrator';
-    } else if (userType === 'warehouse_staff') {
+    if (userType === 'warehouse_staff') {
         note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected for warehouse staff';
     } else {
         note.innerHTML = '<i class="bi bi-info-circle"></i> Stock management auto-selected';
@@ -780,6 +779,8 @@ if (userType === 'finance_staff') {
     financeNote.innerHTML = '<i class="bi bi-info-circle"></i> Financial system auto-selected for finance staff';
     document.querySelector('.action-area').prepend(financeNote);
 }
+
+
 
 // If user is guest, auto-select financial system
 if (userType === 'guest') {

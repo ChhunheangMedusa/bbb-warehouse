@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             unset($_SESSION['redirect_url']);
                         }
                         
-                        header("Location: $redirect_url");
+                        header("Location: select-destination.php");
                         exit();
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
