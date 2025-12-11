@@ -121,11 +121,8 @@ if (isset($_SESSION['redirect_url'])) {
         header("Location: Staff/dashboard-staff.php");
     } elseif ($user_type == 'finance_staff') {
         // Adjust this based on where finance staff should go
-        header("Location: Staff/dashboard-staff.php");
-    } else {
-        // Default fallback
-        header("Location: Staff/dashboard-staff.php");
-    }
+        header("Location: Finance/dashboard.php");
+    } 
     exit();
 }
                         
