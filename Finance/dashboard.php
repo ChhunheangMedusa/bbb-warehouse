@@ -1,8 +1,17 @@
 <?php
 ob_start();
 require_once '../includes/header-finance.php';
+// Add authentication check
+require_once '../includes/auth.php';
 
-
+// Check if user is authenticated
+checkAuth();
+// Check if user has permission (admin or finance staff only)
+if (!isAdmin() && !isFinanceStaff()) {
+    $_SESSION['error'] = "You don't have permission to access this page";
+    header('Location: ../index.php'); // Redirect to login or home page
+    exit();
+}
 ?>
 <style>
     :root {

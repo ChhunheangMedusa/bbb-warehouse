@@ -76,6 +76,9 @@ function isAdmin() {
 function isStaff() {
     return isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'staff';
 }
+function isFinanceStaff() {
+    return isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'finance_staff';
+}
 
 function checkAdminAccess() {
     if (!isAdmin()) {
