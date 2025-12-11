@@ -100,23 +100,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['user_id'] = $user['id'];
                         $_SESSION['username'] = $user['username'];
                         $_SESSION['user_type'] = $user['user_type'];
+                        switch ($user['user_type']) {
+                            case 'admin':
+                                $_SESSION['user_type_display'] = 'Administrator';
+                                break;
+                            case 'finance_staff':
+                                $_SESSION['user_type_display'] = 'Finance Staff';
+                                break;
+                            case 'warehouse_staff':
+                                $_SESSION['user_type_display'] = 'Warehouse Staff';
+                                break;
+                            case 'staff':
+                                $_SESSION['user_type_display'] = 'Staff';
+                                break;
+                            case 'guest':
+                                $_SESSION['user_type_display'] = 'Guest';
+                                break;
+                            default:
+                                $_SESSION['user_type_display'] = $user['user_type'];
+                                break;
+                        }
                         $_SESSION['email'] = $user['email'];
                         $_SESSION['picture'] = $user['picture'];
                         $_SESSION['show_welcome'] = true;
                         logActivity($user['id'], 'Login', "User logged in: {$username} ");
+                        
+                        // Redirect based on user type
+                        $dashboard = ($user['user_type'] == 'admin') ? 'Admin/dashboard.php' : 'Staff/dashboard-staff.php';
+                        
+                        switch ($user['user_type']) {
+                            case 'admin':
+                                $redirect_url = 'Admin/dashboard.php';
+                                break;
+                            case 'finance_staff':
+                                $redirect_url = 'Finance/dashboard.php';
+                                break;
+                            case 'warehouse_staff':
+                                $redirect_url = 'Staff/dashboard.php';
+                                break;
+                            case 'staff': // 如果还有普通的staff类型，保持原有逻辑
+                            default:
+                                $redirect_url = 'Staff/dashboard.php';
+                                break;
+                        }
+                        
                         if (isset($_SESSION['redirect_url'])) {
                             $redirect_url = $_SESSION['redirect_url'];
                             unset($_SESSION['redirect_url']);
-                            header("Location: $redirect_url");
-                        } else {
-                            header("Location: select-destination.php");
                         }
-                      
-                      
                         
-                  
-                            exit();
-                        
+                        header("Location: $redirect_url");
+                        exit();
                     } else {
                         // INCORRECT PASSWORD - Increment login attempts and show error
                         $error = "ឈ្មោះអ្នកប្រើប្រាស់ និងពាក្យសម្ងាត់មិនត្រឹមត្រូវ។";
