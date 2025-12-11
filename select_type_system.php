@@ -845,7 +845,23 @@ if (isset($_SESSION['selected_system'])) {
             });
             
             // Auto-submit after 5 seconds if only one option
-           
+            if (optionCards.length === 1) {
+                let countdown = 5;
+                const countdownText = continueBtn.innerHTML;
+                continueBtn.innerHTML = `Auto-proceeding in ${countdown}s...`;
+                
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    continueBtn.innerHTML = `Auto-proceeding in ${countdown}s...`;
+                    
+                    if (countdown <= 0) {
+                        clearInterval(countdownInterval);
+                        continueBtn.innerHTML = 'Proceeding...';
+                        continueBtn.disabled = true;
+                        systemForm.submit();
+                    }
+                }, 1000);
+            }
         });
     </script>
 </body>
