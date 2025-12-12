@@ -2064,10 +2064,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentImagePreview.innerHTML = '<p class="text-muted">No image</p>';
             }
 
-            // Clear file input and name
+            // Reset new file selection
+            const editFileInput = document.getElementById('editFileInput');
+            const editFileName = document.getElementById('editFileName');
+            const editFileUploadArea = document.getElementById('editFileUploadArea');
+            const editImagePreviewContainer = document.getElementById('editImagePreviewContainer');
+            const editPdfPreviewContainer = document.getElementById('editPdfPreviewContainer');
+            
             editFileInput.value = '';
             editFileName.textContent = '';
-            editFileUploadArea.classList.remove('border-primary');
+            editFileUploadArea.style.display = 'block';
+            editFileUploadArea.style.borderColor = '#dee2e6';
+            editFileUploadArea.style.backgroundColor = 'transparent';
+            editImagePreviewContainer.style.display = 'none';
+            editPdfPreviewContainer.style.display = 'none';
 
             // Show edit modal
             const editModal = new bootstrap.Modal(document.getElementById('editInvoiceModal'));
@@ -2113,6 +2123,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+
     // Handle entries per page change
     const perPageSelect = document.getElementById('per_page_select');
     if (perPageSelect) {
@@ -2144,6 +2155,7 @@ function displayImagePreview(file) {
     const pdfFileName = document.getElementById('pdfFileName');
     const fileName = document.getElementById('fileName');
     const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileInput = document.getElementById('fileInput');
     
     // Hide both previews initially
     imagePreviewContainer.style.display = 'none';
@@ -2182,53 +2194,23 @@ function removeSelectedImage() {
     const pdfPreviewContainer = document.getElementById('pdfPreviewContainer');
     const fileUploadArea = document.getElementById('fileUploadArea');
     const fileName = document.getElementById('fileName');
+    const imagePreview = document.getElementById('imagePreview');
     
     // Reset file input
     fileInput.value = '';
     fileName.textContent = '';
+    
+    // Clear image preview
+    imagePreview.src = '';
     
     // Hide previews and show upload area
     imagePreviewContainer.style.display = 'none';
     pdfPreviewContainer.style.display = 'none';
     fileUploadArea.style.display = 'block';
     fileUploadArea.style.borderColor = '#dee2e6';
+    fileUploadArea.style.backgroundColor = 'transparent';
 }
 
-// Update the existing file upload event listener
-fileInput.addEventListener('change', function() {
-    if (this.files && this.files[0]) {
-        displayImagePreview(this.files[0]);
-    }
-});
-
-// Add drag and drop functionality
-fileUploadArea.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#0d6efd';
-    this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
-});
-
-fileUploadArea.addEventListener('dragleave', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#dee2e6';
-    this.style.backgroundColor = 'transparent';
-});
-
-fileUploadArea.addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#dee2e6';
-    this.style.backgroundColor = 'transparent';
-    
-    if (e.dataTransfer.files.length) {
-        fileInput.files = e.dataTransfer.files;
-        displayImagePreview(e.dataTransfer.files[0]);
-    }
-});
-
-// Reset form when modal is closed
-document.getElementById('addInvoiceModal').addEventListener('hidden.bs.modal', function() {
-    removeSelectedImage();
-});
 // Function to display image preview for edit modal
 function displayEditImagePreview(file) {
     const imagePreviewContainer = document.getElementById('editImagePreviewContainer');
@@ -2238,6 +2220,7 @@ function displayEditImagePreview(file) {
     const fileName = document.getElementById('editFileName');
     const fileUploadArea = document.getElementById('editFileUploadArea');
     const currentImagePreview = document.getElementById('currentImagePreview');
+    const editFileInput = document.getElementById('editFileInput');
     
     // Hide both previews initially
     imagePreviewContainer.style.display = 'none';
@@ -2252,7 +2235,9 @@ function displayEditImagePreview(file) {
         fileUploadArea.style.borderColor = '#0d6efd';
         
         // Hide current image preview when new file is selected
-        currentImagePreview.style.display = 'none';
+        if (currentImagePreview) {
+            currentImagePreview.style.display = 'none';
+        }
         
         if (isImage) {
             // Create image preview
@@ -2274,57 +2259,139 @@ function displayEditImagePreview(file) {
 
 // Function to remove selected image in edit modal
 function removeSelectedEditImage() {
-    const fileInput = document.getElementById('editFileInput');
+    const editFileInput = document.getElementById('editFileInput');
     const imagePreviewContainer = document.getElementById('editImagePreviewContainer');
     const pdfPreviewContainer = document.getElementById('editPdfPreviewContainer');
     const fileUploadArea = document.getElementById('editFileUploadArea');
     const fileName = document.getElementById('editFileName');
     const currentImagePreview = document.getElementById('currentImagePreview');
+    const imagePreview = document.getElementById('editImagePreview');
     
     // Reset file input
-    fileInput.value = '';
+    editFileInput.value = '';
     fileName.textContent = '';
+    
+    // Clear image preview
+    imagePreview.src = '';
     
     // Hide previews and show upload area
     imagePreviewContainer.style.display = 'none';
     pdfPreviewContainer.style.display = 'none';
     fileUploadArea.style.display = 'block';
     fileUploadArea.style.borderColor = '#dee2e6';
+    fileUploadArea.style.backgroundColor = 'transparent';
     
     // Show current image preview again
-    currentImagePreview.style.display = 'block';
+    if (currentImagePreview) {
+        currentImagePreview.style.display = 'block';
+    }
 }
 
-// Update the edit modal file upload event listener
-editFileInput.addEventListener('change', function() {
-    if (this.files && this.files[0]) {
-        displayEditImagePreview(this.files[0]);
-    }
-});
+// Update the file upload event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date in add modal
+    document.getElementById('addInvoiceModal').addEventListener('shown.bs.modal', function() {
+        const today = new Date().toISOString().split('T')[0];
+        this.querySelector('input[name="date"]').value = today;
+    });
 
-// Add drag and drop functionality for edit modal
-editFileUploadArea.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#0d6efd';
-    this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
-});
+    // File upload functionality for add modal
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
 
-editFileUploadArea.addEventListener('dragleave', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#dee2e6';
-    this.style.backgroundColor = 'transparent';
-});
+    fileUploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
 
-editFileUploadArea.addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#dee2e6';
-    this.style.backgroundColor = 'transparent';
-    
-    if (e.dataTransfer.files.length) {
-        editFileInput.files = e.dataTransfer.files;
-        displayEditImagePreview(e.dataTransfer.files[0]);
-    }
-});
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            displayImagePreview(this.files[0]);
+        }
+    });
+
+    // File upload functionality for edit modal
+    const editFileUploadArea = document.getElementById('editFileUploadArea');
+    const editFileInput = document.getElementById('editFileInput');
+    const editFileName = document.getElementById('editFileName');
+
+    editFileUploadArea.addEventListener('click', function() {
+        editFileInput.click();
+    });
+
+    editFileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            displayEditImagePreview(this.files[0]);
+        }
+    });
+
+    // Add drag and drop functionality for add modal
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#0d6efd';
+        this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+    });
+
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#dee2e6';
+        this.style.backgroundColor = 'transparent';
+    });
+
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#dee2e6';
+        this.style.backgroundColor = 'transparent';
+        
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            displayImagePreview(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Add drag and drop functionality for edit modal
+    editFileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#0d6efd';
+        this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+    });
+
+    editFileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#dee2e6';
+        this.style.backgroundColor = 'transparent';
+    });
+
+    editFileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#dee2e6';
+        this.style.backgroundColor = 'transparent';
+        
+        if (e.dataTransfer.files.length) {
+            editFileInput.files = e.dataTransfer.files;
+            displayEditImagePreview(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Reset form when add modal is closed
+    document.getElementById('addInvoiceModal').addEventListener('hidden.bs.modal', function() {
+        removeSelectedImage();
+    });
+
+    // Reset edit form when modal is closed
+    document.getElementById('editInvoiceModal').addEventListener('hidden.bs.modal', function() {
+        // Don't reset everything, just the new file selection
+        const editFileInput = document.getElementById('editFileInput');
+        const editFileName = document.getElementById('editFileName');
+        const editFileUploadArea = document.getElementById('editFileUploadArea');
+        
+        editFileInput.value = '';
+        editFileName.textContent = '';
+        editFileUploadArea.style.display = 'block';
+        editFileUploadArea.style.borderColor = '#dee2e6';
+        editFileUploadArea.style.backgroundColor = 'transparent';
+    });
+
 
 // Reset edit form when modal is closed
 document.getElementById('editInvoiceModal').addEventListener('hidden.bs.modal', function() {
