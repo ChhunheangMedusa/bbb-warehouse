@@ -1725,7 +1725,7 @@ body {
                         <div class="col-md-6">
                             <label class="form-label"><?php echo t('deporty'); ?></label>
                             <select class="form-select" name="supplier_id" required>
-                               
+                                <option value=""><?php echo t(''); ?></option>
                                 <?php foreach ($suppliers as $supplier): ?>
                                     <option value="<?php echo $supplier['id']; ?>"><?php echo $supplier['name']; ?></option>
                                 <?php endforeach; ?>
