@@ -1921,22 +1921,28 @@ body {
             </div>
             <div class="modal-body text-center">
                 <div class="mb-3">
-                    <i class="bi bi-trash-fill text-danger" style="font-size: 3rem;"></i>
+                    <i class="bi bi-trash-fill text-danger" style="font-size: 2.5rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3"><?php echo t('delete_invoice'); ?></h4>
-                <p id="deleteInvoiceMessage"></p>
+                <h4 class="text-danger mb-2" style="font-size: 1.25rem;"><?php echo t('delete_invoice'); ?></h4>
+                <p class="mb-3"><?php echo t('del_usr2'); ?></p>
+                <div id="deleteInvoiceInfo" class="alert alert-light mb-0">
+                    <!-- Dynamic content will go here -->
+                </div>
             </div>
-            <div class="modal-footer justify-content-center">
-                <form method="POST" id="deleteInvoiceForm" style="display: inline;">
+            <div class="modal-footer d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
+                </button>
+                <form method="POST" id="deleteInvoiceForm" style="display: inline; flex-grow: 1;" class="flex-md-grow-0">
                     <input type="hidden" name="invoice_id" id="delete_invoice_id">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="delete_invoice" class="btn btn-danger"><?php echo t('delete'); ?></button>
+                    <button type="submit" name="delete_invoice" class="btn btn-danger flex-grow-1 flex-md-grow-0">
+                        <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
 <!-- Image Preview Modal -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -2285,20 +2291,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Delete invoice button click
-    document.querySelectorAll('.delete-invoice-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const invoiceId = this.dataset.id;
-            const receiptNo = this.dataset.receipt;
+ // Delete invoice button click
+document.querySelectorAll('.delete-invoice-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const invoiceId = this.dataset.id;
+        const receiptNo = this.dataset.receipt;
 
-            document.getElementById('delete_invoice_id').value = invoiceId;
-            document.getElementById('deleteInvoiceMessage').textContent = 
-                'Are you sure you want to delete invoice #' + receiptNo + '? This action cannot be undone.';
+        document.getElementById('delete_invoice_id').value = invoiceId;
+        
+        // Update modal content to match location-control.php style
+        document.getElementById('deleteInvoiceInfo').innerHTML = `
+            <strong><?php echo t('receipt_no'); ?>:</strong> ${receiptNo}<br>
+            <strong><?php echo t('item_invoice'); ?>:</strong> #${receiptNo}
+        `;
 
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-            deleteModal.show();
-        });
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        deleteModal.show();
     });
+});
 
     // Image modal
     document.querySelectorAll('.invoice-image').forEach(img => {
