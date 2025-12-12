@@ -5,14 +5,10 @@ ob_start();
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth.php';
-require_once '../includes/header.php';
+require_once '../includes/header-finance.php';
 require_once 'translate.php';
 
-if (!isAdmin()) {
-    $_SESSION['error'] = "You don't have permission to access this page";
-    header('Location: dashboard-staff.php');
-    exit();
-}
+
 checkAuth();
 // Get deporties for dropdowns
 $deporty_stmt = $pdo->query("SELECT * FROM deporty ORDER BY name");
