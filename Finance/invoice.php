@@ -1,21 +1,23 @@
 <?php
 ob_start();
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once '../includes/auth.php';
 require_once '../includes/header-finance.php';
+require_once 'translate.php';
 // Add authentication check
 //require_once '../includes/auth.php';
+if (!isAdmin() && !isFinanceStaff()) {
+  $_SESSION['error'] = "You don't have permission to access this page";
+  header('Location: ../index.php'); // Redirect to login or home page
+  exit();
+}
 
 // Check if user is authenticated
 checkAuth();
 // Check if user has permission (admin or finance staff only)
-if (!isAdmin() && !isFinanceStaff()) {
-    $_SESSION['error'] = "You don't have permission to access this page";
-    header('Location: ../index.php'); // Redirect to login or home page
-    exit();
-}
 
-require_once '../config/database.php';
-require_once '../includes/functions.php';
-require_once 'translate.php';
+
 
 // Get locations for dropdown
 $location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
