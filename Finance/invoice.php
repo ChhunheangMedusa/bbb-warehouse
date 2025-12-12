@@ -1740,10 +1740,10 @@ body {
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-12">
-                            <label class="form-label"><?php echo t('image'); ?></label>
+                            <label class="form-label"><?php echo t('column_picture'); ?></label>
                             <div class="custom-file-upload" id="fileUploadArea">
                                 <i class="bi bi-cloud-upload"></i>
-                                <p><?php echo t('click_to_upload'); ?></p>
+                                
                                 <input type="file" class="d-none" name="image" id="fileInput" accept="image/*,.pdf">
                                 <div class="file-name" id="fileName"></div>
                             </div>
@@ -1751,7 +1751,7 @@ body {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_cancel'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
                     <button type="submit" name="add_invoice" class="btn btn-primary"><?php echo t('form_save'); ?></button>
                 </div>
             </form>
