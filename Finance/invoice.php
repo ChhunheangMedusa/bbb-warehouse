@@ -1739,16 +1739,41 @@ body {
                         </div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label class="form-label"><?php echo t('column_picture'); ?></label>
-                            <div class="custom-file-upload" id="fileUploadArea">
-                                <i class="bi bi-cloud-upload"></i>
-                                
-                                <input type="file" class="d-none" name="image" id="fileInput" accept="image/*,.pdf">
-                                <div class="file-name" id="fileName"></div>
-                            </div>
-                        </div>
-                    </div>
+    <div class="col-md-12">
+        <label class="form-label"><?php echo t('column_picture'); ?></label>
+        
+        <!-- Image Preview Container -->
+        <div class="mb-3 text-center" id="imagePreviewContainer" style="display: none;">
+            <img id="imagePreview" class="img-thumbnail" style="max-height: 200px;" alt="Selected Image">
+            <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removeSelectedImage()">
+                <i class="bi bi-trash"></i> <?php echo t('remove'); ?>
+            </button>
+        </div>
+        
+        <!-- PDF Preview Container -->
+        <div class="mb-3" id="pdfPreviewContainer" style="display: none;">
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-file-earmark-pdf fs-4 me-2"></i>
+                <div>
+                    <strong id="pdfFileName"></strong>
+                    <button type="button" class="btn btn-sm btn-danger mt-1" onclick="removeSelectedImage()">
+                        <i class="bi bi-trash"></i> <?php echo t('remove'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- File Upload Area -->
+        <div class="custom-file-upload" id="fileUploadArea" style="border: 2px dashed #dee2e6; padding: 2rem; text-align: center; cursor: pointer;">
+            <i class="bi bi-cloud-upload fs-1 text-primary"></i>
+            <p class="mt-2 mb-1"><?php echo t('click_to_upload'); ?></p>
+            <p class="small text-muted mb-0"><?php echo t('supported_formats'); ?>: JPG, PNG, GIF, PDF</p>
+            <p class="small text-muted mb-0"><?php echo t('max_size'); ?>: 5MB</p>
+            <input type="file" class="d-none" name="image" id="fileInput" accept="image/*,.pdf">
+            <div class="file-name mt-2" id="fileName"></div>
+        </div>
+    </div>
+</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
