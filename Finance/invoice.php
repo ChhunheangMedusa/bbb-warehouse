@@ -1428,6 +1428,34 @@ body {
         font-size: 0.9rem;
         color: var(--secondary);
     }
+    /* Image Preview Styles */
+.img-thumbnail {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.custom-file-upload {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+}
+
+.custom-file-upload:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-color: #0d6efd;
+}
+
+/* Modal-specific styles */
+.modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
 </style>
 
 <div class="container-fluid">
@@ -1833,17 +1861,44 @@ body {
                         </div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label class="form-label"><?php echo t('image'); ?></label>
-                            <div class="mb-2" id="currentImagePreview"></div>
-                            <div class="custom-file-upload" id="editFileUploadArea">
-                                <i class="bi bi-cloud-upload"></i>
-                                <p><?php echo t('click_to_upload_new'); ?></p>
-                                <input type="file" class="d-none" name="image" id="editFileInput" accept="image/*,.pdf">
-                                <div class="file-name" id="editFileName"></div>
-                            </div>
-                        </div>
-                    </div>
+    <div class="col-md-12">
+        <label class="form-label"><?php echo t('image'); ?></label>
+        
+        <!-- Current Image Preview -->
+        <div class="mb-3" id="currentImagePreview"></div>
+        
+        <!-- New Image Preview Container -->
+        <div class="mb-3 text-center" id="editImagePreviewContainer" style="display: none;">
+            <img id="editImagePreview" class="img-thumbnail" style="max-height: 200px;" alt="Selected Image">
+            <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removeSelectedEditImage()">
+                <i class="bi bi-trash"></i> <?php echo t('remove'); ?>
+            </button>
+        </div>
+        
+        <!-- PDF Preview Container -->
+        <div class="mb-3" id="editPdfPreviewContainer" style="display: none;">
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-file-earmark-pdf fs-4 me-2"></i>
+                <div>
+                    <strong id="editPdfFileName"></strong>
+                    <button type="button" class="btn btn-sm btn-danger mt-1" onclick="removeSelectedEditImage()">
+                        <i class="bi bi-trash"></i> <?php echo t('remove'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- File Upload Area -->
+        <div class="custom-file-upload" id="editFileUploadArea" style="border: 2px dashed #dee2e6; padding: 2rem; text-align: center; cursor: pointer;">
+            <i class="bi bi-cloud-upload fs-1 text-primary"></i>
+            <p class="mt-2 mb-1"><?php echo t('click_to_upload_new'); ?></p>
+            <p class="small text-muted mb-0"><?php echo t('supported_formats'); ?>: JPG, PNG, GIF, PDF</p>
+            <p class="small text-muted mb-0"><?php echo t('max_size'); ?>: 5MB</p>
+            <input type="file" class="d-none" name="image" id="editFileInput" accept="image/*,.pdf">
+            <div class="file-name mt-2" id="editFileName"></div>
+        </div>
+    </div>
+</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
@@ -2081,7 +2136,208 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 500);
         }, 5000);
     });
+// Function to display image preview
+function displayImagePreview(file) {
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const pdfPreviewContainer = document.getElementById('pdfPreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const pdfFileName = document.getElementById('pdfFileName');
+    const fileName = document.getElementById('fileName');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    
+    // Hide both previews initially
+    imagePreviewContainer.style.display = 'none';
+    pdfPreviewContainer.style.display = 'none';
+    
+    if (file) {
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension);
+        const isPDF = fileExtension === 'pdf';
+        
+        fileName.textContent = file.name;
+        fileUploadArea.style.borderColor = '#0d6efd';
+        
+        if (isImage) {
+            // Create image preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.style.display = 'block';
+                fileUploadArea.style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        } else if (isPDF) {
+            // Show PDF info
+            pdfFileName.textContent = file.name;
+            pdfPreviewContainer.style.display = 'block';
+            fileUploadArea.style.display = 'none';
+        }
+    }
+}
 
+// Function to remove selected image
+function removeSelectedImage() {
+    const fileInput = document.getElementById('fileInput');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const pdfPreviewContainer = document.getElementById('pdfPreviewContainer');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileName = document.getElementById('fileName');
+    
+    // Reset file input
+    fileInput.value = '';
+    fileName.textContent = '';
+    
+    // Hide previews and show upload area
+    imagePreviewContainer.style.display = 'none';
+    pdfPreviewContainer.style.display = 'none';
+    fileUploadArea.style.display = 'block';
+    fileUploadArea.style.borderColor = '#dee2e6';
+}
+
+// Update the existing file upload event listener
+fileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+        displayImagePreview(this.files[0]);
+    }
+});
+
+// Add drag and drop functionality
+fileUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#0d6efd';
+    this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+});
+
+fileUploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#dee2e6';
+    this.style.backgroundColor = 'transparent';
+});
+
+fileUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#dee2e6';
+    this.style.backgroundColor = 'transparent';
+    
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        displayImagePreview(e.dataTransfer.files[0]);
+    }
+});
+
+// Reset form when modal is closed
+document.getElementById('addInvoiceModal').addEventListener('hidden.bs.modal', function() {
+    removeSelectedImage();
+});
+// Function to display image preview for edit modal
+function displayEditImagePreview(file) {
+    const imagePreviewContainer = document.getElementById('editImagePreviewContainer');
+    const pdfPreviewContainer = document.getElementById('editPdfPreviewContainer');
+    const imagePreview = document.getElementById('editImagePreview');
+    const pdfFileName = document.getElementById('editPdfFileName');
+    const fileName = document.getElementById('editFileName');
+    const fileUploadArea = document.getElementById('editFileUploadArea');
+    const currentImagePreview = document.getElementById('currentImagePreview');
+    
+    // Hide both previews initially
+    imagePreviewContainer.style.display = 'none';
+    pdfPreviewContainer.style.display = 'none';
+    
+    if (file) {
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension);
+        const isPDF = fileExtension === 'pdf';
+        
+        fileName.textContent = file.name;
+        fileUploadArea.style.borderColor = '#0d6efd';
+        
+        // Hide current image preview when new file is selected
+        currentImagePreview.style.display = 'none';
+        
+        if (isImage) {
+            // Create image preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.style.display = 'block';
+                fileUploadArea.style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        } else if (isPDF) {
+            // Show PDF info
+            pdfFileName.textContent = file.name;
+            pdfPreviewContainer.style.display = 'block';
+            fileUploadArea.style.display = 'none';
+        }
+    }
+}
+
+// Function to remove selected image in edit modal
+function removeSelectedEditImage() {
+    const fileInput = document.getElementById('editFileInput');
+    const imagePreviewContainer = document.getElementById('editImagePreviewContainer');
+    const pdfPreviewContainer = document.getElementById('editPdfPreviewContainer');
+    const fileUploadArea = document.getElementById('editFileUploadArea');
+    const fileName = document.getElementById('editFileName');
+    const currentImagePreview = document.getElementById('currentImagePreview');
+    
+    // Reset file input
+    fileInput.value = '';
+    fileName.textContent = '';
+    
+    // Hide previews and show upload area
+    imagePreviewContainer.style.display = 'none';
+    pdfPreviewContainer.style.display = 'none';
+    fileUploadArea.style.display = 'block';
+    fileUploadArea.style.borderColor = '#dee2e6';
+    
+    // Show current image preview again
+    currentImagePreview.style.display = 'block';
+}
+
+// Update the edit modal file upload event listener
+editFileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+        displayEditImagePreview(this.files[0]);
+    }
+});
+
+// Add drag and drop functionality for edit modal
+editFileUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#0d6efd';
+    this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+});
+
+editFileUploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#dee2e6';
+    this.style.backgroundColor = 'transparent';
+});
+
+editFileUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#dee2e6';
+    this.style.backgroundColor = 'transparent';
+    
+    if (e.dataTransfer.files.length) {
+        editFileInput.files = e.dataTransfer.files;
+        displayEditImagePreview(e.dataTransfer.files[0]);
+    }
+});
+
+// Reset edit form when modal is closed
+document.getElementById('editInvoiceModal').addEventListener('hidden.bs.modal', function() {
+    // Don't reset everything, just the new file selection
+    const editFileInput = document.getElementById('editFileInput');
+    const editFileName = document.getElementById('editFileName');
+    const editFileUploadArea = document.getElementById('editFileUploadArea');
+    
+    editFileInput.value = '';
+    editFileName.textContent = '';
+    editFileUploadArea.style.display = 'block';
+    editFileUploadArea.style.borderColor = '#dee2e6';
+});
     // Auto-hide error messages after 10 seconds
     const errorMessages = document.querySelectorAll('.alert-danger');
     errorMessages.forEach(message => {
