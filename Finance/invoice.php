@@ -486,7 +486,7 @@ $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
                                         <?php echo $y; ?>
                                     </option>
-                                <?php endforeach; ?>
+                                <?php endfor; ?>
                             </select>
                         </div>
                         <div class="col-md-2">
