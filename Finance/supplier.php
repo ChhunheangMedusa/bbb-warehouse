@@ -1246,6 +1246,24 @@ body {
         font-weight: bold;
         color: var(--primary);
     }
+    @media (max-width: 768px) {
+    #deleteConfirmModal .modal-footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    #deleteConfirmModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    #deleteConfirmModal .modal-footer form {
+        flex: 1;
+    }
+}
 </style>
 
 <div class="container-fluid">
@@ -1501,16 +1519,21 @@ body {
             </div>
             <div class="modal-body text-center">
                 <div class="mb-3">
-                    <i class="bi bi-trash-fill text-danger" style="font-size: 3rem;"></i>
+                    <i class="bi bi-trash-fill text-danger" style="font-size: 2.5rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3"><?php echo t('delete_supplier'); ?></h4>
-                <p id="deleteSupplierMessage"></p>
+                <h4 class="text-danger mb-2" style="font-size: 1.25rem;"><?php echo t('delete_supplier'); ?></h4>
+                <p class="mb-3"><?php echo t('del_usr2'); ?></p>
+                <div id="deleteSupplierInfo" class="alert alert-light mb-0"></div>
             </div>
-            <div class="modal-footer justify-content-center">
-                <form method="POST" id="deleteSupplierForm" style="display: inline;">
+            <div class="modal-footer d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
+                </button>
+                <form method="POST" id="deleteSupplierForm" class="d-inline">
                     <input type="hidden" name="supplier_id" id="delete_supplier_id">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="delete_supplier" class="btn btn-danger"><?php echo t('delete'); ?></button>
+                    <button type="submit" name="delete_supplier" class="btn btn-danger flex-grow-1 flex-md-grow-0">
+                        <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+                    </button>
                 </form>
             </div>
         </div>
@@ -1561,20 +1584,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Delete supplier button click
-    document.querySelectorAll('.delete-supplier-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const supplierId = this.dataset.id;
-            const supplierName = this.dataset.name;
+// Delete supplier button click
+document.querySelectorAll('.delete-supplier-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const supplierId = this.dataset.id;
+        const supplierName = this.dataset.name;
 
-            document.getElementById('delete_supplier_id').value = supplierId;
-            document.getElementById('deleteSupplierMessage').textContent = 
-                'Are you sure you want to delete supplier "' + supplierName + '"? This action cannot be undone.';
+        // Set values in delete modal
+        document.getElementById('delete_supplier_id').value = supplierId;
+        
+        // Update modal content to match deporty.php style
+        document.getElementById('deleteSupplierInfo').innerHTML = `
+            <strong><?php echo t('name'); ?>:</strong> ${supplierName}
+        `;
 
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-            deleteModal.show();
-        });
+        // Show delete modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        deleteModal.show();
     });
+});
 
     // Handle entries per page change
     const perPageSelect = document.getElementById('per_page_select');
