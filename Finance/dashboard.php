@@ -1351,7 +1351,7 @@ body {
                     <a href="invoice.php" class="card text-center text-decoration-none">
                         <div class="card-body">
                             <i class="bi bi-receipt fs-1 text-primary"></i>
-                            <h6 class="mt-2"><?php echo t('manage_invoices'); ?></h6>
+                            <h6 class="mt-2"><?php echo t('invoice'); ?></h6>
                         </div>
                     </a>
                 </div>
@@ -1359,7 +1359,7 @@ body {
                     <a href="location.php" class="card text-center text-decoration-none">
                         <div class="card-body">
                             <i class="bi bi-building fs-1 text-success"></i>
-                            <h6 class="mt-2"><?php echo t('manage_locations'); ?></h6>
+                            <h6 class="mt-2"><?php echo t('locations_button'); ?></h6>
                         </div>
                     </a>
                 </div>
@@ -1367,7 +1367,7 @@ body {
                     <a href="supplier.php" class="card text-center text-decoration-none">
                         <div class="card-body">
                             <i class="bi bi-truck fs-1 text-warning"></i>
-                            <h6 class="mt-2"><?php echo t('manage_suppliers'); ?></h6>
+                            <h6 class="mt-2"><?php echo t('deporty'); ?></h6>
                         </div>
                     </a>
                 </div>
@@ -1375,10 +1375,17 @@ body {
                     <a href="report.php" class="card text-center text-decoration-none">
                         <div class="card-body">
                             <i class="bi bi-bar-chart fs-1 text-info"></i>
-                            <h6 class="mt-2"><?php echo t('view_reports'); ?></h6>
+                            <h6 class="mt-2"><?php echo t('report'); ?></h6>
                         </div>
                     </a>
                 </div>
+                <div class="quick-action-card">
+                    <a href="access-log.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-clock-history fs-1 text-info"></i>
+                            <h6 class="mt-2"><?php echo t('access_log'); ?></h6>
+                        </div>
+                    </a>
             </div>
         </div>
     </div>

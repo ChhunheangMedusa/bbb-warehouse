@@ -474,11 +474,13 @@ $translations = [
 'total_low_to_high'=>'តម្លៃសរុប (ទាប-ខ្ពស់)',
 'total_high_to_low'=>'តម្លៃសរុប (ខ្ពស់-ទាប)',
 'add_invoice'=>'បន្ថែមវិក័យបត្រថ្មី',
-'delete_invoice'=>'តើអ្នកពិតជាចង់លុបវិក័យបត្រនេះមែនទេ?'
+'delete_invoice'=>'តើអ្នកពិតជាចង់លុបវិក័យបត្រនេះមែនទេ?',
+'invoice'=>'វិក័យបត្រ'
     ],
 
 
     'en' => [
+        'invoice'=>'Invoice',
         'delete_invoice'=>'Are you sure want to delete this invoice?',
         'add_invoice'=>'Add Invoice',
         'all_suppliers'=>'All Supplier',
