@@ -77,7 +77,7 @@ foreach ($location_totals as $location) {
 }
 
 // Prepare data for chart
-$chart_labels_with_percent = [];
+$chart_labels = [];
 $chart_data = [];
 $chart_colors = [
     '#0d6efd', '#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc',
@@ -87,7 +87,7 @@ $chart_colors = [
 foreach ($location_totals as $index => $location) {
   if ($location['total_amount'] > 0) {
       $percentage = $total_overall > 0 ? ($location['total_amount'] / $total_overall) * 100 : 0;
-      $chart_labels_with_percent[] = $location['location_name'] . " (" . number_format($percentage, 1) . "%)";
+      $chart_labels[] = $location['location_name'] . " (" . number_format($percentage, 1) . "%)";
       $chart_data[] = $location['total_amount'];
   }
 }
