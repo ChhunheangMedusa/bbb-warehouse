@@ -1468,7 +1468,7 @@ body {
             <form method="POST">
                 <input type="hidden" name="location_id" id="edit_location_id">
                 <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="editLocationModalLabel"><?php echo t('edit_location'); ?></h5>
+                    <h5 class="modal-title" id="editLocationModalLabel"><?php echo t('location_update'); ?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -1476,13 +1476,13 @@ body {
                         <div class="col-md-12">
                             <label class="form-label"><?php echo t('location_name'); ?> <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" id="edit_location_name" required maxlength="255">
-                            <div class="form-text"><?php echo t('location_name_hint'); ?></div>
+                           
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="edit_location" class="btn btn-warning"><?php echo t('update'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
+                    <button type="submit" name="edit_location" class="btn btn-warning"><?php echo t('form_update'); ?></button>
                 </div>
             </form>
         </div>
