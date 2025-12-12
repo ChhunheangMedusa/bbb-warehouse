@@ -1444,12 +1444,12 @@ body {
                     <form method="GET" class="row g-2">
                         <div class="col-md-2">
                             <label for="search" class="form-label"><?php echo t('search'); ?></label>
-                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search_receipt_no'); ?>..." value="<?php echo $search_query; ?>">
+                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
                         </div>
                         <div class="col-md-2">
                             <label for="location" class="form-label"><?php echo t('location'); ?></label>
                             <select name="location" class="form-select">
-                                <option value=""><?php echo t('all_locations'); ?></option>
+                                <option value=""><?php echo t('report_all_location'); ?></option>
                                 <?php foreach ($locations as $location): ?>
                                     <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
                                         <?php echo $location['name']; ?>
@@ -1725,7 +1725,7 @@ body {
                         <div class="col-md-6">
                             <label class="form-label"><?php echo t('supplier'); ?></label>
                             <select class="form-select" name="supplier_id" required>
-                                <option value=""><?php echo t('select_supplier'); ?></option>
+                               
                                 <?php foreach ($suppliers as $supplier): ?>
                                     <option value="<?php echo $supplier['id']; ?>"><?php echo $supplier['name']; ?></option>
                                 <?php endforeach; ?>
@@ -1751,8 +1751,8 @@ body {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="add_invoice" class="btn btn-primary"><?php echo t('save'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_cancel'); ?></button>
+                    <button type="submit" name="add_invoice" class="btn btn-primary"><?php echo t('form_save'); ?></button>
                 </div>
             </form>
         </div>

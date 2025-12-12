@@ -469,11 +469,17 @@ $translations = [
 'form_warehouse_staff' => 'បុគ្គលិកគ្រប់គ្រងស្តុក',
 'form_finance_staff' => 'បុគ្គលិកគណនិយ្យ',
 'invoice_management'=>'គ្រប់គ្រងវិក័យបត្រ',
-'no_invoices_found'=>'មិនមានវិក័យបត្រត្រូវបានរកឃើញនោះទេ'
+'no_invoices_found'=>'មិនមានវិក័យបត្រត្រូវបានរកឃើញនោះទេ',
+'all_suppliers'=>'អ្នកផ្គត់ផ្គង់ទាំងអស់',
+'total_low_to_high'=>'តម្លៃសរុប (ទាប-ខ្ពស់)',
+'total_high_to_low'=>'តម្លៃសរុប (ខ្ពស់-ទាប)',
+'add_invoice'=>'បន្ថែមវិក័យបត្រថ្មី'
     ],
 
 
     'en' => [
+        'add_invoice'=>'Add Invoice',
+        'all_supplers'=>'All Supplier',
 'invoice_management'=>'Invoice Management',
 'no_invoices_found'=>'No invoice found',
 'form_warehouse_staff' => 'Warehouse Staff',
