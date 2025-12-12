@@ -1217,8 +1217,8 @@ body {
     </div>
     
     <!-- Summary Stats -->
-    <div class="row mb-6">
-        <div class="col-md-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
             <div class="card stat-card">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -1233,7 +1233,7 @@ body {
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card stat-card">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -1252,7 +1252,7 @@ body {
     </div>
     
     <!-- Chart and Details Row -->
-    <div class="row mb-6">
+    <div class="row mb-4">
         <!-- Pie Chart -->
         <div class="col-md-8">
             <div class="card chart-card">
