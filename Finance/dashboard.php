@@ -3,6 +3,9 @@ ob_start();
 require_once '../includes/header-finance.php';
 // Add authentication check
 require_once '../includes/auth.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once 'translate.php';
 
 // Check if user is authenticated
 checkAuth();
@@ -11,6 +14,82 @@ if (!isAdmin() && !isFinanceStaff()) {
     $_SESSION['error'] = "You don't have permission to access this page";
     header('Location: ../index.php'); // Redirect to login or home page
     exit();
+}
+
+// Database connection
+$pdo = getPDO();
+
+// Get locations for filter
+$location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
+$locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get date range filter parameters
+$start_date = isset($_GET['start_date']) ? sanitizeInput($_GET['start_date']) : date('Y-m-01'); // First day of current month
+$end_date = isset($_GET['end_date']) ? sanitizeInput($_GET['end_date']) : date('Y-m-d'); // Today
+$location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
+
+// Validate dates
+if (!strtotime($start_date) || !strtotime($end_date)) {
+    $start_date = date('Y-m-01');
+    $end_date = date('Y-m-d');
+}
+
+// Ensure end date is not before start date
+if (strtotime($end_date) < strtotime($start_date)) {
+    $temp = $end_date;
+    $end_date = $start_date;
+    $start_date = $temp;
+}
+
+// Query to get total amount per location
+$query = "SELECT 
+    fl.id,
+    fl.name as location_name,
+    COALESCE(SUM(fi.total), 0) as total_amount,
+    COUNT(fi.id) as invoice_count
+FROM 
+    finance_location fl
+LEFT JOIN 
+    finance_invoice fi ON fl.id = fi.location
+    AND fi.date BETWEEN :start_date AND :end_date";
+
+// Add location filter if specified
+if ($location_filter) {
+    $query .= " AND fl.id = :location_id";
+}
+
+$query .= " GROUP BY fl.id, fl.name ORDER BY total_amount DESC";
+
+$stmt = $pdo->prepare($query);
+$stmt->bindValue(':start_date', $start_date);
+$stmt->bindValue(':end_date', $end_date);
+if ($location_filter) {
+    $stmt->bindValue(':location_id', $location_filter);
+}
+$stmt->execute();
+$location_totals = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Calculate overall totals
+$total_overall = 0;
+$total_invoices = 0;
+foreach ($location_totals as $location) {
+    $total_overall += $location['total_amount'];
+    $total_invoices += $location['invoice_count'];
+}
+
+// Prepare data for chart
+$chart_labels = [];
+$chart_data = [];
+$chart_colors = [
+    '#0d6efd', '#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc',
+    '#6f42c1', '#fd7e14', '#20c997', '#e83e8c', '#6610f2'
+];
+
+foreach ($location_totals as $index => $location) {
+    if ($location['total_amount'] > 0) {
+        $chart_labels[] = $location['location_name'];
+        $chart_data[] = $location['total_amount'];
+    }
 }
 ?>
 <style>
@@ -1044,7 +1123,351 @@ body {
 .table-responsive .table thead th {
     white-space: nowrap;
 }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    
+    .chart-card {
+        height: 100%;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    
+    .date-range-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid var(--primary);
+    }
+    
+    .location-item {
+        border-bottom: 1px solid #eee;
+        padding: 0.75rem 0;
+    }
+    
+    .location-item:last-child {
+        border-bottom: none;
+    }
+    
+    .location-percentage {
+        font-size: 0.85rem;
+        color: var(--secondary);
+    }
+    
+    .no-data-chart {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 300px;
+        flex-direction: column;
+        color: var(--secondary);
+    }
+    
+    .no-data-chart i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
 </style>
+
+<div class="container-fluid dashboard-container">
+    <h2 class="mb-4"><?php echo t('dashboard'); ?></h2>
+    
+    <!-- Filter Card -->
+    <div class="card mb-4 date-range-card">
+        <div class="card-header">
+            <h5 class="mb-0"><?php echo t('filter_by_date_range'); ?></h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label"><?php echo t('start_date'); ?></label>
+                    <input type="date" name="start_date" class="form-control" 
+                           value="<?php echo $start_date; ?>" max="<?php echo $end_date; ?>">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label"><?php echo t('end_date'); ?></label>
+                    <input type="date" name="end_date" class="form-control" 
+                           value="<?php echo $end_date; ?>" min="<?php echo $start_date; ?>">
+                </div>
+                <div class="col-md-3">
+                    <label for="location" class="form-label"><?php echo t('filter_by_location'); ?></label>
+                    <select name="location" class="form-select">
+                        <option value=""><?php echo t('all_locations'); ?></option>
+                        <?php foreach ($locations as $location): ?>
+                            <option value="<?php echo $location['id']; ?>" 
+                                <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                <?php echo $location['name']; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-filter"></i> <?php echo t('apply_filter'); ?>
+                    </button>
+                    <a href="dashboard.php" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> <?php echo t('reset'); ?>
+                    </a>
+                </div>
+            </form>
+            <div class="mt-3 text-muted">
+                <small>
+                    <?php echo t('showing_data_from'); ?>: 
+                    <strong><?php echo date('d/m/Y', strtotime($start_date)); ?></strong> 
+                    <?php echo t('to'); ?> 
+                    <strong><?php echo date('d/m/Y', strtotime($end_date)); ?></strong>
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2"><?php echo t('total_invoices'); ?></h6>
+                            <h3 class="stat-number text-primary"><?php echo number_format($total_invoices); ?></h3>
+                        </div>
+                        <div class="bg-primary rounded-circle p-3">
+                            <i class="bi bi-receipt text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2"><?php echo t('total_amount'); ?></h6>
+                            <h3 class="stat-number text-success">$<?php echo number_format($total_overall, 2); ?></h3>
+                        </div>
+                        <div class="bg-success rounded-circle p-3">
+                            <i class="bi bi-currency-dollar text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2"><?php echo t('locations_with_invoices'); ?></h6>
+                            <h3 class="stat-number text-warning"><?php echo count($chart_labels); ?></h3>
+                        </div>
+                        <div class="bg-warning rounded-circle p-3">
+                            <i class="bi bi-pie-chart text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart and Details Row -->
+    <div class="row mb-4">
+        <!-- Pie Chart -->
+        <div class="col-md-8">
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><?php echo t('amount_by_location'); ?></h5>
+                </div>
+                <div class="card-body">
+                    <?php if (!empty($chart_data) && $total_overall > 0): ?>
+                        <div class="chart-container">
+                            <canvas id="locationPieChart"></canvas>
+                        </div>
+                    <?php else: ?>
+                        <div class="no-data-chart">
+                            <i class="bi bi-pie-chart text-muted"></i>
+                            <h5><?php echo t('no_data_available'); ?></h5>
+                            <p class="text-muted"><?php echo t('no_invoices_in_date_range'); ?></p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Location Details -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><?php echo t('location_details'); ?></h5>
+                </div>
+                <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                    <?php if (!empty($location_totals)): ?>
+                        <?php foreach ($location_totals as $index => $location): ?>
+                            <div class="location-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <span class="badge" style="background-color: <?php echo $chart_colors[$index % count($chart_colors)]; ?>;">
+                                                &nbsp;&nbsp;
+                                            </span>
+                                            <?php echo $location['location_name']; ?>
+                                        </h6>
+                                        <small class="text-muted">
+                                            <?php echo $location['invoice_count']; ?> <?php echo t('invoices'); ?>
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong>$<?php echo number_format($location['total_amount'], 2); ?></strong>
+                                        <?php if ($total_overall > 0): ?>
+                                            <div class="location-percentage">
+                                                <?php echo number_format(($location['total_amount'] / $total_overall) * 100, 1); ?>%
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-building" style="font-size: 2rem;"></i>
+                            <p class="mt-2"><?php echo t('no_location_data'); ?></p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><?php echo t('quick_actions'); ?></h5>
+        </div>
+        <div class="card-body">
+            <div class="quick-actions-container">
+                <div class="quick-action-card">
+                    <a href="invoice.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-receipt fs-1 text-primary"></i>
+                            <h6 class="mt-2"><?php echo t('manage_invoices'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+                <div class="quick-action-card">
+                    <a href="location.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-building fs-1 text-success"></i>
+                            <h6 class="mt-2"><?php echo t('manage_locations'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+                <div class="quick-action-card">
+                    <a href="supplier.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-truck fs-1 text-warning"></i>
+                            <h6 class="mt-2"><?php echo t('manage_suppliers'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+                <div class="quick-action-card">
+                    <a href="report.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-bar-chart fs-1 text-info"></i>
+                            <h6 class="mt-2"><?php echo t('view_reports'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if (!empty($chart_data) && $total_overall > 0): ?>
+    // Initialize pie chart
+    const ctx = document.getElementById('locationPieChart').getContext('2d');
+    const locationPieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: <?php echo json_encode($chart_labels); ?>,
+            datasets: [{
+                data: <?php echo json_encode($chart_data); ?>,
+                backgroundColor: <?php echo json_encode(array_slice($chart_colors, 0, count($chart_data))); ?>,
+                borderColor: '#fff',
+                borderWidth: 2,
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            label += '$' + value.toLocaleString('en-US', {minimumFractionDigits: 2}) + 
+                                     ' (' + percentage + '%)';
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    <?php endif; ?>
+    
+    // Date range validation
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const endDateInput = document.querySelector('input[name="end_date"]');
+    
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', function() {
+            endDateInput.min = this.value;
+            if (new Date(endDateInput.value) < new Date(this.value)) {
+                endDateInput.value = this.value;
+            }
+        });
+        
+        endDateInput.addEventListener('change', function() {
+            startDateInput.max = this.value;
+            if (new Date(startDateInput.value) > new Date(this.value)) {
+                startDateInput.value = this.value;
+            }
+        });
+    }
+    
+    // Auto-hide messages
+    setTimeout(() => {
+        document.querySelectorAll('.alert').forEach(alert => {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+});
+</script>
 
 <?php
 require_once '../includes/footer.php';
