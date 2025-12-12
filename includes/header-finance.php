@@ -262,23 +262,104 @@ $hasAvatar = ($userPicture !== null);
         <div class="sidebar-nav">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/dashboard.php' ? 'active' : ''; ?>" href="../Finance/dashboard.php">
+                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Admin/dashboard.php' ? 'active' : ''; ?>" href="../Admin/dashboard.php">
                         <i class="bi bi-speedometer2 me-2"></i><?php echo t('dashboard'); ?>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/invoice.php' ? 'active' : ''; ?>" href="../Finance/invoice.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('invoice'); ?>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/access-log.php' ? 'active' : ''; ?>" href="../Finance/access-log.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('logs'); ?>
-                    </a>
-                </li>
-          
-                
                
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/user-control.php' ? 'active' : ''; ?>" href="../Admin/user-control.php">
+                        <i class="bi bi-people me-2"></i><?php echo t('user_management'); ?>
+                    </a>
+                </li>
+               
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Finance/invoice.php' ? 'active' : ''; ?>" href="../Finance/invoice.php">
+                        <i class="bi bi-people me-2"></i><?php echo t('invoice'); ?>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" data-bs-toggle="collapse" href="#itemManagementCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-box-seam me-2"></i><?php echo t('item_management'); ?>
+                        <i class="bi bi-chevron-down ms-auto" style="font-size: 0.8rem;"></i>
+                    </a>
+                    <div class="collapse" id="itemManagementCollapse">
+                        <ul class="nav flex-column ps-4">
+                        <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/items.php' ? 'active' : ''; ?>" href="../Admin/items.php">
+                                    <i class="bi bi-box-seam me-2"></i><?php echo t('item'); ?>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/stock-transfer.php' ? 'active' : ''; ?>" href="../Admin/stock-transfer.php">
+                                    <i class="bi bi-arrow-left-right me-2"></i><?php echo t('transfer'); ?>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/remaining.php' ? 'active' : ''; ?>" href="../Admin/remaining.php">
+                                  <i class="bi bi-archive me-2"></i><?php echo t('remaining'); ?>
+                                </a>
+                            </li>
+
+                        <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/store.php' ? 'active' : ''; ?>" href="../Admin/store.php">
+                                    <i class="bi bi-currency-dollar me-2"></i><?php echo t('store_inventory'); ?>
+                                </a>
+                            </li>
+                          
+                       
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/repair.php' ? 'active' : ''; ?>" href="../Admin/repair.php">
+                                    <i class="bi bi-tools me-2"></i><?php echo t('repair'); ?>
+                                </a>
+                            </li>
+                            
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/broken-items.php' ? 'active' : ''; ?>" href="../Admin/broken-items.php">
+                                    <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('broken_items'); ?>
+                                </a>
+                            </li>
+                           
+                        </ul>
+                    </div>
+                </li>
+              
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/location-control.php' ? 'active' : ''; ?>" href="../Admin/location-control.php">
+                        <i class="bi bi-pin-map me-2"></i><?php echo t('location_management'); ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/category.php' ? 'active' : ''; ?>" href="../Admin/category.php">
+                        <i class="bi bi-card-list me-2"></i><?php echo t('category_management'); ?>
+                    </a>
+                </li>
+       
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/deporty.php' ? 'active' : ''; ?>" href="../Admin/deporty.php">
+                        <i class="bi bi-geo-alt me-2"></i><?php echo t('deporty_management'); ?>
+                    </a>
+                </li>
+              
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/access-log.php' ? 'active' : ''; ?>" href="../Admin/access-log.php">
+                        <i class="bi bi-clock-history me-2"></i><?php echo t('logs'); ?>
+                    </a>
+                </li>
+            
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/report.php' ? 'active' : ''; ?>" href="../Admin/report.php">
+                        <i class="bi bi-file-earmark-text me-2"></i><?php echo t('reports'); ?>
+                    </a>
+                </li>
+              
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($_SERVER['PHP_SELF']) == '/Admin/low-stock-alert.php' ? 'active' : ''; ?>" href="../Admin/low-stock-alert.php">
+                        <i class="bi bi-exclamation-triangle me-2"></i><?php echo t('low_stock'); ?>
+                    </a>
+                </li>
             </ul>
         </div>
        
