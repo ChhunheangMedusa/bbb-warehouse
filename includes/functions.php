@@ -78,16 +78,33 @@ function logActivity($userId, $activityType, $activityDetail) {
     $stmt->execute([$userId, $activityType, $activityDetail, $ip]);
 }
 
-function financelog($userId, $activityType, $activityDetail) {
+function financelog($user_id, $activity_type, $activity_detail) {
     global $pdo;
     
-    $ip = $_SERVER['REMOTE_ADDR'];
-    
-    $stmt = $pdo->prepare("INSERT INTO access_logs (user_id, activity_type, activity_detail, ip_address) 
-                          VALUES (?, ?, ?, ?)");
-    $stmt->execute([$userId, $activityType, $activityDetail, $ip]);
+    try {
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+        
+        $stmt = $pdo->prepare("
+            INSERT INTO finance_logs (user_id, activity_type, activity_detail, ip_address, user_agent) 
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        
+        $stmt->execute([
+            $user_id,
+            $activity_type,
+            $activity_detail,
+            $ip_address,
+            $user_agent
+        ]);
+        
+        return true;
+    } catch (Exception $e) {
+        // Log error but don't break the application
+        error_log("Failed to log activity: " . $e->getMessage());
+        return false;
+    }
 }
-
 
 function getCategoryName($pdo, $category_id) {
     $stmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
