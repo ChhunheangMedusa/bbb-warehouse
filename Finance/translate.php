@@ -479,7 +479,7 @@ $translations = [
 
     'en' => [
         'add_invoice'=>'Add Invoice',
-        'all_supplers'=>'All Supplier',
+        'all_suppliers'=>'All Supplier',
 'invoice_management'=>'Invoice Management',
 'no_invoices_found'=>'No invoice found',
 'form_warehouse_staff' => 'Warehouse Staff',

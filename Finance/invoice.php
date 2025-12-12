@@ -1458,7 +1458,7 @@ body {
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label for="supplier" class="form-label"><?php echo t('supplier'); ?></label>
+                            <label for="supplier" class="form-label"><?php echo t('deporty'); ?></label>
                             <select name="supplier" class="form-select">
                                 <option value=""><?php echo t('all_suppliers'); ?></option>
                                 <?php foreach ($suppliers as $supplier): ?>

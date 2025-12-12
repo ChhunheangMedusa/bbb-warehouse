@@ -1503,7 +1503,7 @@ body {
                 <div class="mb-3">
                     <i class="bi bi-trash-fill text-danger" style="font-size: 3rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3"><?php echo t('delete_location'); ?></h4>
+                <h4 class="text-danger mb-3"><?php echo t('del_location1'); ?></h4>
                 <p id="deleteLocationMessage"></p>
             </div>
             <div class="modal-footer justify-content-center">
@@ -1564,12 +1564,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Delete location button click
     document.querySelectorAll('.delete-location-btn').forEach(button => {
         button.addEventListener('click', function() {
+            
+            e.preventDefault();
+            
             const locationId = this.dataset.id;
             const locationName = this.dataset.name;
 
-            document.getElementById('delete_location_id').value = locationId;
-            document.getElementById('deleteLocationMessage').textContent = 
-                'Are you sure you want to delete location "' + locationName + '"? This action cannot be undone.';
+            document.getElementById('deleteLocationInfo').innerHTML = `
+                <strong><?php echo t('location_name');?>:</strong> ${locationName}<br>
+              
+            `;
+
 
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
             deleteModal.show();
