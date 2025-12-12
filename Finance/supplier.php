@@ -66,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logActivity($_SESSION['user_id'], 'Add Supplier', $log_message);
             
             $_SESSION['success'] = "Supplier added successfully!";
+            logActivity($_SESSION['user_id'], 'Add Supplier', "Added new supplier: $name");
             redirect('supplier.php');
             
         } catch (PDOException $e) {
