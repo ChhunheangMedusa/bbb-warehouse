@@ -468,11 +468,14 @@ $translations = [
 'item_status'=>'Status',
 'form_warehouse_staff' => 'បុគ្គលិកគ្រប់គ្រងស្តុក',
 'form_finance_staff' => 'បុគ្គលិកគណនិយ្យ',
+'invoice_management'=>'គ្រប់គ្រងវិក័យបត្រ',
+'no_invoices_found'=>'មិនមានវិក័យបត្រត្រូវបានរកឃើញនោះទេ'
     ],
 
 
     'en' => [
-       
+'invoice_management'=>'Invoice Management',
+'no_invoices_found'=>'No invoice found',
 'form_warehouse_staff' => 'Warehouse Staff',
 'form_finance_staff' => 'Finance Staff',
         'item_status'=>'Status',

@@ -1540,15 +1540,15 @@ body {
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th><?php echo t('no'); ?></th>
-                            <th><?php echo t('receipt_no'); ?></th>
-                            <th><?php echo t('date'); ?></th>
-                            <th><?php echo t('location'); ?></th>
-                            <th><?php echo t('supplier'); ?></th>
-                            <th><?php echo t('total'); ?></th>
-                            <th><?php echo t('image'); ?></th>
+                            <th><?php echo t('item_no'); ?></th>
+                            <th><?php echo t('item_invoice'); ?></th>
+                            <th><?php echo t('item_date'); ?></th>
+                            <th><?php echo t('location_column'); ?></th>
+                            <th><?php echo t('deporty'); ?></th>
+                            <th><?php echo t('sub_total'); ?></th>
+                            <th><?php echo t('column_picture'); ?></th>
                             <th><?php echo t('created_at'); ?></th>
-                            <th><?php echo t('actions'); ?></th>
+                            <th><?php echo t('column_action'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
