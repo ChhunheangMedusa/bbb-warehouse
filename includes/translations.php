@@ -31,9 +31,11 @@ $translations = [
         'settings'=>'ការកំណត់',
         'profile'=>'ជីវប្រវត្តិ',
         'switch'=>'ផ្លាស់ប្ដូរប្រព័ន្ធ',
-        'invoice'=>'វិក័យបត្រ'
+        'invoice'=>'វិក័យបត្រ',
+        'system_title2'=>'ប្រព័ន្ធគ្រប់គ្រងគណនេយ្យ'
     ],
     'en' => [
+        'system_title2'=>'Finance Management System',
         'invoice'=>'Invoice',
         'switch'=>'Switch',
         'settings'=>'Settings',

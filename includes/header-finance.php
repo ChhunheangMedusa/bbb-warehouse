@@ -38,7 +38,7 @@ $hasAvatar = ($userPicture !== null);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($page_title) ? $page_title : t('system_title'); ?></title>
+    <title><?php echo isset($page_title) ? $page_title : t('system_title2'); ?></title>
     <link href="../assets/css/style.css" rel="stylesheet">
     <!-- Favicon -->
     <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
@@ -231,7 +231,7 @@ $hasAvatar = ($userPicture !== null);
     <div class="sidebar bg-gradient-primary">
         <div class="sidebar-brand text-center py-4">
          
-            <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title'); ?></h4>
+            <h4 class="mt-3 text-white" style="font-size:20px;font-weight: bold;"><?php echo t('system_title2'); ?></h4>
           
                             <a href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <?php if ($hasAvatar): ?>
