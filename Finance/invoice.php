@@ -7,9 +7,10 @@ require_once '../includes/header-finance.php';
 require_once 'translate.php';
 // Add authentication check
 //require_once '../includes/auth.php';
-if (!isAdmin() && !isFinanceStaff()) {
+
+if (!isAdmin()) {
   $_SESSION['error'] = "You don't have permission to access this page";
-  header('Location: ../index.php'); // Redirect to login or home page
+  header('Location: dashboard-staff.php');
   exit();
 }
 
