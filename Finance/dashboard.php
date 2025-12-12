@@ -77,7 +77,7 @@ foreach ($location_totals as $location) {
 }
 
 // Prepare data for chart
-$chart_labels = [];
+$chart_labels_with_percent = [];
 $chart_data = [];
 $chart_colors = [
     '#0d6efd', '#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc',
@@ -85,10 +85,11 @@ $chart_colors = [
 ];
 
 foreach ($location_totals as $index => $location) {
-    if ($location['total_amount'] > 0) {
-        $chart_labels[] = $location['location_name'];
-        $chart_data[] = $location['total_amount'];
-    }
+  if ($location['total_amount'] > 0) {
+      $percentage = $total_overall > 0 ? ($location['total_amount'] / $total_overall) * 100 : 0;
+      $chart_labels_with_percent[] = $location['location_name'] . " (" . number_format($percentage, 1) . "%)";
+      $chart_data[] = $location['total_amount'];
+  }
 }
 ?>
 <style>
@@ -1169,8 +1170,21 @@ body {
         font-size: 3rem;
         margin-bottom: 1rem;
     }
-</style>
+    /* Add to your existing CSS */
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
 
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.location-item:hover .progress-bar {
+    transform: scaleY(1.2);
+}
+</style>
 <div class="container-fluid dashboard-container">
     <h2 class="mb-4"><?php echo t('dashboard'); ?></h2>
     
@@ -1212,7 +1226,13 @@ body {
                     </a>
                 </div>
             </form>
-           
+            <div class="mt-3 text-muted">
+                <small>
+                    <strong><?php echo t('date_range'); ?>:</strong> 
+                    <?php echo date('d/m/Y', strtotime($start_date)); ?> - 
+                    <?php echo date('d/m/Y', strtotime($end_date)); ?>
+                </small>
+            </div>
         </div>
     </div>
     
@@ -1248,7 +1268,6 @@ body {
                 </div>
             </div>
         </div>
-       
     </div>
     
     <!-- Chart and Details Row -->
@@ -1257,7 +1276,7 @@ body {
         <div class="col-md-8">
             <div class="card chart-card">
                 <div class="card-header">
-                    <h5 class="mb-0"><?php echo t('amount_by_location'); ?></h5>
+                    <h5 class="mb-0"><?php echo t('amount_by_location'); ?> ($<?php echo number_format($total_overall, 2); ?>)</h5>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($chart_data) && $total_overall > 0): ?>
@@ -1284,6 +1303,10 @@ body {
                 <div class="card-body" style="max-height: 350px; overflow-y: auto;">
                     <?php if (!empty($location_totals)): ?>
                         <?php foreach ($location_totals as $index => $location): ?>
+                            <?php 
+                            $percentage = $total_overall > 0 ? ($location['total_amount'] / $total_overall) * 100 : 0;
+                            $display_name = $location['location_name'] . " (" . number_format($percentage, 1) . "%)";
+                            ?>
                             <div class="location-item">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
@@ -1301,11 +1324,21 @@ body {
                                         <strong>$<?php echo number_format($location['total_amount'], 2); ?></strong>
                                         <?php if ($total_overall > 0): ?>
                                             <div class="location-percentage">
-                                                <?php echo number_format(($location['total_amount'] / $total_overall) * 100, 1); ?>%
+                                                <?php echo number_format($percentage, 1); ?>%
                                             </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
+                                <?php if ($total_overall > 0): ?>
+                                <div class="mt-2">
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar" 
+                                             style="width: <?php echo $percentage; ?>%; 
+                                                    background-color: <?php echo $chart_colors[$index % count($chart_colors)]; ?>;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -1365,6 +1398,7 @@ body {
                             <h6 class="mt-2"><?php echo t('access_log'); ?></h6>
                         </div>
                     </a>
+                </div>
             </div>
         </div>
     </div>
@@ -1376,14 +1410,26 @@ body {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     <?php if (!empty($chart_data) && $total_overall > 0): ?>
+    // Prepare chart data with percentages in labels
+    const chartLabels = <?php echo json_encode($chart_labels); ?>;
+    const chartData = <?php echo json_encode($chart_data); ?>;
+    const totalAmount = <?php echo $total_overall; ?>;
+    
+    // Create labels with percentages
+    const chartLabelsWithPercent = chartLabels.map((label, index) => {
+        const amount = chartData[index];
+        const percentage = totalAmount > 0 ? ((amount / totalAmount) * 100).toFixed(1) : 0;
+        return `${label} (${percentage}%)`;
+    });
+    
     // Initialize pie chart
     const ctx = document.getElementById('locationPieChart').getContext('2d');
     const locationPieChart = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: <?php echo json_encode($chart_labels); ?>,
+            labels: chartLabelsWithPercent,
             datasets: [{
-                data: <?php echo json_encode($chart_data); ?>,
+                data: chartData,
                 backgroundColor: <?php echo json_encode(array_slice($chart_colors, 0, count($chart_data))); ?>,
                 borderColor: '#fff',
                 borderWidth: 2,
@@ -1399,19 +1445,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     labels: {
                         padding: 20,
                         usePointStyle: true,
-                        pointStyle: 'circle'
+                        pointStyle: 'circle',
+                        font: {
+                            size: 12
+                        },
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                return data.labels.map((label, i) => {
+                                    const meta = chart.getDatasetMeta(0);
+                                    const style = meta.controller.getStyle(i);
+                                    
+                                    return {
+                                        text: label,
+                                        fillStyle: style.backgroundColor,
+                                        strokeStyle: style.borderColor,
+                                        lineWidth: style.borderWidth,
+                                        hidden: !chart.isDatasetVisible(0) || meta.data[i].hidden,
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
                     }
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            let label = context.label || '';
+                            let label = context.label.split(' (')[0] || ''; // Remove percentage from label
                             if (label) {
                                 label += ': ';
                             }
                             const value = context.parsed;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = Math.round((value / total) * 100);
+                            const percentage = totalAmount > 0 ? ((value / totalAmount) * 100).toFixed(1) : 0;
                             label += '$' + value.toLocaleString('en-US', {minimumFractionDigits: 2}) + 
                                      ' (' + percentage + '%)';
                             return label;
@@ -1453,7 +1520,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 5000);
 });
 </script>
-
 <?php
 require_once '../includes/footer.php';
 ?>
