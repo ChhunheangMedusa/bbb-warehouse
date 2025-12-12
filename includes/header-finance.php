@@ -268,22 +268,22 @@ $hasAvatar = ($userPicture !== null);
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/invoice.php' ? 'active' : ''; ?>" href="../Finance/invoice.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('invoice'); ?>
+                        <i class="bi bi-receipt me-2"></i><?php echo t('invoice'); ?>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/location.php' ? 'active' : ''; ?>" href="../Finance/location.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('location_management'); ?>
+                        <i class="bi bi-pin-map me-2"></i><?php echo t('location_management'); ?>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/supplier.php' ? 'active' : ''; ?>" href="../Finance/supplier.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('deporty_management'); ?>
+                        <i class="bi bi-geo-alt me-2"></i><?php echo t('deporty_management'); ?>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/access-log.php' ? 'active' : ''; ?>" href="../Finance/access-log.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('logs'); ?>
+                        <i class="bi bi-clock-history me-2"></i><?php echo t('logs'); ?>
                     </a>
                 </li>
           
