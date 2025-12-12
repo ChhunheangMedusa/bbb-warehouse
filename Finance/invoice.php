@@ -1753,7 +1753,7 @@ body {
                         <div class="col-md-6">
                             <label class="form-label"><?php echo t('deporty'); ?></label>
                             <select class="form-select" name="supplier_id" required>
-                                <option value=""><?php echo t(''); ?></option>
+                                <option value=""><?php echo t('select_supplier'); ?></option>
                                 <?php foreach ($suppliers as $supplier): ?>
                                     <option value="<?php echo $supplier['id']; ?>"><?php echo $supplier['name']; ?></option>
                                 <?php endforeach; ?>
@@ -1979,174 +1979,6 @@ body {
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set today's date in add modal
-    document.getElementById('addInvoiceModal').addEventListener('shown.bs.modal', function() {
-        const today = new Date().toISOString().split('T')[0];
-        this.querySelector('input[name="date"]').value = today;
-    });
-
-    // File upload functionality for add modal
-    const fileUploadArea = document.getElementById('fileUploadArea');
-    const fileInput = document.getElementById('fileInput');
-    const fileName = document.getElementById('fileName');
-
-    fileUploadArea.addEventListener('click', function() {
-        fileInput.click();
-    });
-
-    fileInput.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            fileName.textContent = this.files[0].name;
-            fileUploadArea.classList.add('border-primary');
-        } else {
-            fileName.textContent = '';
-            fileUploadArea.classList.remove('border-primary');
-        }
-    });
-
-    // File upload functionality for edit modal
-    const editFileUploadArea = document.getElementById('editFileUploadArea');
-    const editFileInput = document.getElementById('editFileInput');
-    const editFileName = document.getElementById('editFileName');
-
-    editFileUploadArea.addEventListener('click', function() {
-        editFileInput.click();
-    });
-
-    editFileInput.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            editFileName.textContent = this.files[0].name;
-            editFileUploadArea.classList.add('border-primary');
-        } else {
-            editFileName.textContent = '';
-            editFileUploadArea.classList.remove('border-primary');
-        }
-    });
-
-    // Edit invoice button click
-    document.querySelectorAll('.edit-invoice-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const invoiceId = this.dataset.id;
-            const receiptNo = this.dataset.receipt;
-            const date = this.dataset.date;
-            const locationId = this.dataset.location;
-            const supplierId = this.dataset.supplier;
-            const total = this.dataset.total;
-            const image = this.dataset.image;
-
-            // Set values in edit modal
-            document.getElementById('edit_invoice_id').value = invoiceId;
-            document.getElementById('edit_receipt_no').value = receiptNo;
-            document.getElementById('edit_date').value = date;
-            document.getElementById('edit_location_id').value = locationId;
-            document.getElementById('edit_supplier_id').value = supplierId;
-            document.getElementById('edit_total').value = total;
-            document.getElementById('edit_current_image').value = image;
-
-            // Show current image preview
-            const currentImagePreview = document.getElementById('currentImagePreview');
-            if (image) {
-                const fileExtension = image.split('.').pop().toLowerCase();
-                if (fileExtension === 'pdf') {
-                    currentImagePreview.innerHTML = `
-                        <div class="alert alert-info">
-                            <i class="bi bi-file-earmark-pdf"></i> PDF File: ${image.split('/').pop()}
-                        </div>
-                    `;
-                } else {
-                    currentImagePreview.innerHTML = `
-                        <img src="${image}" class="img-thumbnail" style="max-width: 150px;" alt="Current Image">
-                        <p class="small text-muted mt-1">${image.split('/').pop()}</p>
-                    `;
-                }
-            } else {
-                currentImagePreview.innerHTML = '<p class="text-muted">No image</p>';
-            }
-
-            // Reset new file selection
-            const editFileInput = document.getElementById('editFileInput');
-            const editFileName = document.getElementById('editFileName');
-            const editFileUploadArea = document.getElementById('editFileUploadArea');
-            const editImagePreviewContainer = document.getElementById('editImagePreviewContainer');
-            const editPdfPreviewContainer = document.getElementById('editPdfPreviewContainer');
-            
-            editFileInput.value = '';
-            editFileName.textContent = '';
-            editFileUploadArea.style.display = 'block';
-            editFileUploadArea.style.borderColor = '#dee2e6';
-            editFileUploadArea.style.backgroundColor = 'transparent';
-            editImagePreviewContainer.style.display = 'none';
-            editPdfPreviewContainer.style.display = 'none';
-
-            // Show edit modal
-            const editModal = new bootstrap.Modal(document.getElementById('editInvoiceModal'));
-            editModal.show();
-        });
-    });
-
-    // Delete invoice button click
-    document.querySelectorAll('.delete-invoice-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const invoiceId = this.dataset.id;
-            const receiptNo = this.dataset.receipt;
-
-            document.getElementById('delete_invoice_id').value = invoiceId;
-            document.getElementById('deleteInvoiceMessage').textContent = 
-                'Are you sure you want to delete invoice #' + receiptNo + '? This action cannot be undone.';
-
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-            deleteModal.show();
-        });
-    });
-
-    // Image modal
-    document.querySelectorAll('.invoice-image').forEach(img => {
-        img.addEventListener('click', function() {
-            const imageSrc = this.dataset.imageSrc;
-            const modalImage = document.getElementById('modalImage');
-            
-            // Check if it's a PDF
-            const fileExtension = imageSrc.split('.').pop().toLowerCase();
-            if (fileExtension === 'pdf') {
-                modalImage.src = '';
-                modalImage.style.display = 'none';
-                // You could add PDF viewer functionality here
-                alert('PDF files cannot be displayed in the image viewer. Please download the file to view.');
-            } else {
-                modalImage.src = imageSrc;
-                modalImage.style.display = 'block';
-                
-                const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
-                imageModal.show();
-            }
-        });
-    });
-
-
-    // Handle entries per page change
-    const perPageSelect = document.getElementById('per_page_select');
-    if (perPageSelect) {
-        perPageSelect.addEventListener('change', function() {
-            const url = new URL(window.location);
-            url.searchParams.set('per_page', this.value);
-            url.searchParams.set('page', '1'); // Reset to first page
-            window.location.href = url.toString();
-        });
-    }
-
-    // Auto-hide success messages after 5 seconds
-    const successMessages = document.querySelectorAll('.alert-success');
-    successMessages.forEach(message => {
-        setTimeout(() => {
-            message.style.transition = 'opacity 0.5s ease';
-            message.style.opacity = '0';
-            
-            setTimeout(() => {
-                message.remove();
-            }, 500);
-        }, 5000);
-    });
 // Function to display image preview
 function displayImagePreview(file) {
     const imagePreviewContainer = document.getElementById('imagePreviewContainer');
@@ -2392,19 +2224,129 @@ document.addEventListener('DOMContentLoaded', function() {
         editFileUploadArea.style.backgroundColor = 'transparent';
     });
 
+    // Edit invoice button click
+    document.querySelectorAll('.edit-invoice-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const invoiceId = this.dataset.id;
+            const receiptNo = this.dataset.receipt;
+            const date = this.dataset.date;
+            const locationId = this.dataset.location;
+            const supplierId = this.dataset.supplier;
+            const total = this.dataset.total;
+            const image = this.dataset.image;
 
-// Reset edit form when modal is closed
-document.getElementById('editInvoiceModal').addEventListener('hidden.bs.modal', function() {
-    // Don't reset everything, just the new file selection
-    const editFileInput = document.getElementById('editFileInput');
-    const editFileName = document.getElementById('editFileName');
-    const editFileUploadArea = document.getElementById('editFileUploadArea');
-    
-    editFileInput.value = '';
-    editFileName.textContent = '';
-    editFileUploadArea.style.display = 'block';
-    editFileUploadArea.style.borderColor = '#dee2e6';
-});
+            // Set values in edit modal
+            document.getElementById('edit_invoice_id').value = invoiceId;
+            document.getElementById('edit_receipt_no').value = receiptNo;
+            document.getElementById('edit_date').value = date;
+            document.getElementById('edit_location_id').value = locationId;
+            document.getElementById('edit_supplier_id').value = supplierId;
+            document.getElementById('edit_total').value = total;
+            document.getElementById('edit_current_image').value = image;
+
+            // Show current image preview
+            const currentImagePreview = document.getElementById('currentImagePreview');
+            if (image) {
+                const fileExtension = image.split('.').pop().toLowerCase();
+                if (fileExtension === 'pdf') {
+                    currentImagePreview.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF File: ${image.split('/').pop()}
+                        </div>
+                    `;
+                } else {
+                    currentImagePreview.innerHTML = `
+                        <img src="${image}" class="img-thumbnail" style="max-width: 150px;" alt="Current Image">
+                        <p class="small text-muted mt-1">${image.split('/').pop()}</p>
+                    `;
+                }
+            } else {
+                currentImagePreview.innerHTML = '<p class="text-muted">No image</p>';
+            }
+
+            // Reset new file selection
+            const editFileInput = document.getElementById('editFileInput');
+            const editFileName = document.getElementById('editFileName');
+            const editFileUploadArea = document.getElementById('editFileUploadArea');
+            const editImagePreviewContainer = document.getElementById('editImagePreviewContainer');
+            const editPdfPreviewContainer = document.getElementById('editPdfPreviewContainer');
+            
+            editFileInput.value = '';
+            editFileName.textContent = '';
+            editFileUploadArea.style.display = 'block';
+            editFileUploadArea.style.borderColor = '#dee2e6';
+            editFileUploadArea.style.backgroundColor = 'transparent';
+            editImagePreviewContainer.style.display = 'none';
+            editPdfPreviewContainer.style.display = 'none';
+
+            // Show edit modal
+            const editModal = new bootstrap.Modal(document.getElementById('editInvoiceModal'));
+            editModal.show();
+        });
+    });
+
+    // Delete invoice button click
+    document.querySelectorAll('.delete-invoice-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const invoiceId = this.dataset.id;
+            const receiptNo = this.dataset.receipt;
+
+            document.getElementById('delete_invoice_id').value = invoiceId;
+            document.getElementById('deleteInvoiceMessage').textContent = 
+                'Are you sure you want to delete invoice #' + receiptNo + '? This action cannot be undone.';
+
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            deleteModal.show();
+        });
+    });
+
+    // Image modal
+    document.querySelectorAll('.invoice-image').forEach(img => {
+        img.addEventListener('click', function() {
+            const imageSrc = this.dataset.imageSrc;
+            const modalImage = document.getElementById('modalImage');
+            
+            // Check if it's a PDF
+            const fileExtension = imageSrc.split('.').pop().toLowerCase();
+            if (fileExtension === 'pdf') {
+                modalImage.src = '';
+                modalImage.style.display = 'none';
+                // You could add PDF viewer functionality here
+                alert('PDF files cannot be displayed in the image viewer. Please download the file to view.');
+            } else {
+                modalImage.src = imageSrc;
+                modalImage.style.display = 'block';
+                
+                const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+                imageModal.show();
+            }
+        });
+    });
+
+    // Handle entries per page change
+    const perPageSelect = document.getElementById('per_page_select');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            const url = new URL(window.location);
+            url.searchParams.set('per_page', this.value);
+            url.searchParams.set('page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        });
+    }
+
+    // Auto-hide success messages after 5 seconds
+    const successMessages = document.querySelectorAll('.alert-success');
+    successMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.5s ease';
+            message.style.opacity = '0';
+            
+            setTimeout(() => {
+                message.remove();
+            }, 500);
+        }, 5000);
+    });
+
     // Auto-hide error messages after 10 seconds
     const errorMessages = document.querySelectorAll('.alert-danger');
     errorMessages.forEach(message => {
