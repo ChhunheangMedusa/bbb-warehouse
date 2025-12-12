@@ -40,104 +40,207 @@ if (strtotime($start_date) > strtotime($end_date)) {
     $end_date = $temp;
 }
 
-// Build query for report
-$query = "SELECT 
-    fl.id as location_id,
-    fl.name as location_name,
-    COUNT(fi.id) as total_invoices,
-    SUM(fi.total) as total_amount,
-    MIN(fi.date) as first_invoice_date,
-    MAX(fi.date) as last_invoice_date
-FROM 
-    finance_location fl
-LEFT JOIN 
-    finance_invoice fi ON fl.id = fi.location";
-
-$conditions = [];
-$params = [];
-
-// Add date filter
-if ($start_date && $end_date) {
-    $conditions[] = "(fi.date BETWEEN :start_date AND :end_date OR fi.date IS NULL)";
-    $params[':start_date'] = $start_date;
-    $params[':end_date'] = $end_date;
-}
-
-// Add location filter if selected
+// Get selected location name for report header
+$selected_location_name = t('all_locations');
 if ($location_filter) {
-    $conditions[] = "fl.id = :location_id";
-    $params[':location_id'] = $location_filter;
+    foreach ($locations as $location) {
+        if ($location['id'] == $location_filter) {
+            $selected_location_name = $location['name'];
+            break;
+        }
+    }
 }
 
-// Add WHERE clause if there are conditions
-if (!empty($conditions)) {
-    $query .= " WHERE " . implode(" AND ", $conditions);
-}
+// Format dates for display
+$display_start_date = date('d/m/Y', strtotime($start_date));
+$display_end_date = date('d/m/Y', strtotime($end_date));
 
-// Group by location
-$query .= " GROUP BY fl.id, fl.name ORDER BY fl.name";
-
-// Prepare and execute query
-$stmt = $pdo->prepare($query);
-foreach ($params as $key => $value) {
-    $stmt->bindValue($key, $value);
-}
-$stmt->execute();
-$report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Calculate totals
-$grand_total_invoices = 0;
-$grand_total_amount = 0;
-foreach ($report_data as $row) {
-    $grand_total_invoices += $row['total_invoices'];
-    $grand_total_amount += $row['total_amount'];
+// Build query for detailed report with supplier information
+if ($location_filter) {
+    // Detailed report for specific location
+    $query = "SELECT 
+        fi.id,
+        fi.receipt_no as invoice_no,
+        fi.date,
+        fs.name as supplier_name,
+        fi.total,
+        fi.created_at
+    FROM 
+        finance_invoice fi
+    LEFT JOIN 
+        finance_supplier fs ON fi.supplier = fs.id
+    WHERE 
+        fi.location = :location_id
+        AND fi.date BETWEEN :start_date AND :end_date
+    ORDER BY 
+        fi.date DESC, fi.receipt_no";
+    
+    $params = [
+        ':location_id' => $location_filter,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ];
+    
+    $stmt = $pdo->prepare($query);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->execute();
+    $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Calculate totals
+    $total_invoices = count($report_data);
+    $total_amount = 0;
+    foreach ($report_data as $row) {
+        $total_amount += $row['total'];
+    }
+    
+    $is_detailed_report = true;
+} else {
+    // Summary report for all locations
+    $query = "SELECT 
+        fl.id as location_id,
+        fl.name as location_name,
+        COUNT(fi.id) as total_invoices,
+        SUM(fi.total) as total_amount,
+        MIN(fi.date) as first_invoice_date,
+        MAX(fi.date) as last_invoice_date
+    FROM 
+        finance_location fl
+    LEFT JOIN 
+        finance_invoice fi ON fl.id = fi.location
+        AND fi.date BETWEEN :start_date AND :end_date
+    GROUP BY 
+        fl.id, fl.name 
+    ORDER BY 
+        fl.name";
+    
+    $params = [
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ];
+    
+    $stmt = $pdo->prepare($query);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->execute();
+    $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Calculate totals
+    $grand_total_invoices = 0;
+    $grand_total_amount = 0;
+    foreach ($report_data as $row) {
+        $grand_total_invoices += $row['total_invoices'];
+        $grand_total_amount += $row['total_amount'];
+    }
+    
+    $is_detailed_report = false;
 }
 
 // Handle download request
 if ($report_format === 'download') {
-    // Set headers for CSV download
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=invoice_report_' . date('Y-m-d') . '.csv');
-    
-    // Create output stream
-    $output = fopen('php://output', 'w');
-    
-    // Add BOM for UTF-8
-    fputs($output, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
-    
-    // CSV headers
-    $headers = array(
-        t('location'),
-        t('total_invoices'),
-        t('total_amount'),
-        t('first_invoice_date'),
-        t('last_invoice_date')
-    );
-    fputcsv($output, $headers);
-    
-    // Add data rows
-    foreach ($report_data as $row) {
-        $csv_row = array(
-            $row['location_name'],
-            $row['total_invoices'],
-            '$' . number_format($row['total_amount'], 2),
-            $row['first_invoice_date'] ? date('d/m/Y', strtotime($row['first_invoice_date'])) : t('no_data'),
-            $row['last_invoice_date'] ? date('d/m/Y', strtotime($row['last_invoice_date'])) : t('no_data')
+    if ($is_detailed_report) {
+        // Detailed CSV for specific location
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=invoice_report_' . $selected_location_name . '_' . date('Y-m-d') . '.csv');
+        
+        $output = fopen('php://output', 'w');
+        fputs($output, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+        
+        // Report header
+        fputcsv($output, array(t('invoice_report')));
+        fputcsv($output, array(t('location') . ': ' . $selected_location_name));
+        fputcsv($output, array(t('period') . ': ' . $display_start_date . ' - ' . $display_end_date));
+        fputcsv($output, array('')); // Empty row
+        
+        // Data headers
+        $headers = array(
+            t('no'),
+            t('invoice_no'),
+            t('date'),
+            t('supplier'),
+            t('total')
         );
-        fputcsv($output, $csv_row);
+        fputcsv($output, $headers);
+        
+        // Data rows
+        $row_number = 1;
+        foreach ($report_data as $row) {
+            $csv_row = array(
+                $row_number,
+                $row['invoice_no'],
+                date('d/m/Y', strtotime($row['date'])),
+                $row['supplier_name'],
+                '$' . number_format($row['total'], 2)
+            );
+            fputcsv($output, $csv_row);
+            $row_number++;
+        }
+        
+        // Total row
+        fputcsv($output, array('')); // Empty row
+        fputcsv($output, array(
+            t('total'),
+            '',
+            '',
+            '',
+            '$' . number_format($total_amount, 2)
+        ));
+        
+        fclose($output);
+    } else {
+        // Summary CSV for all locations
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=invoice_summary_report_' . date('Y-m-d') . '.csv');
+        
+        $output = fopen('php://output', 'w');
+        fputs($output, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+        
+        // Report header
+        fputcsv($output, array(t('invoice_summary_report')));
+        fputcsv($output, array(t('period') . ': ' . $display_start_date . ' - ' . $display_end_date));
+        fputcsv($output, array('')); // Empty row
+        
+        // Data headers
+        $headers = array(
+            t('no'),
+            t('location'),
+            t('total_invoices'),
+            t('total_amount'),
+            t('first_invoice'),
+            t('last_invoice')
+        );
+        fputcsv($output, $headers);
+        
+        // Data rows
+        $row_number = 1;
+        foreach ($report_data as $row) {
+            $csv_row = array(
+                $row_number,
+                $row['location_name'],
+                $row['total_invoices'],
+                '$' . number_format($row['total_amount'], 2),
+                $row['first_invoice_date'] ? date('d/m/Y', strtotime($row['first_invoice_date'])) : t('no_data'),
+                $row['last_invoice_date'] ? date('d/m/Y', strtotime($row['last_invoice_date'])) : t('no_data')
+            );
+            fputcsv($output, $csv_row);
+            $row_number++;
+        }
+        
+        // Total row
+        fputcsv($output, array('')); // Empty row
+        fputcsv($output, array(
+            t('grand_total'),
+            '',
+            $grand_total_invoices,
+            '$' . number_format($grand_total_amount, 2),
+            '',
+            ''
+        ));
+        
+        fclose($output);
     }
-    
-    // Add total row
-    fputcsv($output, array('')); // Empty row
-    fputcsv($output, array(
-        t('grand_total'),
-        $grand_total_invoices,
-        '$' . number_format($grand_total_amount, 2),
-        '',
-        ''
-    ));
-    
-    fclose($output);
     exit();
 }
 ?>
@@ -157,6 +260,77 @@ if ($report_format === 'download') {
   --gray: #b7b9cc;
   --gray-dark: #7b7d8a;
   --font-family: "Khmer OS Siemreap", sans-serif;
+}
+
+/* Excel-like table styles */
+.excel-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.875rem;
+}
+
+.excel-table th {
+    background-color: #f2f2f2;
+    border: 1px solid #d4d4d4;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+}
+
+.excel-table td {
+    border: 1px solid #d4d4d4;
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+
+.excel-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.excel-table tr:hover {
+    background-color: #f5f5f5;
+}
+
+.excel-table .total-row {
+    background-color: #e8f4f8;
+    font-weight: bold;
+}
+
+.excel-table .total-cell {
+    background-color: #e8f4f8;
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+/* Report header styles */
+.report-header {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.35rem;
+}
+
+.report-title {
+    color: #0d6efd;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.report-subtitle {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.report-period {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #dee2e6;
 }
 
 /* Base Styles */
@@ -1393,6 +1567,217 @@ body {
         </div>
     </div>
     
+    <?php if (!empty($_GET) && isset($_GET['format']) && $_GET['format'] == 'preview'): ?>
+    <!-- Report Header -->
+    <div class="report-header">
+        <div class="report-title"><?php echo t('invoice_report'); ?></div>
+        <div class="report-subtitle"><?php echo t('location'); ?>: <?php echo $selected_location_name; ?></div>
+        <div class="report-subtitle"><?php echo t('period'); ?>: <?php echo $display_start_date . ' - ' . $display_end_date; ?></div>
+        <?php if ($is_detailed_report): ?>
+        <div class="report-period"><?php echo t('total_invoices'); ?>: <?php echo $total_invoices; ?> | <?php echo t('total_amount'); ?>: $<?php echo number_format($total_amount, 2); ?></div>
+        <?php else: ?>
+        <div class="report-period"><?php echo t('total_locations'); ?>: <?php echo count($report_data); ?> | <?php echo t('total_invoices'); ?>: <?php echo $grand_total_invoices; ?> | <?php echo t('total_amount'); ?>: $<?php echo number_format($grand_total_amount, 2); ?></div>
+        <?php endif; ?>
+    </div>
+    
+    <!-- Report Data Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <?php if ($is_detailed_report): ?>
+                    <?php echo t('invoice_details'); ?> - <?php echo $selected_location_name; ?>
+                <?php else: ?>
+                    <?php echo t('invoice_summary_by_location'); ?>
+                <?php endif; ?>
+            </h5>
+            <?php if (!empty($report_data)): ?>
+            <div class="d-flex align-items-center">
+                <button type="button" onclick="window.print()" class="btn btn-light btn-sm">
+                    <i class="bi bi-printer"></i> <?php echo t('print'); ?>
+                </button>
+            </div>
+            <?php endif; ?>
+        </div>
+        <div class="card-body">
+            <?php if (empty($report_data)): ?>
+                <div class="report-empty-state">
+                    <i class="bi bi-clipboard-data"></i>
+                    <h5><?php echo t('no_report_data'); ?></h5>
+                    <p><?php echo t('no_report_data_message'); ?></p>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <?php if ($is_detailed_report): ?>
+                        <!-- Detailed Report Table -->
+                        <table class="excel-table">
+                            <thead>
+                                <tr>
+                                    <th><?php echo t('no'); ?></th>
+                                    <th><?php echo t('invoice_no'); ?></th>
+                                    <th><?php echo t('date'); ?></th>
+                                    <th><?php echo t('supplier'); ?></th>
+                                    <th><?php echo t('total'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $row_number = 1; ?>
+                                <?php foreach ($report_data as $row): ?>
+                                    <tr>
+                                        <td><?php echo $row_number; ?></td>
+                                        <td><?php echo $row['invoice_no']; ?></td>
+                                        <td><?php echo date('d/m/Y', strtotime($row['date'])); ?></td>
+                                        <td><?php echo $row['supplier_name']; ?></td>
+                                        <td class="text-end">$<?php echo number_format($row['total'], 2); ?></td>
+                                    </tr>
+                                    <?php $row_number++; ?>
+                                <?php endforeach; ?>
+                                <!-- Total Row -->
+                                <tr class="total-row">
+                                    <td colspan="4" class="text-end"><strong><?php echo t('total'); ?>:</strong></td>
+                                    <td class="total-cell text-end"><strong>$<?php echo number_format($total_amount, 2); ?></strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <!-- Summary Report Table -->
+                        <table class="excel-table">
+                            <thead>
+                                <tr>
+                                    <th><?php echo t('no'); ?></th>
+                                    <th><?php echo t('location'); ?></th>
+                                    <th><?php echo t('total_invoices'); ?></th>
+                                    <th><?php echo t('total_amount'); ?></th>
+                                    <th><?php echo t('first_invoice'); ?></th>
+                                    <th><?php echo t('last_invoice'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $row_number = 1; ?>
+                                <?php foreach ($report_data as $row): ?>
+                                    <tr>
+                                        <td><?php echo $row_number; ?></td>
+                                        <td><?php echo $row['location_name']; ?></td>
+                                        <td class="text-center"><?php echo $row['total_invoices']; ?></td>
+                                        <td class="text-end">$<?php echo number_format($row['total_amount'], 2); ?></td>
+                                        <td>
+                                            <?php if ($row['first_invoice_date']): ?>
+                                                <?php echo date('d/m/Y', strtotime($row['first_invoice_date'])); ?>
+                                            <?php else: ?>
+                                                <span class="text-muted"><?php echo t('no_data'); ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($row['last_invoice_date']): ?>
+                                                <?php echo date('d/m/Y', strtotime($row['last_invoice_date'])); ?>
+                                            <?php else: ?>
+                                                <span class="text-muted"><?php echo t('no_data'); ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php $row_number++; ?>
+                                <?php endforeach; ?>
+                                <!-- Grand Total Row -->
+                                <tr class="total-row">
+                                    <td colspan="2" class="text-end"><strong><?php echo t('grand_total'); ?>:</strong></td>
+                                    <td class="total-cell text-center"><strong><?php echo $grand_total_invoices; ?></strong></td>
+                                    <td class="total-cell text-end"><strong>$<?php echo number_format($grand_total_amount, 2); ?></strong></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Report Statistics -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><?php echo t('report_statistics'); ?></h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <?php if ($is_detailed_report): ?>
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <h3 class="text-primary"><?php echo $total_invoices; ?></h3>
+                                                <p class="text-muted mb-0"><?php echo t('total_invoices'); ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <h3 class="text-success">$<?php echo number_format($total_amount, 2); ?></h3>
+                                                <p class="text-muted mb-0"><?php echo t('total_amount'); ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <h3 class="text-info">
+                                                    <?php if ($total_invoices > 0): ?>
+                                                        $<?php echo number_format($total_amount / $total_invoices, 2); ?>
+                                                    <?php else: ?>
+                                                        0.00
+                                                    <?php endif; ?>
+                                                </h3>
+                                                <p class="text-muted mb-0"><?php echo t('average_per_invoice'); ?></p>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h3 class="text-primary"><?php echo $grand_total_invoices; ?></h3>
+                                                <p class="text-muted mb-0"><?php echo t('total_invoices'); ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h3 class="text-success">$<?php echo number_format($grand_total_amount, 2); ?></h3>
+                                                <p class="text-muted mb-0"><?php echo t('total_amount'); ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h3 class="text-warning"><?php echo count($report_data); ?></h3>
+                                                <p class="text-muted mb-0"><?php echo t('locations'); ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h3 class="text-info">
+                                                    <?php if ($grand_total_invoices > 0): ?>
+                                                        $<?php echo number_format($grand_total_amount / $grand_total_invoices, 2); ?>
+                                                    <?php else: ?>
+                                                        0.00
+                                                    <?php endif; ?>
+                                                </h3>
+                                                <p class="text-muted mb-0"><?php echo t('average_per_invoice'); ?></p>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- Report Notes -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><?php echo t('report_notes'); ?></h6>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><?php echo t('report_note1'); ?></li>
+                <li><?php echo t('report_note2'); ?></li>
+                <li><?php echo t('report_note3'); ?></li>
+                <li><?php echo t('report_note4'); ?></li>
+            </ul>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
 
 <script>
