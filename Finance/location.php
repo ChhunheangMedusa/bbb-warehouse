@@ -877,7 +877,6 @@ body {
   height: 1.5em;
   cursor: pointer;
 }
-/* Delete Confirmation Modal Styles */
 #deleteConfirmModal .modal-content {
     border: 2px solid #dc3545;
     border-radius: 10px;
@@ -893,7 +892,6 @@ body {
 }
 
 #deleteConfirmModal .btn-danger {
-
     padding: 8px 20px;
     font-weight: 600;
 }
@@ -1489,28 +1487,33 @@ body {
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Delete Confirmation Modal - Updated to match location-control.php -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('confirm_delete'); ?>
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?php echo t('del_location'); ?>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
                 <div class="mb-3">
-                    <i class="bi bi-trash-fill text-danger" style="font-size: 3rem;"></i>
+                    <i class="bi bi-trash-fill text-danger" style="font-size: 2.5rem;"></i>
                 </div>
-                <h4 class="text-danger mb-3"><?php echo t('delete_location'); ?></h4>
-                <p id="deleteLocationMessage"></p>
+                <h4 class="text-danger mb-2" style="font-size: 1.25rem;"><?php echo t('del_location1'); ?></h4>
+                <p class="mb-3"><?php echo t('del_usr2'); ?></p>
+                <div id="deleteLocationInfo" class="alert alert-light mb-0"></div>
             </div>
-            <div class="modal-footer justify-content-center">
+            <div class="modal-footer d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
+                </button>
                 <form method="POST" id="deleteLocationForm" style="display: inline;">
                     <input type="hidden" name="location_id" id="delete_location_id">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="delete_location" class="btn btn-danger"><?php echo t('delete'); ?></button>
+                    <button type="submit" name="delete_location" class="btn btn-danger flex-grow-1 flex-md-grow-0">
+                        <i class="bi bi-trash"></i> <?php echo t('delete_button'); ?>
+                    </button>
                 </form>
             </div>
         </div>
@@ -1561,17 +1564,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Delete location button click
+    // Delete location button click - Updated to match location-control.php
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    
     document.querySelectorAll('.delete-location-btn').forEach(button => {
         button.addEventListener('click', function() {
             const locationId = this.dataset.id;
             const locationName = this.dataset.name;
 
+            // Set the delete form values
             document.getElementById('delete_location_id').value = locationId;
-            document.getElementById('deleteLocationMessage').textContent = 
-                'Are you sure you want to delete location "' + locationName + '"? This action cannot be undone.';
+            
+            // Update modal content
+            document.getElementById('deleteLocationInfo').innerHTML = `
+                <strong><?php echo t('location_name'); ?>:</strong> ${locationName}
+            `;
 
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            // Show the modal
             deleteModal.show();
         });
     });
