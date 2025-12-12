@@ -16,8 +16,7 @@ if (!isAdmin() && !isFinanceStaff()) {
     exit();
 }
 
-// Database connection
-$pdo = getPDO();
+
 
 // Get locations for filter
 $location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
