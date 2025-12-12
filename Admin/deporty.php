@@ -1505,7 +1505,7 @@ input[name="invoice_no"] {
                     <thead>
                         <tr>
                             <th><?php echo t('item_no'); ?></th>
-                            <th><?php echo t('name'); ?></th>
+                            <th><?php echo t('name_deport'); ?></th>
                             <th><?php echo t('column_action'); ?></th>
                         </tr>
                     </thead>

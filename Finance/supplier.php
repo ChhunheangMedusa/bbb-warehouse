@@ -1248,7 +1248,7 @@ body {
 </style>
 
 <div class="container-fluid">
-    <h2 class="mb-4"><?php echo t('supplier_management'); ?></h2>
+    <h2 class="mb-4"><?php echo t('deporty_management'); ?></h2>
     
     <!-- Filter Card -->
     <div class="card mb-4">
@@ -1261,7 +1261,7 @@ body {
                     <form method="GET" class="row g-2">
                         <div class="col-md-4">
                             <label for="search" class="form-label"><?php echo t('search'); ?></label>
-                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search_supplier_name'); ?>..." value="<?php echo $search_query; ?>">
+                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
                         </div>
                         <div class="col-md-4">
                             <label for="sort" class="form-label"><?php echo t('sort'); ?></label>
@@ -1299,10 +1299,10 @@ body {
     <!-- Data Table Card -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><?php echo t('supplier_list'); ?> <span class="supplier-count">(<?php echo $total_items; ?>)</span></h5>
+            <h5 class="mb-0"><?php echo t('deporty_list'); ?> <span class="supplier-count">(<?php echo $total_items; ?>)</span></h5>
             <div class="d-inline-flex gap-2 align-items-center flex-nowrap">
                 <button class="btn btn-light btn-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                    <i class="bi bi-plus-circle"></i> <?php echo t('add_supplier'); ?>
+                    <i class="bi bi-plus-circle"></i> <?php echo t('add_deporty'); ?>
                 </button>
             </div>
         </div>
@@ -1312,7 +1312,7 @@ body {
                     <thead>
                         <tr>
                             <th><?php echo t('no'); ?></th>
-                            <th><?php echo t('supplier_name'); ?></th>
+                            <th><?php echo t('name_deport'); ?></th>
                             <th><?php echo t('created_at'); ?></th>
                             <th><?php echo t('actions'); ?></th>
                         </tr>
@@ -1445,15 +1445,15 @@ body {
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-12">
-                            <label class="form-label"><?php echo t('supplier_name'); ?> <span class="text-danger">*</span></label>
+                            <label class="form-label"><?php echo t('name_deport'); ?> <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" required maxlength="255">
-                            <div class="form-text"><?php echo t('supplier_name_hint'); ?></div>
+                           
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="add_supplier" class="btn btn-primary"><?php echo t('save'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
+                    <button type="submit" name="add_supplier" class="btn btn-primary"><?php echo t('form_save'); ?></button>
                 </div>
             </form>
         </div>

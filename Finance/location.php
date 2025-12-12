@@ -1453,8 +1453,8 @@ body {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                    <button type="submit" name="add_location" class="btn btn-primary"><?php echo t('save'); ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('form_close'); ?></button>
+                    <button type="submit" name="add_location" class="btn btn-primary"><?php echo t('form_save'); ?></button>
                 </div>
             </form>
         </div>
