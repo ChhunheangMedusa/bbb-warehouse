@@ -1564,16 +1564,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Delete location button click
     document.querySelectorAll('.delete-location-btn').forEach(button => {
         button.addEventListener('click', function() {
-            
-            e.preventDefault();
-            
             const locationId = this.dataset.id;
             const locationName = this.dataset.name;
 
-            document.getElementById('deleteLocationInfo').innerHTML = `
-                <strong><?php echo t('location_name');?>:</strong> ${locationName}<br>
-              
-            `;
+            
+
+            document.getElementById('delete_location_id').value = locationId;
+            document.getElementById('deleteLocationMessage').innerHTML = 
+            <strong><?php echo t('location_name');?>:</strong> ${locationName}<br>
+
 
 
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
