@@ -2301,7 +2301,7 @@ document.querySelectorAll('.delete-invoice-btn').forEach(button => {
         
         // Update modal content to match location-control.php style
         document.getElementById('deleteInvoiceInfo').innerHTML = `
-            <strong><?php echo t('receipt_no'); ?>:</strong> ${receiptNo}<br>
+           
             <strong><?php echo t('item_invoice'); ?>:</strong> #${receiptNo}
         `;
 
