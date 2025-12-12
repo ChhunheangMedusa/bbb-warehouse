@@ -286,6 +286,11 @@ $hasAvatar = ($userPicture !== null);
                         <i class="bi bi-clock-history me-2"></i><?php echo t('logs'); ?>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/access-log.php' ? 'active' : ''; ?>" href="../Finance/access-log.php">
+                        <i class="bi-bar-chart me-2"></i><?php echo t('logs'); ?>
+                    </a>
+                </li>
           
                 
                
