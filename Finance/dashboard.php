@@ -1194,7 +1194,7 @@ body {
                 <div class="col-md-3">
                     <label for="location" class="form-label"><?php echo t('location_column'); ?></label>
                     <select name="location" class="form-select">
-                        <option value=""><?php echo t('all_location'); ?></option>
+                        <option value=""><?php echo t('report_all_location'); ?></option>
                         <?php foreach ($locations as $location): ?>
                             <option value="<?php echo $location['id']; ?>" 
                                 <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
@@ -1212,14 +1212,7 @@ body {
                     </a>
                 </div>
             </form>
-            <div class="mt-3 text-muted">
-                <small>
-                    <?php echo t('showing_data_from'); ?>: 
-                    <strong><?php echo date('d/m/Y', strtotime($start_date)); ?></strong> 
-                    <?php echo t('to'); ?> 
-                    <strong><?php echo date('d/m/Y', strtotime($end_date)); ?></strong>
-                </small>
-            </div>
+           
         </div>
     </div>
     
@@ -1255,21 +1248,7 @@ body {
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2"><?php echo t('locations_with_invoices'); ?></h6>
-                            <h3 class="stat-number text-warning"><?php echo count($chart_labels); ?></h3>
-                        </div>
-                        <div class="bg-warning rounded-circle p-3">
-                            <i class="bi bi-pie-chart text-white" style="font-size: 1.5rem;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+       
     </div>
     
     <!-- Chart and Details Row -->
