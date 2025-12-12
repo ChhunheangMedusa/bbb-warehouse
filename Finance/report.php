@@ -5,7 +5,7 @@ ob_start();
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth.php';
-require_once '../includes/header.php';
+require_once '../includes/header-finance.php';
 require_once 'translate.php'; // Moved this line up
 
 
