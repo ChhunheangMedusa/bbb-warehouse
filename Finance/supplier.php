@@ -3,6 +3,9 @@ ob_start();
 require_once '../includes/header-finance.php';
 // Add authentication check
 require_once '../includes/auth.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+require_once 'translate.php';
 
 // Check if user is authenticated
 checkAuth();
@@ -13,9 +16,6 @@ if (!isAdmin() && !isFinanceStaff()) {
     exit();
 }
 
-require_once '../config/database.php';
-require_once '../includes/functions.php';
-require_once 'translate.php';
 
 // Get filter parameters
 $search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
