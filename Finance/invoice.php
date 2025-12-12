@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $supplier_name = $suppliers[array_search($supplier_id, array_column($suppliers, 'id'))]['name'];
             
             $log_message = "Added new invoice #$receipt_no for $location_name from $supplier_name - Total: $" . number_format($total, 2);
-            logActivity($_SESSION['user_id'], 'Add Invoice', $log_message);
+            financelog($_SESSION['user_id'], 'Add Invoice', $log_message);
             
             $_SESSION['success'] = "Invoice added successfully!";
             redirect('invoice.php');
@@ -203,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $supplier_name = $suppliers[array_search($supplier_id, array_column($suppliers, 'id'))]['name'];
             
             $log_message = "Updated invoice #$receipt_no for $location_name from $supplier_name - Total: $" . number_format($total, 2);
-            logActivity($_SESSION['user_id'], 'Edit Invoice', $log_message);
+            financelog($_SESSION['user_id'], 'Edit Invoice', $log_message);
             
             $_SESSION['success'] = "Invoice updated successfully!";
             redirect('invoice.php');
@@ -234,7 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Log activity
                 $log_message = "Deleted invoice #" . $invoice['receipt_no'];
-                logActivity($_SESSION['user_id'], 'Delete Invoice', $log_message);
+                financelog($_SESSION['user_id'], 'Delete Invoice', $log_message);
                 
                 $_SESSION['success'] = "Invoice deleted successfully!";
             }

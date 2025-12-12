@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Log activity
             $log_message = "Added new location: $name";
-            logActivity($_SESSION['user_id'], 'Add Location', $log_message);
+            financelog($_SESSION['user_id'], 'Add Location', $log_message);
             
             $_SESSION['success'] = "Location added successfully!";
             redirect('location.php');
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Log activity
             $log_message = "Updated location: {$old_location['name']} to $name";
-            logActivity($_SESSION['user_id'], 'Edit Location', $log_message);
+            financelog($_SESSION['user_id'], 'Edit Location', $log_message);
             
             $_SESSION['success'] = "Location updated successfully!";
             redirect('location.php');
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Log activity
                 $log_message = "Deleted location: " . $location['name'];
-                logActivity($_SESSION['user_id'], 'Delete Location', $log_message);
+                financelog($_SESSION['user_id'], 'Delete Location', $log_message);
                 
                 $_SESSION['success'] = "Location deleted successfully!";
             }

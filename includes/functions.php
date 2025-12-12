@@ -77,6 +77,18 @@ function logActivity($userId, $activityType, $activityDetail) {
                           VALUES (?, ?, ?, ?)");
     $stmt->execute([$userId, $activityType, $activityDetail, $ip]);
 }
+
+function financelog($userId, $activityType, $activityDetail) {
+    global $pdo;
+    
+    $ip = $_SERVER['REMOTE_ADDR'];
+    
+    $stmt = $pdo->prepare("INSERT INTO access_logs (user_id, activity_type, activity_detail, ip_address) 
+                          VALUES (?, ?, ?, ?)");
+    $stmt->execute([$userId, $activityType, $activityDetail, $ip]);
+}
+
+
 function getCategoryName($pdo, $category_id) {
     $stmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
     $stmt->execute([$category_id]);

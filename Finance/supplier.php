@@ -63,10 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Log activity
             $log_message = "Added new supplier: $name";
-            logActivity($_SESSION['user_id'], 'Add Supplier', $log_message);
+            financelog($_SESSION['user_id'], 'Add Supplier', $log_message);
             
             $_SESSION['success'] = "Supplier added successfully!";
-            logActivity($_SESSION['user_id'], 'Add Supplier', "Added new supplier: $name");
+            
             redirect('supplier.php');
             
         } catch (PDOException $e) {
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Log activity
             $log_message = "Updated supplier: {$old_supplier['name']} to $name";
-            logActivity($_SESSION['user_id'], 'Edit Supplier', $log_message);
+            financelog($_SESSION['user_id'], 'Edit Supplier', $log_message);
             
             $_SESSION['success'] = "Supplier updated successfully!";
             redirect('supplier.php');
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Log activity
                 $log_message = "Deleted supplier: " . $supplier['name'];
-                logActivity($_SESSION['user_id'], 'Delete Supplier', $log_message);
+                financelog($_SESSION['user_id'], 'Delete Supplier', $log_message);
                 
                 $_SESSION['success'] = "Supplier deleted successfully!";
             }
