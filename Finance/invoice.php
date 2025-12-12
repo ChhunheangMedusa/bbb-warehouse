@@ -1744,7 +1744,7 @@ body {
                         <div class="col-md-6">
                             <label for="location_id" class="form-label"><?php echo t('location'); ?></label>
                             <select class="form-select" name="location_id" required>
-                                <option value=""><?php echo t('select_location'); ?></option>
+                                <option value=""><?php echo t(''); ?></option>
                                 <?php foreach ($locations as $location): ?>
                                     <option value="<?php echo $location['id']; ?>"><?php echo $location['name']; ?></option>
                                 <?php endforeach; ?>
@@ -1753,7 +1753,7 @@ body {
                         <div class="col-md-6">
                             <label class="form-label"><?php echo t('deporty'); ?></label>
                             <select class="form-select" name="supplier_id" required>
-                                <option value=""><?php echo t('select_supplier'); ?></option>
+                                <option value=""><?php echo t(''); ?></option>
                                 <?php foreach ($suppliers as $supplier): ?>
                                     <option value="<?php echo $supplier['id']; ?>"><?php echo $supplier['name']; ?></option>
                                 <?php endforeach; ?>
