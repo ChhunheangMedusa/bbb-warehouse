@@ -1529,17 +1529,13 @@ body {
                 <button type="button" class="btn btn-secondary flex-grow-1 flex-md-grow-0" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle"></i> <?php echo t('form_close'); ?>
                 </button>
-                <form method="POST" id="deleteSupplierForm" class="d-inline">
-                    <input type="hidden" name="supplier_id" id="delete_supplier_id">
-                    <button type="submit" name="delete_supplier" class="btn btn-danger flex-grow-1 flex-md-grow-0">
-                        <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
-                    </button>
-                </form>
+                <a href="#" id="deleteConfirmBtn" class="btn btn-danger flex-grow-1 flex-md-grow-0">
+                    <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+                </a>
             </div>
         </div>
     </div>
 </div>
-
 <!-- Duplicate Modal -->
 <div class="modal fade" id="duplicateModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -1586,14 +1582,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Delete supplier button click
 document.querySelectorAll('.delete-supplier-btn').forEach(button => {
-    button.addEventListener('click', function() {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+        
         const supplierId = this.dataset.id;
         const supplierName = this.dataset.name;
-
-        // Set values in delete modal
+        
+        // Set the delete URL - we'll handle this differently since supplier uses POST
+        // We'll create a form submission instead
         document.getElementById('delete_supplier_id').value = supplierId;
         
-        // Update modal content to match deporty.php style
+        // Update modal content to match location-control.php style
         document.getElementById('deleteSupplierInfo').innerHTML = `
             <strong><?php echo t('name'); ?>:</strong> ${supplierName}
         `;
@@ -1604,6 +1603,13 @@ document.querySelectorAll('.delete-supplier-btn').forEach(button => {
     });
 });
 
+// Handle confirm delete button click
+document.getElementById('deleteConfirmBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    // Submit the delete form
+    document.getElementById('deleteSupplierForm').submit();
+});
     // Handle entries per page change
     const perPageSelect = document.getElementById('per_page_select');
     if (perPageSelect) {
