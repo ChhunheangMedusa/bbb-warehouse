@@ -1249,7 +1249,7 @@ body {
 </style>
 
 <div class="container-fluid">
-    <h2 class="mb-4"><?php echo t('location_management'); ?></h2>
+    <h2 class="mb-4"><?php echo t('location_title'); ?></h2>
     
     <!-- Filter Card -->
     <div class="card mb-4">
@@ -1262,7 +1262,7 @@ body {
                     <form method="GET" class="row g-2">
                         <div class="col-md-4">
                             <label for="search" class="form-label"><?php echo t('search'); ?></label>
-                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search_location_name'); ?>..." value="<?php echo $search_query; ?>">
+                            <input type="text" name="search" class="form-control" placeholder="<?php echo t('search'); ?>..." value="<?php echo $search_query; ?>">
                         </div>
                         <div class="col-md-4">
                             <label for="sort" class="form-label"><?php echo t('sort'); ?></label>
@@ -1321,7 +1321,7 @@ body {
                     <tbody>
                         <?php if (empty($locations)): ?>
                             <tr>
-                                <td colspan="4" class="text-center"><?php echo t('no_locations_found'); ?></td>
+                                <td colspan="4" class="text-center"><?php echo t('no_location'); ?></td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($locations as $index => $location): ?>
@@ -1448,7 +1448,7 @@ body {
                         <div class="col-md-12">
                             <label class="form-label"><?php echo t('location_name'); ?> <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" required maxlength="255">
-                            <div class="form-text"><?php echo t('location_name_hint'); ?></div>
+                          
                         </div>
                     </div>
                 </div>

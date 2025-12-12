@@ -273,12 +273,12 @@ $hasAvatar = ($userPicture !== null);
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/location.php' ? 'active' : ''; ?>" href="../Finance/location.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('invoice'); ?>
+                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('location_management'); ?>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/supplier.php' ? 'active' : ''; ?>" href="../Finance/supplier.php">
-                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('invoice'); ?>
+                        <i class="bi bi-speedometer2 me-2"></i><?php echo t('deporty_management'); ?>
                     </a>
                 </li>
                 <li class="nav-item">
