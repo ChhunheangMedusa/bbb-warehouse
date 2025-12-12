@@ -1311,7 +1311,7 @@ body {
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th><?php echo t('no'); ?></th>
+                            <th><?php echo t('item_no'); ?></th>
                             <th><?php echo t('name_deport'); ?></th>
                             <th><?php echo t('created_at'); ?></th>
                             <th><?php echo t('actions'); ?></th>
@@ -1320,7 +1320,7 @@ body {
                     <tbody>
                         <?php if (empty($suppliers)): ?>
                             <tr>
-                                <td colspan="4" class="text-center"><?php echo t('no_suppliers_found'); ?></td>
+                                <td colspan="4" class="text-center"><?php echo t('no_deporty_found'); ?></td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($suppliers as $index => $supplier): ?>
@@ -1439,7 +1439,7 @@ body {
         <div class="modal-content">
             <form method="POST">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="addSupplierModalLabel"><?php echo t('add_supplier'); ?></h5>
+                    <h5 class="modal-title" id="addSupplierModalLabel"><?php echo t('add_deporty'); ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">

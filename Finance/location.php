@@ -1312,7 +1312,7 @@ body {
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th><?php echo t('no'); ?></th>
+                            <th><?php echo t('item_no'); ?></th>
                             <th><?php echo t('location_name'); ?></th>
                             <th><?php echo t('created_at'); ?></th>
                             <th><?php echo t('actions'); ?></th>
