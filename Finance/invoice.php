@@ -1704,11 +1704,11 @@ body {
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label"><?php echo t('receipt_no'); ?></label>
+                            <label class="form-label"><?php echo t('item_invoice'); ?></label>
                             <input type="text" class="form-control" name="receipt_no" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="date" class="form-label"><?php echo t('date'); ?></label>
+                            <label for="date" class="form-label"><?php echo t('item_date'); ?></label>
                             <input type="date" class="form-control" name="date" required>
                         </div>
                     </div>
@@ -1723,7 +1723,7 @@ body {
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label"><?php echo t('supplier'); ?></label>
+                            <label class="form-label"><?php echo t('deporty'); ?></label>
                             <select class="form-select" name="supplier_id" required>
                                
                                 <?php foreach ($suppliers as $supplier): ?>
