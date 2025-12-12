@@ -1,3 +1,4 @@
+
 <?php
 
 ob_start();
@@ -16,8 +17,129 @@ if (!isAdmin() && !isFinanceStaff()) {
     exit();
 }
 
+// Get locations for dropdown
+$location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
+$locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get filter parameters
+$location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
+$start_date = isset($_GET['start_date']) ? sanitizeInput($_GET['start_date']) : date('Y-m-01'); // First day of current month
+$end_date = isset($_GET['end_date']) ? sanitizeInput($_GET['end_date']) : date('Y-m-d'); // Today
+$report_format = isset($_GET['format']) ? sanitizeInput($_GET['format']) : 'preview'; // preview or download
 
+// Validate dates
+if ($start_date && !strtotime($start_date)) {
+    $start_date = date('Y-m-01');
+}
+if ($end_date && !strtotime($end_date)) {
+    $end_date = date('Y-m-d');
+}
+if (strtotime($start_date) > strtotime($end_date)) {
+    $temp = $start_date;
+    $start_date = $end_date;
+    $end_date = $temp;
+}
+
+// Build query for report
+$query = "SELECT 
+    fl.id as location_id,
+    fl.name as location_name,
+    COUNT(fi.id) as total_invoices,
+    SUM(fi.total) as total_amount,
+    MIN(fi.date) as first_invoice_date,
+    MAX(fi.date) as last_invoice_date
+FROM 
+    finance_location fl
+LEFT JOIN 
+    finance_invoice fi ON fl.id = fi.location";
+
+$conditions = [];
+$params = [];
+
+// Add date filter
+if ($start_date && $end_date) {
+    $conditions[] = "(fi.date BETWEEN :start_date AND :end_date OR fi.date IS NULL)";
+    $params[':start_date'] = $start_date;
+    $params[':end_date'] = $end_date;
+}
+
+// Add location filter if selected
+if ($location_filter) {
+    $conditions[] = "fl.id = :location_id";
+    $params[':location_id'] = $location_filter;
+}
+
+// Add WHERE clause if there are conditions
+if (!empty($conditions)) {
+    $query .= " WHERE " . implode(" AND ", $conditions);
+}
+
+// Group by location
+$query .= " GROUP BY fl.id, fl.name ORDER BY fl.name";
+
+// Prepare and execute query
+$stmt = $pdo->prepare($query);
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
+$stmt->execute();
+$report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Calculate totals
+$grand_total_invoices = 0;
+$grand_total_amount = 0;
+foreach ($report_data as $row) {
+    $grand_total_invoices += $row['total_invoices'];
+    $grand_total_amount += $row['total_amount'];
+}
+
+// Handle download request
+if ($report_format === 'download') {
+    // Set headers for CSV download
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=invoice_report_' . date('Y-m-d') . '.csv');
+    
+    // Create output stream
+    $output = fopen('php://output', 'w');
+    
+    // Add BOM for UTF-8
+    fputs($output, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
+    
+    // CSV headers
+    $headers = array(
+        t('location'),
+        t('total_invoices'),
+        t('total_amount'),
+        t('first_invoice_date'),
+        t('last_invoice_date')
+    );
+    fputcsv($output, $headers);
+    
+    // Add data rows
+    foreach ($report_data as $row) {
+        $csv_row = array(
+            $row['location_name'],
+            $row['total_invoices'],
+            '$' . number_format($row['total_amount'], 2),
+            $row['first_invoice_date'] ? date('d/m/Y', strtotime($row['first_invoice_date'])) : t('no_data'),
+            $row['last_invoice_date'] ? date('d/m/Y', strtotime($row['last_invoice_date'])) : t('no_data')
+        );
+        fputcsv($output, $csv_row);
+    }
+    
+    // Add total row
+    fputcsv($output, array('')); // Empty row
+    fputcsv($output, array(
+        t('grand_total'),
+        $grand_total_invoices,
+        '$' . number_format($grand_total_amount, 2),
+        '',
+        ''
+    ));
+    
+    fclose($output);
+    exit();
+}
 ?>
 <style>
     :root {
@@ -1126,7 +1248,443 @@ body {
     max-height: 70vh;
     overflow-y: auto;
 }
+/* Report specific styles */
+.report-summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.report-summary-card h5 {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+}
+
+.report-summary-card h2 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+
+.report-date-range {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.35rem;
+}
+
+.report-date-range h6 {
+    color: #0d6efd;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.report-total-row {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top: 2px solid #dee2e6;
+}
+
+.report-total-cell {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+.report-empty-state {
+    text-align: center;
+    padding: 3rem;
+    background-color: #f8f9fa;
+    border-radius: 0.35rem;
+    border: 2px dashed #dee2e6;
+}
+
+.report-empty-state i {
+    font-size: 3rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.report-empty-state h5 {
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.report-empty-state p {
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* Download button styles */
+.btn-download {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.btn-download:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    color: white;
+}
+
+.btn-download i {
+    margin-right: 0.5rem;
+}
+
+/* Loading spinner for report generation */
+.spinner-border {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-width: 0.2em;
+}
+
 </style>
+
+<div class="container-fluid">
+    <h2 class="mb-4"><?php echo t('invoice_report'); ?></h2>
+    
+    <!-- Report Filters Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><?php echo t('report_filters'); ?></h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" id="reportForm">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="location" class="form-label"><?php echo t('location'); ?></label>
+                        <select name="location" id="location" class="form-select">
+                            <option value=""><?php echo t('all_locations'); ?></option>
+                            <?php foreach ($locations as $location): ?>
+                                <option value="<?php echo $location['id']; ?>" <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
+                                    <?php echo $location['name']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label"><?php echo t('start_date'); ?></label>
+                        <input type="date" class="form-control" name="start_date" id="start_date" 
+                               value="<?php echo $start_date; ?>" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label"><?php echo t('end_date'); ?></label>
+                        <input type="date" class="form-control" name="end_date" id="end_date" 
+                               value="<?php echo $end_date; ?>" required>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="format" value="preview" class="btn btn-primary">
+                                <i class="bi bi-eye"></i> <?php echo t('preview_report'); ?>
+                            </button>
+                            <?php if (!empty($report_data)): ?>
+                            <button type="submit" name="format" value="download" class="btn btn-download">
+                                <i class="bi bi-download"></i> <?php echo t('download_report'); ?>
+                            </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Report Summary Card -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="report-summary-card">
+                <h5><?php echo t('report_period'); ?></h5>
+                <h2><?php echo date('d/m/Y', strtotime($start_date)) . ' - ' . date('d/m/Y', strtotime($end_date)); ?></h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="report-summary-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h5><?php echo t('total_locations'); ?></h5>
+                <h2><?php echo count($report_data); ?></h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="report-summary-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <h5><?php echo t('total_amount'); ?></h5>
+                <h2>$<?php echo number_format($grand_total_amount, 2); ?></h2>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Report Data Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><?php echo t('invoice_report_by_location'); ?></h5>
+            <?php if (!empty($report_data)): ?>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-2">
+                    <?php echo t('filtered'); ?>: <?php echo count($report_data); ?> <?php echo t('locations'); ?>
+                </span>
+                <button type="button" onclick="window.print()" class="btn btn-light btn-sm">
+                    <i class="bi bi-printer"></i> <?php echo t('print'); ?>
+                </button>
+            </div>
+            <?php endif; ?>
+        </div>
+        <div class="card-body">
+            <?php if (empty($report_data)): ?>
+                <div class="report-empty-state">
+                    <i class="bi bi-clipboard-data"></i>
+                    <h5><?php echo t('no_report_data'); ?></h5>
+                    <p><?php echo t('no_report_data_message'); ?></p>
+                    <button type="submit" form="reportForm" name="format" value="preview" class="btn btn-primary mt-3">
+                        <i class="bi bi-arrow-clockwise"></i> <?php echo t('refresh_report'); ?>
+                    </button>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th><?php echo t('no'); ?></th>
+                                <th><?php echo t('location'); ?></th>
+                                <th><?php echo t('total_invoices'); ?></th>
+                                <th><?php echo t('total_amount'); ?></th>
+                                <th><?php echo t('first_invoice_date'); ?></th>
+                                <th><?php echo t('last_invoice_date'); ?></th>
+                                <th><?php echo t('average_per_invoice'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($report_data as $index => $row): ?>
+                                <tr>
+                                    <td><?php echo $index + 1; ?></td>
+                                    <td>
+                                        <strong><?php echo $row['location_name']; ?></strong>
+                                        <?php if (!$row['location_id']): ?>
+                                            <span class="badge bg-secondary ms-2"><?php echo t('no_location'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary"><?php echo $row['total_invoices']; ?></span>
+                                    </td>
+                                    <td class="report-total-cell">
+                                        $<?php echo number_format($row['total_amount'], 2); ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($row['first_invoice_date']): ?>
+                                            <?php echo date('d/m/Y', strtotime($row['first_invoice_date'])); ?>
+                                        <?php else: ?>
+                                            <span class="text-muted"><?php echo t('no_data'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($row['last_invoice_date']): ?>
+                                            <?php echo date('d/m/Y', strtotime($row['last_invoice_date'])); ?>
+                                        <?php else: ?>
+                                            <span class="text-muted"><?php echo t('no_data'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($row['total_invoices'] > 0): ?>
+                                            $<?php echo number_format($row['total_amount'] / $row['total_invoices'], 2); ?>
+                                        <?php else: ?>
+                                            <span class="text-muted"><?php echo t('n_a'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <!-- Grand Total Row -->
+                            <tr class="report-total-row">
+                                <td colspan="2" class="text-end">
+                                    <strong><?php echo t('grand_total'); ?>:</strong>
+                                </td>
+                                <td>
+                                    <strong><?php echo $grand_total_invoices; ?></strong>
+                                </td>
+                                <td class="report-total-cell">
+                                    <strong>$<?php echo number_format($grand_total_amount, 2); ?></strong>
+                                </td>
+                                <td colspan="3">
+                                    <?php if ($grand_total_invoices > 0): ?>
+                                        <small class="text-muted">
+                                            <?php echo t('average_per_invoice'); ?>: 
+                                            $<?php echo number_format($grand_total_amount / $grand_total_invoices, 2); ?>
+                                        </small>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Report Statistics -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><?php echo t('report_statistics'); ?></h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-primary"><?php echo $grand_total_invoices; ?></h3>
+                                            <p class="text-muted mb-0"><?php echo t('total_invoices'); ?></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-success">$<?php echo number_format($grand_total_amount, 2); ?></h3>
+                                            <p class="text-muted mb-0"><?php echo t('total_amount'); ?></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-warning"><?php echo count($report_data); ?></h3>
+                                            <p class="text-muted mb-0"><?php echo t('locations'); ?></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-info">
+                                                <?php if ($grand_total_invoices > 0): ?>
+                                                    $<?php echo number_format($grand_total_amount / $grand_total_invoices, 2); ?>
+                                                <?php else: ?>
+                                                    0.00
+                                                <?php endif; ?>
+                                            </h3>
+                                            <p class="text-muted mb-0"><?php echo t('average_per_invoice'); ?></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- Report Notes -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><?php echo t('report_notes'); ?></h6>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><?php echo t('report_note1'); ?></li>
+                <li><?php echo t('report_note2'); ?></li>
+                <li><?php echo t('report_note3'); ?></li>
+                <li><?php echo t('report_note4'); ?></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates if not set
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    if (!startDateInput.value) {
+        const firstDay = new Date();
+        firstDay.setDate(1);
+        startDateInput.value = firstDay.toISOString().split('T')[0];
+    }
+    
+    if (!endDateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        endDateInput.value = today;
+    }
+    
+    // Validate date range
+    const reportForm = document.getElementById('reportForm');
+    reportForm.addEventListener('submit', function(e) {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (startDate > endDate) {
+            e.preventDefault();
+            alert('<?php echo t('invalid_date_range'); ?>');
+            startDateInput.focus();
+            return false;
+        }
+        
+        // Show loading for download
+        const submitButton = e.submitter;
+        if (submitButton && submitButton.name === 'format' && submitButton.value === 'download') {
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> <?php echo t('generating_report'); ?>...';
+            submitButton.disabled = true;
+        }
+    });
+    
+    // Quick date range buttons
+    function setDateRange(days) {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - days);
+        
+        startDateInput.value = startDate.toISOString().split('T')[0];
+        endDateInput.value = endDate.toISOString().split('T')[0];
+    }
+    
+    // Add quick date range buttons if needed
+    const dateFilterDiv = document.querySelector('.col-md-3:has(#start_date)');
+    if (dateFilterDiv) {
+        const quickButtons = document.createElement('div');
+        quickButtons.className = 'mt-2';
+        quickButtons.innerHTML = `
+            <small class="text-muted d-block mb-1"><?php echo t('quick_ranges'); ?>:</small>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(7)">7 <?php echo t('days'); ?></button>
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(30)">30 <?php echo t('days'); ?></button>
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(90)">90 <?php echo t('days'); ?></button>
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(365)">1 <?php echo t('year'); ?></button>
+            </div>
+        `;
+        dateFilterDiv.appendChild(quickButtons);
+    }
+    
+    // Auto-hide messages
+    const successMessages = document.querySelectorAll('.alert-success');
+    successMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.5s ease';
+            message.style.opacity = '0';
+            
+            setTimeout(() => {
+                message.remove();
+            }, 500);
+        }, 5000);
+    });
+
+    const errorMessages = document.querySelectorAll('.alert-danger');
+    errorMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.5s ease';
+            message.style.opacity = '0';
+            
+            setTimeout(() => {
+                message.remove();
+            }, 500);
+        }, 10000);
+    });
+});
+
+// Make setDateRange function available globally
+window.setDateRange = function(days) {
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    startDateInput.value = startDate.toISOString().split('T')[0];
+    endDateInput.value = endDate.toISOString().split('T')[0];
+};
+</script>
 
 <?php
 require_once '../includes/footer.php';

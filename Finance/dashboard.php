@@ -1226,13 +1226,7 @@ body {
                     </a>
                 </div>
             </form>
-            <div class="mt-3 text-muted">
-                <small>
-                    <strong><?php echo t('date_range'); ?>:</strong> 
-                    <?php echo date('d/m/Y', strtotime($start_date)); ?> - 
-                    <?php echo date('d/m/Y', strtotime($end_date)); ?>
-                </small>
-            </div>
+          
         </div>
     </div>
     
