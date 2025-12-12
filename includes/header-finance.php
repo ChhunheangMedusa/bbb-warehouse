@@ -282,8 +282,8 @@ $hasAvatar = ($userPicture !== null);
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/access-log.php' ? 'active' : ''; ?>" href="../Finance/access-log.php">
-                        <i class="bi bi-clock-history me-2"></i><?php echo t('logs'); ?>
+                    <a class="nav-link <?php echo $_SERVER['PHP_SELF'] == '/Finance/report.php' ? 'active' : ''; ?>" href="../Finance/report.php">
+                        <i class="bi bi-clock-history me-2"></i><?php echo t('reports'); ?>
                     </a>
                 </li>
                 <li class="nav-item">
