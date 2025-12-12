@@ -1205,7 +1205,7 @@ body {
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary me-2">
-                        <?php echo t('apply_filter'); ?>
+                        <?php echo t('search'); ?>
                     </button>
                     <a href="dashboard.php" class="btn btn-secondary">
                          <?php echo t('reset'); ?>
@@ -1375,7 +1375,7 @@ body {
                     <a href="report.php" class="card text-center text-decoration-none">
                         <div class="card-body">
                             <i class="bi bi-bar-chart fs-1 text-info"></i>
-                            <h6 class="mt-2"><?php echo t('report'); ?></h6>
+                            <h6 class="mt-2"><?php echo t('reports'); ?></h6>
                         </div>
                     </a>
                 </div>
