@@ -20,6 +20,10 @@ if (!isAdmin() && !isFinanceStaff()) {
 $location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
 $locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Set default dates to current month
+$default_start_date = date('Y-m-01'); // First day of current month
+$default_end_date = date('Y-m-t'); // Last day of current month
+
 // Handle report generation
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['generate_report']) || isset($_POST['preview_report'])) {
@@ -815,11 +819,13 @@ body {
                     </div>
                     <div class="col-md-3">
                         <label for="start_date" class="form-label"><?php echo t('report_from'); ?></label>
-                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required 
+                               value="<?php echo $default_start_date; ?>">
                     </div>
                     <div class="col-md-3">
                         <label for="end_date" class="form-label"><?php echo t('report_to'); ?></label>
-                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        <input type="date" class="form-control" id="end_date" name="end_date" required 
+                               value="<?php echo $default_end_date; ?>">
                     </div>
                 </div>
 
@@ -841,20 +847,6 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Set default dates (last 30 days)
-        const today = new Date();
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(today.getDate() - 30);
-        
-        // Format dates to YYYY-MM-DD
-        const formatDate = (date) => {
-            return date.toISOString().split('T')[0];
-        };
-        
-        // Set default values for date inputs
-        document.getElementById('start_date').value = formatDate(thirtyDaysAgo);
-        document.getElementById('end_date').value = formatDate(today);
-        
         // Handle form validation for custom dates
         document.getElementById('reportForm').addEventListener('submit', function(e) {
             const startDate = document.getElementById('start_date').value;
