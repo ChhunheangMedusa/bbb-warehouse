@@ -1456,6 +1456,47 @@ body {
     max-height: 70vh;
     overflow-y: auto;
 }
+/* Fix modal backdrop issues */
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+.modal {
+    z-index: 1050 !important;
+}
+
+/* Ensure modal content is visible */
+#imageModal .modal-content {
+    background-color: transparent;
+    border: none;
+}
+
+#imageModal .modal-body {
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+#imageModal .modal-header,
+#imageModal .modal-footer {
+    background-color: white;
+    border: none;
+}
+
+#imageModal .modal-header {
+    border-bottom: 1px solid #dee2e6;
+}
+
+#imageModal .modal-footer {
+    border-top: 1px solid #dee2e6;
+}
+
+/* Make sure image displays properly */
+#modalImage {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
 </style>
 
 <div class="container-fluid">
