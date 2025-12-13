@@ -59,6 +59,11 @@ foreach ($report_data as $item) {
 function formatCurrency($number) {
     return number_format($number, 2);
 }
+
+// Helper function to format date
+function formatDate($date_string) {
+    return date('d/m/Y', strtotime($date_string));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -211,6 +216,7 @@ function formatCurrency($number) {
             <thead>
                 <tr>
                     <th><?php echo t('no'); ?></th>
+                    <th><?php echo t('date'); ?></th>
                     <th><?php echo t('location'); ?></th>
                     <th><?php echo t('invoice_no'); ?></th>
                     <th><?php echo t('supplier'); ?></th>
@@ -226,6 +232,7 @@ function formatCurrency($number) {
                     
                     <tr class="<?php echo $row_class; ?>">
                         <td class="text-center"><?php echo $index + 1; ?></td>
+                        <td class="text-center"><?php echo formatDate($item['date']); ?></td>
                         <td class="text-left"><?php echo $item['location_name']; ?></td>
                         <td class="text-center"><?php echo $item['invoice_no']; ?></td>
                         <td class="text-left"><?php echo $item['supplier_name']; ?></td>
@@ -235,7 +242,7 @@ function formatCurrency($number) {
                 
                 <!-- Totals row -->
                 <tr class="bold">
-                    <td colspan="4" class="text-right"><?php echo t('total'); ?>:</td>
+                    <td colspan="5" class="text-right"><?php echo t('total'); ?>:</td>
                     <td class="number-cell" style="background-color:yellow;">$<?php echo formatCurrency($grand_total); ?></td>
                 </tr>
             </tbody>
