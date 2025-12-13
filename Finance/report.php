@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $end_date = date('Y-12-31');
         } elseif ($period === 'custom' && (empty($start_date) || empty($end_date))) {
             $_SESSION['error'] = "Please select both start and end dates for custom range";
-            header('Location: reports.php');
+            header('Location: report.php');
             exit();
         }
         
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (empty($report_data)) {
             $_SESSION['error'] = "No records found for the selected criteria";
-            header('Location: reports.php');
+            header('Location: report.php');
             exit();
         }
         
@@ -99,7 +99,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'true' && isset($_SESSION[
         exit();
     } else {
         $_SESSION['error'] = "Report data not found";
-        header('Location: reports.php');
+        header('Location: report.php');
         exit();
     }
 }
