@@ -1945,14 +1945,20 @@ body {
 </div>
 <!-- Image Preview Modal -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><?php echo t('image_preview'); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <img src="" class="image-modal-img" id="modalImage" alt="Invoice Image">
+            <div class="modal-body p-0 text-center">
+                <img src="" class="img-fluid w-100" id="modalImage" alt="Invoice Image" style="max-height: 80vh; object-fit: contain;">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('close'); ?></button>
+                <a href="#" class="btn btn-primary" id="downloadImage" download>
+                    <i class="bi bi-download"></i> <?php echo t('download'); ?>
+                </a>
             </div>
         </div>
     </div>
@@ -2310,29 +2316,27 @@ document.querySelectorAll('.delete-invoice-btn').forEach(button => {
     });
 });
 
-    // Image modal
-    document.querySelectorAll('.invoice-image').forEach(img => {
-        img.addEventListener('click', function() {
-            const imageSrc = this.dataset.imageSrc;
-            const modalImage = document.getElementById('modalImage');
-            
-            // Check if it's a PDF
-            const fileExtension = imageSrc.split('.').pop().toLowerCase();
-            if (fileExtension === 'pdf') {
-                modalImage.src = '';
-                modalImage.style.display = 'none';
-                // You could add PDF viewer functionality here
-                alert('PDF files cannot be displayed in the image viewer. Please download the file to view.');
-            } else {
-                modalImage.src = imageSrc;
-                modalImage.style.display = 'block';
-                
-                const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
-                imageModal.show();
-            }
-        });
+    // Image modal with download button
+document.querySelectorAll('.invoice-image').forEach(img => {
+    img.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const imageSrc = this.src;
+        const modalImage = document.getElementById('modalImage');
+        const downloadBtn = document.getElementById('downloadImage');
+        
+        // Set image source
+        modalImage.src = imageSrc;
+        
+        // Set download link
+        downloadBtn.href = imageSrc;
+        downloadBtn.download = imageSrc.split('/').pop();
+        
+        // Show modal
+        const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        imageModal.show();
     });
-
+});
     // Handle entries per page change
     const perPageSelect = document.getElementById('per_page_select');
     if (perPageSelect) {
