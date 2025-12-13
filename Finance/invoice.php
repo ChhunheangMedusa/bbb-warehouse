@@ -117,9 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Insert invoice
-            // Insert invoice
 $stmt = $pdo->prepare("INSERT INTO finance_invoice (receipt_no, date, location_id, deporty_id, total_price, image, remark, created_by) 
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 $stmt->execute([$receipt_no, $date, $location_id, $supplier_id, $total, $image_path, '', $_SESSION['user_id']]);
             
             // Log activity
@@ -196,8 +195,9 @@ $stmt->execute([$receipt_no, $date, $location_id, $supplier_id, $total, $image_p
             
             // Update invoice
             // Update invoice
+// Update invoice
 $stmt = $pdo->prepare("UPDATE finance_invoice SET receipt_no = ?, date = ?, location_id = ?, 
-deporty_id = ?, total_price = ?, image = ? WHERE id = ?");
+                      deporty_id = ?, total_price = ?, image = ? WHERE id = ?");
 $stmt->execute([$receipt_no, $date, $location_id, $supplier_id, $total, $image_path, $invoice_id]);
             
             // Log activity
@@ -263,13 +263,14 @@ $offset = ($page - 1) * $limit;
 
 // Build query for invoices
 // Build query for invoices
+// Build query for invoices
 $query = "SELECT 
     fi.id,
     fi.receipt_no,
     fi.date,
-    fi.location_id,
+    fi.location_id as location,
     fl.name as location_name,
-    fi.deporty_id,
+    fi.deporty_id as supplier,
     fs.name as supplier_name,
     fi.total_price as total,
     fi.image,
