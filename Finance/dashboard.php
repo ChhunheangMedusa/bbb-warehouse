@@ -1187,57 +1187,7 @@ body {
 </style>
 <div class="container-fluid dashboard-container">
     <h2 class="mb-4"><?php echo t('dashboard'); ?></h2>
-    <!-- Quick Actions -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0"><?php echo t('quick_actions'); ?></h5>
-        </div>
-        <div class="card-body">
-            <div class="quick-actions-container">
-                <div class="quick-action-card">
-                    <a href="invoice.php" class="card text-center text-decoration-none">
-                        <div class="card-body">
-                            <i class="bi bi-receipt fs-1 text-primary"></i>
-                            <h6 class="mt-2"><?php echo t('invoice'); ?></h6>
-                        </div>
-                    </a>
-                </div>
-                <div class="quick-action-card">
-                    <a href="location.php" class="card text-center text-decoration-none">
-                        <div class="card-body">
-                            <i class="bi bi-building fs-1 text-success"></i>
-                            <h6 class="mt-2"><?php echo t('locations_button'); ?></h6>
-                        </div>
-                    </a>
-                </div>
-                <div class="quick-action-card">
-                    <a href="supplier.php" class="card text-center text-decoration-none">
-                        <div class="card-body">
-                            <i class="bi bi-truck fs-1 text-warning"></i>
-                            <h6 class="mt-2"><?php echo t('deporty'); ?></h6>
-                        </div>
-                    </a>
-                </div>
-                <div class="quick-action-card">
-                    <a href="report.php" class="card text-center text-decoration-none">
-                        <div class="card-body">
-                            <i class="bi bi-bar-chart fs-1 text-info"></i>
-                            <h6 class="mt-2"><?php echo t('reports'); ?></h6>
-                        </div>
-                    </a>
-                </div>
-                <div class="quick-action-card">
-                    <a href="access-log.php" class="card text-center text-decoration-none">
-                        <div class="card-body">
-                            <i class="bi bi-clock-history fs-1 text-info"></i>
-                            <h6 class="mt-2"><?php echo t('access_log'); ?></h6>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    
     <!-- Filter Card -->
     <div class="card mb-4 date-range-card">
         <div class="card-header">
@@ -1396,7 +1346,57 @@ body {
         </div>
     </div>
     
-    
+    <!-- Quick Actions -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><?php echo t('quick_actions'); ?></h5>
+        </div>
+        <div class="card-body">
+            <div class="quick-actions-container">
+                <div class="quick-action-card">
+                    <a href="invoice.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-receipt fs-1 text-primary"></i>
+                            <h6 class="mt-2"><?php echo t('invoice'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+                <div class="quick-action-card">
+                    <a href="location.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-building fs-1 text-success"></i>
+                            <h6 class="mt-2"><?php echo t('locations_button'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+                <div class="quick-action-card">
+                    <a href="supplier.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-truck fs-1 text-warning"></i>
+                            <h6 class="mt-2"><?php echo t('deporty'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+                <div class="quick-action-card">
+                    <a href="report.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-bar-chart fs-1 text-info"></i>
+                            <h6 class="mt-2"><?php echo t('reports'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+                <div class="quick-action-card">
+                    <a href="access-log.php" class="card text-center text-decoration-none">
+                        <div class="card-body">
+                            <i class="bi bi-clock-history fs-1 text-info"></i>
+                            <h6 class="mt-2"><?php echo t('access_log'); ?></h6>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Include Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
