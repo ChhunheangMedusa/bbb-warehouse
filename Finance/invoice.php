@@ -2317,24 +2317,65 @@ document.querySelectorAll('.delete-invoice-btn').forEach(button => {
 });
 
     // Image modal with download button
-document.querySelectorAll('.invoice-image').forEach(img => {
-    img.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        const imageSrc = this.src;
+    document.querySelectorAll('.invoice-image').forEach(img => {
+        img.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const imageSrc = this.src;
+            const modalImage = document.getElementById('modalImage');
+            const downloadBtn = document.getElementById('downloadImage');
+            
+            // Clear previous image
+            modalImage.src = '';
+            
+            // Set new image source
+            setTimeout(() => {
+                modalImage.src = imageSrc;
+                modalImage.onload = function() {
+                    // Image loaded successfully
+                };
+                modalImage.onerror = function() {
+                    console.error('Failed to load image:', imageSrc);
+                    modalImage.alt = 'Image failed to load';
+                };
+            }, 100);
+            
+            // Set download link
+            if (downloadBtn) {
+                downloadBtn.href = imageSrc;
+                downloadBtn.download = imageSrc.split('/').pop();
+            }
+            
+            // Show modal using Bootstrap
+            const imageModalElement = document.getElementById('imageModal');
+            const imageModal = new bootstrap.Modal(imageModalElement);
+            
+            // Clean up any existing modal backdrops
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            
+            // Remove any existing modal-open class
+            document.body.classList.remove('modal-open');
+            
+            // Show modal
+            imageModal.show();
+        });
+    });
+    
+    // Clean up when modal is closed
+    document.getElementById('imageModal').addEventListener('hidden.bs.modal', function() {
         const modalImage = document.getElementById('modalImage');
-        const downloadBtn = document.getElementById('downloadImage');
+        modalImage.src = '';
         
-        // Set image source
-        modalImage.src = imageSrc;
-        
-        // Set download link
-        downloadBtn.href = imageSrc;
-        downloadBtn.download = imageSrc.split('/').pop();
-        
-        // Show modal
-        const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
-        imageModal.show();
+        // Clean up any remaining backdrops
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }, 100);
     });
 });
     // Handle entries per page change
