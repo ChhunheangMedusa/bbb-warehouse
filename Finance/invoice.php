@@ -172,6 +172,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
         }
+    }elseif (isset($_POST['delete_invoice'])) {
+        $invoice_id = (int)$_POST['invoice_id'];
+        
+        try {
+            // First, get the invoice details for logging
+            $stmt = $pdo->prepare("SELECT receipt_no, total_price FROM finance_invoice WHERE id = ?");
+            $stmt->execute([$invoice_id]);
+            $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($invoice) {
+                $pdo->beginTransaction();
+                
+                // Delete the invoice
+                $stmt = $pdo->prepare("DELETE FROM finance_invoice WHERE id = ?");
+                $stmt->execute([$invoice_id]);
+                
+                // Log activity
+                $log_message = "Deleted Invoice: Receipt #" . $invoice['receipt_no'] . " - Amount: " . $invoice['total_price'];
+                logActivity($_SESSION['user_id'], 'Delete Invoice', $log_message);
+                
+                $pdo->commit();
+                $_SESSION['success'] = t('invoice_deleted_success');
+            } else {
+                $_SESSION['error'] = t('invoice_not_found');
+            }
+            
+            redirect('invoice.php');
+            
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            $_SESSION['error'] = t('invoice_delete_error');
+            redirect('invoice.php');
+        }
     }
 }
 
@@ -1581,20 +1614,26 @@ body {
                                     </td>
                                     <td><?php echo $invoice['created_by_name']; ?></td>
                                     <td><?php echo date('d/m/Y H:i', strtotime($invoice['created_at'])); ?></td>
-                                    <td>
-                                        <div class="btn-group" role="group" style="display: flex; gap: 5px;">
-                                            <button class="btn btn-sm btn-warning edit-invoice" 
-                                                    data-id="<?php echo $invoice['id']; ?>"
-                                                    data-receipt="<?php echo $invoice['receipt_no']; ?>"
-                                                    data-date="<?php echo $invoice['date']; ?>"
-                                                    data-location="<?php echo $invoice['location_id']; ?>"
-                                                    data-deporty="<?php echo $invoice['deporty_id']; ?>"
-                                                    data-price="<?php echo $invoice['total_price']; ?>"
-                                                    data-remark="<?php echo $invoice['remark']; ?>">
-                                                <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
-                                            </button>
-                                        </div>
-                                    </td>
+                                    <!-- In the table body section, find the actions column -->
+<td>
+    <div class="btn-group" role="group" style="display: flex; gap: 5px;">
+        <button class="btn btn-sm btn-warning edit-invoice" 
+                data-id="<?php echo $invoice['id']; ?>"
+                data-receipt="<?php echo $invoice['receipt_no']; ?>"
+                data-date="<?php echo $invoice['date']; ?>"
+                data-location="<?php echo $invoice['location_id']; ?>"
+                data-deporty="<?php echo $invoice['deporty_id']; ?>"
+                data-price="<?php echo $invoice['total_price']; ?>"
+                data-remark="<?php echo $invoice['remark']; ?>">
+            <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
+        </button>
+        <button class="btn btn-sm btn-danger delete-invoice" 
+                data-id="<?php echo $invoice['id']; ?>"
+                data-receipt="<?php echo $invoice['receipt_no']; ?>">
+            <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+        </button>
+    </div>
+</td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -1819,7 +1858,28 @@ body {
         </div>
     </div>
 </div>
-
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteInvoiceModal" tabindex="-1" aria-labelledby="deleteInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="invoice_id" id="delete_invoice_id">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteInvoiceModalLabel"><?php echo t('confirm_delete'); ?></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><?php echo t('confirm_delete_invoice'); ?>: <strong id="delete_receipt_no"></strong>?</p>
+                    <p class="text-danger"><small><?php echo t('delete_warning'); ?></small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
+                    <button type="submit" name="delete_invoice" class="btn btn-danger"><?php echo t('delete'); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Handle entries per page change
@@ -1850,7 +1910,18 @@ document.addEventListener('DOMContentLoaded', function() {
             editModal.show();
         });
     });
-    
+    // Handle delete invoice button clicks
+document.querySelectorAll('.delete-invoice').forEach(button => {
+    button.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent event bubbling
+        
+        document.getElementById('delete_invoice_id').value = this.dataset.id;
+        document.getElementById('delete_receipt_no').textContent = this.dataset.receipt;
+        
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+        deleteModal.show();
+    });
+});
     // Handle image modal
     const imageModal = document.getElementById('imageModal');
     if (imageModal) {
