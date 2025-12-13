@@ -25,13 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['generate_report']) || isset($_POST['preview_report'])) {
         $report_type = 'invoice';
         $location_id = isset($_POST['location_id']) ? (int)$_POST['location_id'] : null;
-        $period = sanitizeInput($_POST['period']);
         $start_date = sanitizeInput($_POST['start_date']);
         $end_date = sanitizeInput($_POST['end_date']);
         
-        // For custom range, validate dates
-        if ($period === 'custom' && (empty($start_date) || empty($end_date))) {
-            $_SESSION['error'] = "Please select both start and end dates for custom range";
+        // Validate dates
+        if (empty($start_date) || empty($end_date)) {
+            $_SESSION['error'] = "Please select both start and end dates";
             header('Location: report.php');
             exit();
         }
@@ -40,7 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['report_criteria'] = [
             'report_type' => $report_type,
             'location_id' => $location_id,
-            'period' => $period,
             'start_date' => $start_date,
             'end_date' => $end_date
         ];
@@ -93,7 +91,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'true' && isset($_SESSION[
         exit();
     } else {
         $_SESSION['error'] = "Report data not found";
-        header('Location: .php');
+        header('Location: report.php');
         exit();
     }
 }
@@ -815,20 +813,14 @@ body {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label for="period" class="form-label"><?php echo t('report_time'); ?></label>
-                        <select class="form-select" id="period" name="period" required>
-                            <option value="custom"><?php echo t('report_range'); ?></option>
-                        </select>
-                    </div>
                 </div>
 
                 <div class="row mb-3">
-                    <div class="col-md-3 custom-date">
+                    <div class="col-md-3">
                         <label for="start_date" class="form-label"><?php echo t('report_from'); ?></label>
                         <input type="date" class="form-control" id="start_date" name="start_date" required>
                     </div>
-                    <div class="col-md-3 custom-date">
+                    <div class="col-md-3">
                         <label for="end_date" class="form-label"><?php echo t('report_to'); ?></label>
                         <input type="date" class="form-control" id="end_date" name="end_date" required>
                     </div>
