@@ -1184,6 +1184,25 @@ body {
 .location-item:hover .progress-bar {
     transform: scaleY(1.2);
 }
+/* Bar chart styles */
+.bar-chart-label {
+    font-size: 12px;
+    font-weight: bold;
+    fill: #fff;
+}
+
+.bar-chart-percentage {
+    font-size: 11px;
+    fill: #666;
+    text-anchor: end;
+}
+
+/* Adjust chart container for bar chart */
+.chart-container {
+    position: relative;
+    height: 400px; /* Slightly taller for bar chart */
+    width: 100%;
+}
 </style>
 <div class="container-fluid dashboard-container">
     <h2 class="mb-4"><?php echo t('dashboard'); ?></h2>
@@ -1297,7 +1316,7 @@ body {
         <div class="col-md-8">
             <div class="card chart-card">
                 <div class="card-header">
-                    <h5 class="mb-0"><?php echo t('amount_by_location'); ?> ($<?php echo number_format($total_overall, 2); ?>)</h5>
+                <h5 class="mb-0"><?php echo t('amount_by_location'); ?> - Bar Chart ($<?php echo number_format($total_overall, 2); ?>)</h5>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($chart_data) && $total_overall > 0): ?>
@@ -1388,83 +1407,124 @@ body {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     <?php if (!empty($chart_data) && $total_overall > 0): ?>
-    // Prepare chart data with percentages in labels
-    const chartLabels = <?php echo json_encode($chart_labels); ?>;
-    const chartData = <?php echo json_encode($chart_data); ?>;
+    // Prepare chart data
+    const chartLabels = <?php echo json_encode(array_column($location_totals, 'location_name')); ?>;
+    const chartData = <?php echo json_encode(array_column($location_totals, 'total_amount')); ?>;
     const totalAmount = <?php echo $total_overall; ?>;
     
-    // Create labels with percentages
-    const chartLabelsWithPercent = chartLabels.map((label, index) => {
-        const amount = chartData[index];
-        const percentage = totalAmount > 0 ? ((amount / totalAmount) * 100).toFixed(1) : 0;
-        return `${label} (${percentage}%)`;
-    });
+    // Calculate percentages
+    const percentages = chartData.map(amount => 
+        totalAmount > 0 ? ((amount / totalAmount) * 100).toFixed(1) : 0
+    );
     
-    // Initialize pie chart
+    // Initialize bar chart
     const ctx = document.getElementById('locationPieChart').getContext('2d');
-    const locationPieChart = new Chart(ctx, {
-        type: 'pie',
+    const locationBarChart = new Chart(ctx, {
+        type: 'bar',
         data: {
-            labels: chartLabelsWithPercent,
+            labels: chartLabels,
             datasets: [{
+                label: 'Amount ($)',
                 data: chartData,
                 backgroundColor: <?php echo json_encode(array_slice($chart_colors, 0, count($chart_data))); ?>,
                 borderColor: '#fff',
-                borderWidth: 2,
-                hoverOffset: 15
+                borderWidth: 1,
+                borderRadius: 5,
+                barPercentage: 0.7,
+                categoryPercentage: 0.8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            indexAxis: 'y', // Horizontal bar chart
             plugins: {
                 legend: {
-                    position: 'right',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        font: {
-                            size: 12
-                        },
-                        generateLabels: function(chart) {
-                            const data = chart.data;
-                            if (data.labels.length && data.datasets.length) {
-                                return data.labels.map((label, i) => {
-                                    const meta = chart.getDatasetMeta(0);
-                                    const style = meta.controller.getStyle(i);
-                                    
-                                    return {
-                                        text: label,
-                                        fillStyle: style.backgroundColor,
-                                        strokeStyle: style.borderColor,
-                                        lineWidth: style.borderWidth,
-                                        hidden: !chart.isDatasetVisible(0) || meta.data[i].hidden,
-                                        index: i
-                                    };
-                                });
-                            }
-                            return [];
-                        }
-                    }
+                    display: false
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            let label = context.label.split(' (')[0] || ''; // Remove percentage from label
-                            if (label) {
-                                label += ': ';
-                            }
-                            const value = context.parsed;
-                            const percentage = totalAmount > 0 ? ((value / totalAmount) * 100).toFixed(1) : 0;
-                            label += '$' + value.toLocaleString('en-US', {minimumFractionDigits: 2}) + 
-                                     ' (' + percentage + '%)';
-                            return label;
+                            const amount = context.raw;
+                            const percentage = percentages[context.dataIndex];
+                            return [
+                                `Amount: $${amount.toLocaleString('en-US', {minimumFractionDigits: 2})}`,
+                                `Percentage: ${percentage}%`
+                            ];
+                        },
+                        afterLabel: function(context) {
+                            const invoiceCount = <?php echo json_encode(array_column($location_totals, 'invoice_count')); ?>[context.dataIndex];
+                            return `Invoices: ${invoiceCount}`;
+                        }
+                    }
+                },
+                datalabels: {
+                    display: false // We'll use custom labels
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString('en-US');
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Amount ($)'
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 12
                         }
                     }
                 }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
             }
-        }
+        },
+        plugins: [{
+            id: 'customLabels',
+            afterDraw: function(chart) {
+                const ctx = chart.ctx;
+                const meta = chart.getDatasetMeta(0);
+                
+                meta.data.forEach((bar, index) => {
+                    const value = chart.data.datasets[0].data[index];
+                    const percentage = percentages[index];
+                    
+                    // Draw amount on bar
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    
+                    const textX = bar.x + 10;
+                    const textY = bar.y;
+                    
+                    ctx.fillText(`$${value.toLocaleString('en-US', {minimumFractionDigits: 2})}`, textX, textY);
+                    
+                    // Draw percentage on right side
+                    ctx.fillStyle = '#666';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'right';
+                    
+                    const percentX = chart.chartArea.right - 10;
+                    ctx.fillText(`${percentage}%`, percentX, textY);
+                });
+            }
+        }]
     });
     <?php endif; ?>
     
