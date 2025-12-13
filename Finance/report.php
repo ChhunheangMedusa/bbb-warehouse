@@ -804,7 +804,7 @@ body {
         <div class="card-body">
             <form method="POST" id="reportForm">
                 <div class="row mb-3">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label for="location_id" class="form-label"><?php echo t('location'); ?></label>
                         <select class="form-select" id="location_id" name="location_id">
                             <option value=""><?php echo t('all_location'); ?></option>
@@ -813,9 +813,6 @@ body {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                </div>
-
-                <div class="row mb-3">
                     <div class="col-md-3">
                         <label for="start_date" class="form-label"><?php echo t('report_from'); ?></label>
                         <input type="date" class="form-control" id="start_date" name="start_date" required>
