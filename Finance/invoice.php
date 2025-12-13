@@ -19,11 +19,11 @@ if (!isAdmin() && !isFinanceStaff()) {
 
 
 // Get locations for dropdown
-$location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
+$location_stmt = $pdo->query("SELECT * FROM location ORDER BY name");
 $locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get suppliers for dropdown
-$supplier_stmt = $pdo->query("SELECT * FROM finance_supplier ORDER BY name");
+$supplier_stmt = $pdo->query("SELECT * FROM deporty ORDER BY name");
 $suppliers = $supplier_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get filter parameters
@@ -274,9 +274,9 @@ $query = "SELECT
 FROM 
     finance_invoice fi
 LEFT JOIN 
-    finance_location fl ON fi.location = fl.id
+    location fl ON fi.location = fl.id
 LEFT JOIN 
-    finance_supplier fs ON fi.supplier = fs.id
+    deporty fs ON fi.supplier = fs.id
 WHERE 1=1";
 
 $params = [];
@@ -318,8 +318,8 @@ $query .= " ORDER BY $sort_by $sort_order";
 
 // Get total count
 $count_query = "SELECT COUNT(*) as total FROM finance_invoice fi
-                LEFT JOIN finance_location fl ON fi.location = fl.id
-                LEFT JOIN finance_supplier fs ON fi.supplier = fs.id
+                LEFT JOIN location fl ON fi.location = fl.id
+                LEFT JOIN deporty fs ON fi.supplier = fs.id
                 WHERE 1=1";
 
 foreach ($count_params as $key => $value) {
