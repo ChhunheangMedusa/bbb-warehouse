@@ -1344,47 +1344,7 @@ body {
             </div>
         </div>
     </div>
-    <!-- Filter Card -->
-    <div class="card mb-4 date-range-card">
-        <div class="card-header">
-            <h5 class="mb-0"><?php echo t('filter_options'); ?></h5>
-        </div>
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-3">
-                    <label for="start_date" class="form-label"><?php echo t('report_from'); ?></label>
-                    <input type="date" name="start_date" class="form-control" 
-                           value="<?php echo $start_date; ?>" max="<?php echo $end_date; ?>">
-                </div>
-                <div class="col-md-3">
-                    <label for="end_date" class="form-label"><?php echo t('report_to'); ?></label>
-                    <input type="date" name="end_date" class="form-control" 
-                           value="<?php echo $end_date; ?>" min="<?php echo $start_date; ?>">
-                </div>
-                <div class="col-md-3">
-                    <label for="location" class="form-label"><?php echo t('location_column'); ?></label>
-                    <select name="location" class="form-select">
-                        <option value=""><?php echo t('report_all_location'); ?></option>
-                        <?php foreach ($locations as $location): ?>
-                            <option value="<?php echo $location['id']; ?>" 
-                                <?php echo $location_filter == $location['id'] ? 'selected' : ''; ?>>
-                                <?php echo $location['name']; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <?php echo t('search'); ?>
-                    </button>
-                    <a href="dashboard.php" class="btn btn-secondary">
-                         <?php echo t('reset'); ?>
-                    </a>
-                </div>
-            </form>
-          
-        </div>
-    </div>
+    
     
     
     
