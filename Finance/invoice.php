@@ -1943,16 +1943,16 @@ body {
         </div>
     </div>
 </div>
-<!-- Image Preview Modal -->
+<!-- Image Preview Modal - UPDATED -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><?php echo t('image_preview'); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0 text-center">
-                <img src="" class="img-fluid w-100" id="modalImage" alt="Invoice Image" style="max-height: 80vh; object-fit: contain;">
+            <div class="modal-body p-0 text-center bg-dark">
+                <img src="" class="img-fluid" id="modalImage" alt="Invoice Image" style="max-height: 70vh; width: auto;">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('close'); ?></button>
