@@ -208,19 +208,19 @@ function formatDate($date_string) {
         <div class="report-title"><?php echo t('invoice_report'); ?></div>
         
         <div class="report-info">
-            <div class="info-line"><span class="bold"><?php echo t('site_location'); ?>:</span> <?php echo $location_name; ?></div>
-            <div class="info-line"><span class="bold"><?php echo t('period'); ?>:</span> <?php echo date('d/m/Y', strtotime($criteria['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($criteria['end_date'])); ?></div>
+            <div class="info-line"><span class="bold"><?php echo "Site Location" ?>:</span> <?php echo $location_name; ?></div>
+            <div class="info-line"><span class="bold"><?php echo "Period" ?>:</span> <?php echo date('d/m/Y', strtotime($criteria['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($criteria['end_date'])); ?></div>
         </div>
         
         <table>
             <thead>
                 <tr>
-                    <th><?php echo t('no'); ?></th>
-                    <th><?php echo t('date'); ?></th>
-                    <th><?php echo t('location'); ?></th>
-                    <th><?php echo t('invoice_no'); ?></th>
-                    <th><?php echo t('supplier'); ?></th>
-                    <th><?php echo t('total'); ?></th>
+                    <th>No</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                    <th>Invoice No</th>
+                    <th>Supplier</th>
+                    <th>Total</th>
                 </tr>
             </thead>
             <tbody>
@@ -242,7 +242,7 @@ function formatDate($date_string) {
                 
                 <!-- Totals row -->
                 <tr class="bold">
-                    <td colspan="5" class="text-right"><?php echo t('total'); ?>:</td>
+                    <td colspan="5" class="text-right">Total  :</td>
                     <td class="number-cell" style="background-color:yellow;">$<?php echo formatCurrency($grand_total); ?></td>
                 </tr>
             </tbody>

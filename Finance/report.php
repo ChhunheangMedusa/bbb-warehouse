@@ -195,7 +195,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     $location_name = $location_id ? $report_data[0]['location_name'] : 'All Locations';
     
     // Translations
-    $report_title = t('invoice_report');
+    $report_title = t('reports_button');
     $site_location = t('site_location');
     $period_label = t('period');
     $no = t('no');
@@ -782,7 +782,7 @@ body {
             
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h2 class="h3 mb-0 text-gray-800"><?php echo t('invoice_report'); ?></h2>
+        <h2 class="h3 mb-0 text-gray-800"><?php echo t('reports_button'); ?></h2>
     </div>
 
     <?php if (isset($_SESSION['error'])): ?>
@@ -807,7 +807,7 @@ body {
                     <div class="col-md-6">
                         <label for="location_id" class="form-label"><?php echo t('location'); ?></label>
                         <select class="form-select" id="location_id" name="location_id">
-                            <option value=""><?php echo t('all_locations'); ?></option>
+                            <option value=""><?php echo t('all_location'); ?></option>
                             <?php foreach ($locations as $location): ?>
                                 <option value="<?= $location['id'] ?>"><?= $location['name'] ?></option>
                             <?php endforeach; ?>
@@ -816,8 +816,6 @@ body {
                     <div class="col-md-6">
                         <label for="period" class="form-label"><?php echo t('report_time'); ?></label>
                         <select class="form-select" id="period" name="period" required>
-                            <option value="monthly" selected><?php echo t('report_month'); ?></option>
-                            <option value="yearly"><?php echo t('report_year'); ?></option>
                             <option value="custom"><?php echo t('report_range'); ?></option>
                         </select>
                     </div>
