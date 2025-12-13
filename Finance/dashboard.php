@@ -19,7 +19,7 @@ if (!isAdmin() && !isFinanceStaff()) {
 
 
 // Get locations for filter
-$location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
+$location_stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
 $locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get date range filter parameters
@@ -47,7 +47,7 @@ $query = "SELECT
     COALESCE(SUM(fi.total), 0) as total_amount,
     COUNT(fi.id) as invoice_count
 FROM 
-    finance_location fl
+    locations fl
 LEFT JOIN 
     finance_invoice fi ON fl.id = fi.location
     AND fi.date BETWEEN :start_date AND :end_date";
