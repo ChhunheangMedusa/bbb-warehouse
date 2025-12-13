@@ -804,7 +804,7 @@ body {
         <div class="card-body">
             <form method="POST" id="reportForm">
                 <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <label for="location_id" class="form-label"><?php echo t('location'); ?></label>
                         <select class="form-select" id="location_id" name="location_id">
                             <option value=""><?php echo t('all_location'); ?></option>
