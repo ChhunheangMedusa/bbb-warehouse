@@ -1149,7 +1149,7 @@ body {
     }
     
     .date-range-card {
-        background-color: #f8f9fa;
+        background-color: black;
         border-left: 4px solid var(--primary);
     }
     
