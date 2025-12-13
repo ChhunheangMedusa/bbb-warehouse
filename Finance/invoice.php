@@ -1648,21 +1648,23 @@ body {
                                     <td><?php echo $invoice['created_by_name']; ?></td>
                                     <td><?php echo date('d/m/Y H:i', strtotime($invoice['created_at'])); ?></td>
                                     <td>
-    <button class="btn btn-sm btn-warning edit-invoice" 
-            data-id="<?php echo $invoice['id']; ?>"
-            data-receipt="<?php echo $invoice['receipt_no']; ?>"
-            data-date="<?php echo $invoice['date']; ?>"
-            data-location="<?php echo $invoice['location_id']; ?>"
-            data-deporty="<?php echo $invoice['deporty_id']; ?>"
-            data-price="<?php echo $invoice['total_price']; ?>"
-            data-remark="<?php echo $invoice['remark']; ?>">
-        <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
-    </button>
-    <button class="btn btn-sm btn-danger delete-invoice" 
-            data-id="<?php echo $invoice['id']; ?>"
-            data-receipt="<?php echo $invoice['receipt_no']; ?>">
-        <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
-    </button>
+    <div class="btn-group" role="group" style="display: flex; gap: 5px;">
+        <button class="btn btn-sm btn-warning edit-invoice" 
+                data-id="<?php echo $invoice['id']; ?>"
+                data-receipt="<?php echo $invoice['receipt_no']; ?>"
+                data-date="<?php echo $invoice['date']; ?>"
+                data-location="<?php echo $invoice['location_id']; ?>"
+                data-deporty="<?php echo $invoice['deporty_id']; ?>"
+                data-price="<?php echo $invoice['total_price']; ?>"
+                data-remark="<?php echo $invoice['remark']; ?>">
+            <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
+        </button>
+        <button class="btn btn-sm btn-danger delete-invoice" 
+                data-id="<?php echo $invoice['id']; ?>"
+                data-receipt="<?php echo $invoice['receipt_no']; ?>">
+            <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
+        </button>
+    </div>
 </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -1936,7 +1938,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle edit invoice button clicks
     document.querySelectorAll('.edit-invoice').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
+            
             document.getElementById('edit_invoice_id').value = this.dataset.id;
             document.getElementById('edit_receipt_no').value = this.dataset.receipt;
             document.getElementById('edit_date').value = this.dataset.date;
@@ -1950,30 +1954,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-     // Handle delete invoice button clicks
-     document.querySelectorAll('.delete-invoice').forEach(button => {
-        button.addEventListener('click', function() {
-            const invoiceId = this.dataset.id;
-            const receiptNo = this.dataset.receipt;
+    // Handle delete invoice button clicks
+    document.querySelectorAll('.delete-invoice').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
             
-            // Update modal content
-            document.getElementById('deleteInvoiceId').value = invoiceId;
-            document.getElementById('deleteInvoiceInfo').innerHTML = 
-                '<strong>Receipt No:</strong> ' + receiptNo + '<br>' +
-                '<strong>ID:</strong> ' + invoiceId;
+            // Close any open modals first
+            const openModals = document.querySelectorAll('.modal.show');
+            openModals.forEach(modal => {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+            });
             
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-            deleteModal.show();
+            // Wait for modals to close
+            setTimeout(() => {
+                const invoiceId = this.dataset.id;
+                const receiptNo = this.dataset.receipt;
+                
+                // Update modal content
+                document.getElementById('deleteInvoiceId').value = invoiceId;
+                document.getElementById('deleteInvoiceInfo').innerHTML = 
+                    '<strong>Receipt No:</strong> ' + receiptNo + '<br>' +
+                    '<strong>ID:</strong> ' + invoiceId;
+                
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                deleteModal.show();
+            }, 300);
         });
     });
     
-    // Remove the confirmDeleteBtn event listener since form will auto-submit
-
     // Handle confirm delete button click
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', function() {
-            console.log('Confirm delete clicked'); // 调试
             document.getElementById('deleteForm').submit();
         });
     }
@@ -1997,6 +2012,17 @@ document.addEventListener('DOMContentLoaded', function() {
             alert.style.opacity = '0';
             setTimeout(() => alert.remove(), 500);
         }, 5000);
+    });
+    
+    // Force cleanup of modal backdrops when closing modals
+    document.addEventListener('hidden.bs.modal', function (event) {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => {
+            backdrop.remove();
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
     });
 });
 </script>
