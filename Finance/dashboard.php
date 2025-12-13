@@ -41,24 +41,29 @@ if (strtotime($end_date) < strtotime($start_date)) {
 }
 
 // Query to get total amount per location
+// Get total amount per location WITH supplier info
 $query = "SELECT 
     fl.id,
     fl.name as location_name,
-    COALESCE(SUM(fi.total), 0) as total_amount,
-    COUNT(fi.id) as invoice_count
+    COALESCE(SUM(fi.total_price), 0) as total_amount,
+    COUNT(fi.id) as invoice_count,
+    d.name as supplier_name,
+    d.id as supplier_id
 FROM 
     locations fl
 LEFT JOIN 
-    finance_invoice fi ON fl.id = fi.location
-    AND fi.date BETWEEN :start_date AND :end_date";
+    finance_invoice fi ON fl.id = fi.location_id
+    AND fi.date BETWEEN :start_date AND :end_date
+LEFT JOIN
+    deporty d ON fi.deporty_id = d.id
+";
 
 // Add location filter if specified
 if ($location_filter) {
     $query .= " AND fl.id = :location_id";
 }
 
-$query .= " GROUP BY fl.id, fl.name ORDER BY total_amount DESC";
-
+$query .= " GROUP BY fl.id, fl.name, d.id, d.name ORDER BY total_amount DESC";
 $stmt = $pdo->prepare($query);
 $stmt->bindValue(':start_date', $start_date);
 $stmt->bindValue(':end_date', $end_date);
