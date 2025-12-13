@@ -29,14 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $start_date = sanitizeInput($_POST['start_date']);
         $end_date = sanitizeInput($_POST['end_date']);
         
-        // Determine date range based on period
-        if ($period === 'monthly') {
-            $start_date = date('Y-m-01');
-            $end_date = date('Y-m-t');
-        } elseif ($period === 'yearly') {
-            $start_date = date('Y-01-01');
-            $end_date = date('Y-12-31');
-        } elseif ($period === 'custom' && (empty($start_date) || empty($end_date))) {
+        // For custom range, validate dates
+        if ($period === 'custom' && (empty($start_date) || empty($end_date))) {
             $_SESSION['error'] = "Please select both start and end dates for custom range";
             header('Location: report.php');
             exit();
@@ -99,7 +93,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'true' && isset($_SESSION[
         exit();
     } else {
         $_SESSION['error'] = "Report data not found";
-        header('Location: report.php');
+        header('Location: .php');
         exit();
     }
 }
@@ -189,7 +183,7 @@ function generateExcelReport($report_type, $report_data, $start_date, $end_date,
     generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color);
 }
 
-// Function to generate Excel content
+// Function to generate Excel content - UPDATED VERSION with Date column
 function generateExcelContent($report_type, $report_data, $start_date, $end_date, $location_id, $title, $header_color) {
     // Get location name
     $location_name = $location_id ? $report_data[0]['location_name'] : 'All Locations';
@@ -209,6 +203,11 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     // Helper function to format numbers
     function formatQuantity($number) {
         return number_format($number, 2);
+    }
+    
+    // Helper function to format date
+    function formatDate($date_string) {
+        return date('d/m/Y', strtotime($date_string));
     }
     
     echo '<!DOCTYPE html>
@@ -283,6 +282,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
             <thead>
                 <tr>
                     <th>'.$no.'</th>
+                    <th>'.$date.'</th>
                     <th>'.$location_col.'</th>
                     <th>'.$invoice_no.'</th>
                     <th>'.$supplier.'</th>
@@ -300,6 +300,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
         
         // Get data
         $invoice_number = $item['invoice_no'];
+        $date_value = $item['date'];
         $location = $item['location_name'];
         $supplier_name = $item['supplier_name'];
         $item_total = $item['total'];
@@ -309,6 +310,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
 
         echo '<tr class="'.$row_class.'">
             <td class="text-center">'.($index + 1).'</td>
+            <td class="text-center" style="mso-number-format:\@">'.formatDate($date_value).'</td>
             <td class="text-left">'.$location.'</td>
             <td class="text-center" style="mso-number-format:\@">'.$invoice_number.'</td>
             <td class="text-left">'.$supplier_name.'</td>
@@ -318,7 +320,7 @@ function generateExcelContent($report_type, $report_data, $start_date, $end_date
     
     // Add totals row
     echo '<tr class="bold">
-        <td colspan="4" class="text-right">'.$total_label.':</td>
+        <td colspan="5" class="text-right">'.$total_label.':</td>
         <td class="number-cell" style="background-color:yellow;">$'.formatQuantity($grand_total).'</td>
     </tr>';
     
@@ -822,13 +824,13 @@ body {
                 </div>
 
                 <div class="row mb-3">
-                    <div class="col-md-3 custom-date" style="display: none;">
+                    <div class="col-md-3 custom-date">
                         <label for="start_date" class="form-label"><?php echo t('report_from'); ?></label>
-                        <input type="date" class="form-control" id="start_date" name="start_date">
+                        <input type="date" class="form-control" id="start_date" name="start_date" required>
                     </div>
-                    <div class="col-md-3 custom-date" style="display: none;">
+                    <div class="col-md-3 custom-date">
                         <label for="end_date" class="form-label"><?php echo t('report_to'); ?></label>
-                        <input type="date" class="form-control" id="end_date" name="end_date">
+                        <input type="date" class="form-control" id="end_date" name="end_date" required>
                     </div>
                 </div>
 
@@ -850,28 +852,36 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Handle period selection
-        const periodSelect = document.getElementById('period');
-        const customDateFields = document.querySelectorAll('.custom-date');
+        // Set default dates (last 30 days)
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
         
-        periodSelect.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customDateFields.forEach(field => field.style.display = 'block');
-            } else {
-                customDateFields.forEach(field => field.style.display = 'none');
-            }
-        });
+        // Format dates to YYYY-MM-DD
+        const formatDate = (date) => {
+            return date.toISOString().split('T')[0];
+        };
+        
+        // Set default values for date inputs
+        document.getElementById('start_date').value = formatDate(thirtyDaysAgo);
+        document.getElementById('end_date').value = formatDate(today);
         
         // Handle form validation for custom dates
         document.getElementById('reportForm').addEventListener('submit', function(e) {
-            if (periodSelect.value === 'custom') {
-                const startDate = document.getElementById('start_date').value;
-                const endDate = document.getElementById('end_date').value;
-                
-                if (!startDate || !endDate) {
-                    e.preventDefault();
-                    alert('Please select both start and end dates for custom range');
-                }
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            
+            if (!startDate || !endDate) {
+                e.preventDefault();
+                alert('Please select both start and end dates');
+                return false;
+            }
+            
+            // Validate that end date is not before start date
+            if (new Date(endDate) < new Date(startDate)) {
+                e.preventDefault();
+                alert('End date cannot be earlier than start date');
+                return false;
             }
         });
         
