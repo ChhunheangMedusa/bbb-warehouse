@@ -14,7 +14,7 @@ if (!isAdmin() && !isFinanceStaff()) {
 }
 
 // Get locations for filter
-$location_stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
+$location_stmt = $pdo->query("SELECT * FROM locations WHERE type = 'Construction Site' ORDER BY name");
 $locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get time period filter (default to monthly)
@@ -1149,7 +1149,7 @@ body {
     }
     
     .date-range-card {
-        background-color: black;
+        background-color: #f8f9fa;
         border-left: 4px solid var(--primary);
     }
     
