@@ -1912,7 +1912,8 @@ body {
 </div>
 
 <!-- Hidden form for delete -->
-<form method="POST" id="deleteForm" style="display: none;">
+<!-- Hidden form for delete -->
+<form method="POST" id="deleteForm" style="display: block; position: absolute; top: -1000px;">
     <input type="hidden" name="delete_invoice" value="1">
     <input type="hidden" name="invoice_id" id="deleteInvoiceId">
 </form>
@@ -1944,16 +1945,21 @@ document.addEventListener('DOMContentLoaded', function() {
             editModal.show();
         });
     });
+    
+    // Handle delete invoice button clicks
     document.querySelectorAll('.delete-invoice').forEach(button => {
         button.addEventListener('click', function() {
+            console.log('Delete button clicked'); // 添加调试信息
             const invoiceId = this.dataset.id;
             const receiptNo = this.dataset.receipt;
+            
+            console.log('Invoice ID:', invoiceId, 'Receipt No:', receiptNo); // 调试
             
             // Update modal content
             document.getElementById('deleteInvoiceId').value = invoiceId;
             document.getElementById('deleteInvoiceInfo').innerHTML = 
-                `<strong>${t('receipt_no')}:</strong> ${receiptNo}<br>` +
-                `<strong>${t('id')}:</strong> ${invoiceId}`;
+                '<strong>Receipt No:</strong> ' + receiptNo + '<br>' +
+                '<strong>ID:</strong> ' + invoiceId;
             
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
             deleteModal.show();
@@ -1964,6 +1970,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', function() {
+            console.log('Confirm delete clicked'); // 调试
             document.getElementById('deleteForm').submit();
         });
     }
