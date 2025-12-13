@@ -19,7 +19,7 @@ checkAuth();
 if (!isset($_SESSION['report_data']) || empty($_SESSION['report_data'])) {
     $_SESSION['error'] = "No report data found. Please generate a report first.";
     if (isset($_SESSION['report_type']) && $_SESSION['report_type'] === 'invoice') {
-        header('Location: reports.php');
+        header('Location: report.php');
     } else {
         header('Location: report.php');
     }
@@ -42,7 +42,7 @@ if ($criteria['location_id']) {
 // Handle download request
 if (isset($_POST['download'])) {
     if ($report_type === 'invoice') {
-        header('Location: reports.php?download=true');
+        header('Location: report.php?download=true');
     } else {
         header('Location: report.php?download=true');
     }
@@ -190,7 +190,7 @@ function formatDate($date_string) {
     <div class="container-fluid">
         <div class="action-buttons">
             <?php if ($report_type === 'invoice'): ?>
-                <a href="reports.php" class="btn btn-secondary">
+                <a href="report.php" class="btn btn-secondary">
                     <i class="bi bi-arrow-left me-2"></i><?php echo t('return'); ?>
                 </a>
             <?php else: ?>
