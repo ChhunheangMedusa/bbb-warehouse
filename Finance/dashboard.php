@@ -1,69 +1,74 @@
 <?php
 ob_start();
 require_once '../includes/header-finance.php';
-// Add authentication check
 require_once '../includes/auth.php';
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once 'translate.php';
 
-// Check if user is authenticated
 checkAuth();
-// Check if user has permission (admin or finance staff only)
 if (!isAdmin() && !isFinanceStaff()) {
     $_SESSION['error'] = "You don't have permission to access this page";
-    header('Location: ../index.php'); // Redirect to login or home page
+    header('Location: ../index.php');
     exit();
 }
-
-
 
 // Get locations for filter
 $location_stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
 $locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get date range filter parameters
-$start_date = isset($_GET['start_date']) ? sanitizeInput($_GET['start_date']) : date('Y-m-01'); // First day of current month
-$end_date = isset($_GET['end_date']) ? sanitizeInput($_GET['end_date']) : date('Y-m-d'); // Today
+// Get time period filter (default to monthly)
+$time_period = isset($_GET['period']) ? sanitizeInput($_GET['period']) : 'monthly';
 $location_filter = isset($_GET['location']) ? (int)$_GET['location'] : null;
 
-// Validate dates
-if (!strtotime($start_date) || !strtotime($end_date)) {
-    $start_date = date('Y-m-01');
-    $end_date = date('Y-m-d');
-}
+// Calculate date range based on time period
+$today = new DateTime();
+$start_date = $today->format('Y-m-d');
+$end_date = $today->format('Y-m-d');
 
-// Ensure end date is not before start date
-if (strtotime($end_date) < strtotime($start_date)) {
-    $temp = $end_date;
-    $end_date = $start_date;
-    $start_date = $temp;
+switch($time_period) {
+    case 'daily':
+        // Today only
+        $start_date = $today->format('Y-m-d');
+        $end_date = $today->format('Y-m-d');
+        break;
+    case 'weekly':
+        // This week (Monday to Sunday)
+        $start_date = $today->modify('Monday this week')->format('Y-m-d');
+        $end_date = $today->modify('Sunday this week')->format('Y-m-d');
+        break;
+    case 'monthly':
+        // This month
+        $start_date = $today->modify('first day of this month')->format('Y-m-d');
+        $end_date = $today->modify('last day of this month')->format('Y-m-d');
+        break;
+    case 'yearly':
+        // This year
+        $start_date = $today->modify('first day of January this year')->format('Y-m-d');
+        $end_date = $today->modify('last day of December this year')->format('Y-m-d');
+        break;
 }
 
 // Query to get total amount per location
-// Get total amount per location WITH supplier info
 $query = "SELECT 
     fl.id,
     fl.name as location_name,
     COALESCE(SUM(fi.total_price), 0) as total_amount,
-    COUNT(fi.id) as invoice_count,
-    d.name as supplier_name,
-    d.id as supplier_id
+    COUNT(fi.id) as invoice_count
 FROM 
     locations fl
 LEFT JOIN 
     finance_invoice fi ON fl.id = fi.location_id
     AND fi.date BETWEEN :start_date AND :end_date
-LEFT JOIN
-    deporty d ON fi.deporty_id = d.id
-";
+WHERE 1=1";
 
 // Add location filter if specified
 if ($location_filter) {
     $query .= " AND fl.id = :location_id";
 }
 
-$query .= " GROUP BY fl.id, fl.name, d.id, d.name ORDER BY total_amount DESC";
+$query .= " GROUP BY fl.id, fl.name ORDER BY total_amount DESC";
+
 $stmt = $pdo->prepare($query);
 $stmt->bindValue(':start_date', $start_date);
 $stmt->bindValue(':end_date', $end_date);
@@ -1254,7 +1259,7 @@ body {
             </div>
         </div>
     </div>
-   <!-- Expense Overview Header with Filters -->
+  <!-- Expense Overview Header with Filters -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Expense Overview</h2>
     <div class="d-flex align-items-center gap-2">
@@ -1417,11 +1422,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartData = <?php echo json_encode(array_column($location_totals, 'total_amount')); ?>;
     const totalAmount = <?php echo $total_overall; ?>;
     
-    // Calculate percentages
-    const percentages = chartData.map(amount => 
-        totalAmount > 0 ? ((amount / totalAmount) * 100).toFixed(1) : 0
-    );
-    
     // Initialize bar chart
     const ctx = document.getElementById('locationPieChart').getContext('2d');
     const locationBarChart = new Chart(ctx, {
@@ -1434,214 +1434,183 @@ document.addEventListener('DOMContentLoaded', function() {
                 backgroundColor: <?php echo json_encode(array_slice($chart_colors, 0, count($chart_data))); ?>,
                 borderColor: '#fff',
                 borderWidth: 1,
-                borderRadius: 5,
-                barPercentage: 0.7,
-                categoryPercentage: 0.8
+                borderRadius: 5
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            indexAxis: 'y', // Horizontal bar chart
+            indexAxis: 'y',
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const amount = context.raw;
-                            const percentage = percentages[context.dataIndex];
-                            return [
-                                `Amount: $${amount.toLocaleString('en-US', {minimumFractionDigits: 2})}`,
-                                `Percentage: ${percentage}%`
-                            ];
-                        },
-                        afterLabel: function(context) {
-                            const invoiceCount = <?php echo json_encode(array_column($location_totals, 'invoice_count')); ?>[context.dataIndex];
-                            return `Invoices: ${invoiceCount}`;
+                            return `$${context.raw.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
                         }
                     }
-                },
-                datalabels: {
-                    display: false // We'll use custom labels
                 }
             },
             scales: {
                 x: {
                     beginAtZero: true,
-                    grid: {
-                        display: false
-                    },
                     ticks: {
                         callback: function(value) {
                             return '$' + value.toLocaleString('en-US');
                         }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Amount ($)'
-                    }
-                },
-                y: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            size: 12
-                        }
                     }
                 }
-            },
-            animation: {
-                duration: 1000,
-                easing: 'easeOutQuart'
             }
-        },
-        plugins: [{
-            id: 'customLabels',
-            afterDraw: function(chart) {
-                const ctx = chart.ctx;
-                const meta = chart.getDatasetMeta(0);
-                
-                meta.data.forEach((bar, index) => {
-                    const value = chart.data.datasets[0].data[index];
-                    const percentage = percentages[index];
-                    
-                    // Draw amount on bar
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 12px Arial';
-                    ctx.textAlign = 'left';
-                    ctx.textBaseline = 'middle';
-                    
-                    const textX = bar.x + 10;
-                    const textY = bar.y;
-                    
-                    ctx.fillText(`$${value.toLocaleString('en-US', {minimumFractionDigits: 2})}`, textX, textY);
-                    
-                    // Draw percentage on right side
-                    ctx.fillStyle = '#666';
-                    ctx.font = '12px Arial';
-                    ctx.textAlign = 'right';
-                    
-                    const percentX = chart.chartArea.right - 10;
-                    ctx.fillText(`${percentage}%`, percentX, textY);
-                });
-            }
-        }]
+        }
     });
     <?php endif; ?>
     
-    // Date range validation
-    const startDateInput = document.querySelector('input[name="start_date"]');
-    const endDateInput = document.querySelector('input[name="end_date"]');
-    
-    if (startDateInput && endDateInput) {
-        startDateInput.addEventListener('change', function() {
-            endDateInput.min = this.value;
-            if (new Date(endDateInput.value) < new Date(this.value)) {
-                endDateInput.value = this.value;
-            }
-        });
-        
-        endDateInput.addEventListener('change', function() {
-            startDateInput.max = this.value;
-            if (new Date(startDateInput.value) > new Date(this.value)) {
-                startDateInput.value = this.value;
-            }
-        });
-    }
-    
-    // Time period and location filter functionality
+    // Time period buttons functionality
     const timePeriodButtons = document.querySelectorAll('.time-period');
+    
+    // Highlight current time period
+    const currentPeriod = "<?php echo $time_period; ?>";
+    timePeriodButtons.forEach(btn => {
+        if (btn.getAttribute('data-period') === currentPeriod) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Handle time period button clicks
     timePeriodButtons.forEach(button => {
         button.addEventListener('click', function() {
-            // Remove active class from all buttons
-            timePeriodButtons.forEach(btn => btn.classList.remove('active'));
-            // Add active class to clicked button
-            this.classList.add('active');
-            
             const period = this.getAttribute('data-period');
-            updateDateRange(period);
+            
+            // Update URL with period
+            const url = new URL(window.location.href);
+            url.searchParams.set('period', period);
+            window.location.href = url.toString();
         });
     });
     
-    // Location filter
+    // Location filter functionality
     const locationDropdownItems = document.querySelectorAll('.dropdown-item[data-location]');
+    
+    // Highlight current location
+    const currentLocation = "<?php echo $location_filter ?: 'all'; ?>";
+    locationDropdownItems.forEach(item => {
+        if (item.getAttribute('data-location') === currentLocation.toString()) {
+            const dropdownButton = document.getElementById('locationFilterDropdown');
+            if (currentLocation === 'all') {
+                dropdownButton.innerHTML = '<i class="bi bi-geo-alt"></i> Location';
+            } else {
+                dropdownButton.innerHTML = `<i class="bi bi-geo-alt"></i> ${item.textContent.trim()}`;
+            }
+        }
+    });
+    
+    // Handle location dropdown clicks
     locationDropdownItems.forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
             const locationId = this.getAttribute('data-location');
-            const dropdownButton = document.getElementById('locationFilterDropdown');
-            
-            // Update button text
-            if (locationId === 'all') {
-                dropdownButton.innerHTML = '<i class="bi bi-geo-alt"></i> Location';
-            } else {
-                const locationName = this.textContent.trim();
-                dropdownButton.innerHTML = `<i class="bi bi-geo-alt"></i> ${locationName}`;
-            }
             
             // Update URL with location filter
-            updateLocationFilter(locationId);
+            const url = new URL(window.location.href);
+            if (locationId === 'all') {
+                url.searchParams.delete('location');
+            } else {
+                url.searchParams.set('location', locationId);
+            }
+            window.location.href = url.toString();
         });
     });
-    
-    // Function to update date range based on selected period
-    function updateDateRange(period) {
-        const today = new Date();
-        let startDate, endDate;
+    // Combine filters function
+    function applyFilters(period = null, locationId = null) {
+        const url = new URL(window.location.href);
         
-        switch(period) {
-            case 'daily':
-                startDate = formatDate(today);
-                endDate = formatDate(today);
-                break;
-            case 'weekly':
-                // Start of week (Monday)
-                startDate = new Date(today);
-                startDate.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-                endDate = new Date(startDate);
-                endDate.setDate(startDate.getDate() + 6);
-                startDate = formatDate(startDate);
-                endDate = formatDate(endDate);
-                break;
-            case 'monthly':
-                // Start of month
-                startDate = formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
-                // End of month
-                endDate = formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
-                break;
-            case 'yearly':
-                // Start of year
-                startDate = formatDate(new Date(today.getFullYear(), 0, 1));
-                // End of year
-                endDate = formatDate(new Date(today.getFullYear(), 11, 31));
-                break;
-            default:
-                return;
+        if (period) {
+            url.searchParams.set('period', period);
         }
         
-        // Update URL with new date range
-        const url = new URL(window.location.href);
-        url.searchParams.set('start_date', startDate);
-        url.searchParams.set('end_date', endDate);
+        if (locationId) {
+            if (locationId === 'all') {
+                url.searchParams.delete('location');
+            } else {
+                url.searchParams.set('location', locationId);
+            }
+        }
+        
         window.location.href = url.toString();
     }
+    
+    // Auto-hide messages
+    setTimeout(() => {
+        document.querySelectorAll('.alert').forEach(alert => {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+});
+    // Function to update date range based on selected period
+    // Function to update date range based on selected period
+function updateDateRange(period) {
+    const today = new Date();
+    let startDate, endDate;
+    
+    switch(period) {
+        case 'daily':
+            // Today only
+            startDate = formatDate(today);
+            endDate = formatDate(today);
+            break;
+        case 'weekly':
+            // Start of week (Monday)
+            startDate = new Date(today);
+            const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust for Monday start
+            startDate.setDate(today.getDate() + diffToMonday);
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            startDate = formatDate(startDate);
+            endDate = formatDate(endDate);
+            break;
+        case 'monthly':
+            // Start of current month
+            startDate = formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
+            // End of current month
+            endDate = formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+            break;
+        case 'yearly':
+            // Start of current year
+            startDate = formatDate(new Date(today.getFullYear(), 0, 1));
+            // End of current year
+            endDate = formatDate(new Date(today.getFullYear(), 11, 31));
+            break;
+        default:
+            return;
+    }
+    
+    // Update URL with new date range
+    const url = new URL(window.location.href);
+    url.searchParams.set('start_date', startDate);
+    url.searchParams.set('end_date', endDate);
+    url.searchParams.set('page', '1'); // Reset to page 1
+    window.location.href = url.toString();
+}
     
     // Function to update location filter
-    function updateLocationFilter(locationId) {
-        const url = new URL(window.location.href);
-        
-        if (locationId === 'all') {
-            url.searchParams.delete('location');
-        } else {
-            url.searchParams.set('location', locationId);
-        }
-        
-        window.location.href = url.toString();
+// Function to update location filter
+function updateLocationFilter(locationId) {
+    const url = new URL(window.location.href);
+    
+    if (locationId === 'all') {
+        url.searchParams.delete('location');
+    } else {
+        url.searchParams.set('location', locationId);
     }
+    
+    // Also reset page to 1 when filtering
+    url.searchParams.set('page', '1');
+    
+    window.location.href = url.toString();
+}
     
     // Helper function to format date as YYYY-MM-DD
     function formatDate(date) {
