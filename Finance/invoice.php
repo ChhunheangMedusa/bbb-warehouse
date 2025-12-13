@@ -172,35 +172,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
         }
-    } elseif (isset($_POST['delete_invoice'])) {
-        $invoice_id = (int)$_POST['invoice_id'];
-        
-        try {
-            // Get invoice info for logging
-            $stmt = $pdo->prepare("SELECT receipt_no, total_price FROM finance_invoice WHERE id = ?");
-            $stmt->execute([$invoice_id]);
-            $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$invoice) {
-                throw new Exception(t('invoice_not_found'));
-            }
-            
-            // Delete the invoice
-            $stmt = $pdo->prepare("DELETE FROM finance_invoice WHERE id = ?");
-            $stmt->execute([$invoice_id]);
-            
-            // Log activity
-            $log_message = "Deleted Invoice: Receipt #" . $invoice['receipt_no'] . " - Amount: " . $invoice['total_price'];
-            logActivity($_SESSION['user_id'], 'Delete Invoice', $log_message);
-            
-            $_SESSION['success'] = t('invoice_deleted_success');
-            redirect('invoice.php');
-            
-        } catch (PDOException $e) {
-            $_SESSION['error'] = t('invoice_delete_error');
-        } catch (Exception $e) {
-            $_SESSION['error'] = $e->getMessage();
-        }
     }
 }
 
@@ -990,43 +961,6 @@ body {
   height: 1.5em;
   cursor: pointer;
 }
-/* Delete Confirmation Modal Styles */
-#deleteConfirmModal .modal-content {
-    border: 2px solid #dc3545;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
-}
-
-#deleteConfirmModal .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-#deleteConfirmModal .modal-footer {
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-#deleteConfirmModal .btn-danger {
-
-    padding: 8px 20px;
-    font-weight: 600;
-}
-
-#deleteUserInfo {
-    text-align: left;
-    background-color: #f8f9fa;
-    border-radius: 0.35rem;
-    padding: 1rem;
-}
-
-#unblockConfirmModal .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-#unblockUserInfo{
-  text-align:left;
-  background-color: #f8f9fa;
-    border-radius: 0.35rem;
-    padding: 1rem;
-}
 /* Custom File Upload */
 .form-control-file::-webkit-file-upload-button {
   visibility: hidden;
@@ -1648,24 +1582,19 @@ body {
                                     <td><?php echo $invoice['created_by_name']; ?></td>
                                     <td><?php echo date('d/m/Y H:i', strtotime($invoice['created_at'])); ?></td>
                                     <td>
-    <div class="btn-group" role="group" style="display: flex; gap: 5px;">
-        <button class="btn btn-sm btn-warning edit-invoice" 
-                data-id="<?php echo $invoice['id']; ?>"
-                data-receipt="<?php echo $invoice['receipt_no']; ?>"
-                data-date="<?php echo $invoice['date']; ?>"
-                data-location="<?php echo $invoice['location_id']; ?>"
-                data-deporty="<?php echo $invoice['deporty_id']; ?>"
-                data-price="<?php echo $invoice['total_price']; ?>"
-                data-remark="<?php echo $invoice['remark']; ?>">
-            <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
-        </button>
-        <button class="btn btn-sm btn-danger delete-invoice" 
-                data-id="<?php echo $invoice['id']; ?>"
-                data-receipt="<?php echo $invoice['receipt_no']; ?>">
-            <i class="bi bi-trash"></i> <?php echo t('delete'); ?>
-        </button>
-    </div>
-</td>
+                                        <div class="btn-group" role="group" style="display: flex; gap: 5px;">
+                                            <button class="btn btn-sm btn-warning edit-invoice" 
+                                                    data-id="<?php echo $invoice['id']; ?>"
+                                                    data-receipt="<?php echo $invoice['receipt_no']; ?>"
+                                                    data-date="<?php echo $invoice['date']; ?>"
+                                                    data-location="<?php echo $invoice['location_id']; ?>"
+                                                    data-deporty="<?php echo $invoice['deporty_id']; ?>"
+                                                    data-price="<?php echo $invoice['total_price']; ?>"
+                                                    data-remark="<?php echo $invoice['remark']; ?>">
+                                                <i class="bi bi-pencil"></i> <?php echo t('edit'); ?>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -1890,39 +1819,7 @@ body {
         </div>
     </div>
 </div>
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" id="deleteForm">
-                <input type="hidden" name="delete_invoice" value="1">
-                <input type="hidden" name="invoice_id" id="deleteInvoiceId">
-                
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this invoice?</p>
-                    <div id="deleteInvoiceInfo" class="alert alert-warning">
-                        <!-- Invoice info will be inserted here -->
-                    </div>
-                    <p class="text-danger"><strong>Warning: This action cannot be undone.</strong></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
-<!-- Hidden form for delete -->
-<form method="POST" id="deleteForm" style="display: none;">
-    <input type="hidden" name="delete_invoice" value="1">
-    <input type="hidden" name="invoice_id" id="deleteInvoiceId">
-</form>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Handle entries per page change
@@ -1953,45 +1850,6 @@ document.addEventListener('DOMContentLoaded', function() {
             editModal.show();
         });
     });
-    
-    // Handle delete invoice button clicks
-    document.querySelectorAll('.delete-invoice').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.stopPropagation(); // Prevent event bubbling
-            
-            // Close any open modals first
-            const openModals = document.querySelectorAll('.modal.show');
-            openModals.forEach(modal => {
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) {
-                    bsModal.hide();
-                }
-            });
-            
-            // Wait for modals to close
-            setTimeout(() => {
-                const invoiceId = this.dataset.id;
-                const receiptNo = this.dataset.receipt;
-                
-                // Update modal content
-                document.getElementById('deleteInvoiceId').value = invoiceId;
-                document.getElementById('deleteInvoiceInfo').innerHTML = 
-                    '<strong>Receipt No:</strong> ' + receiptNo + '<br>' +
-                    '<strong>ID:</strong> ' + invoiceId;
-                
-                const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-                deleteModal.show();
-            }, 300);
-        });
-    });
-    
-    // Handle confirm delete button click
-    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    if (confirmDeleteBtn) {
-        confirmDeleteBtn.addEventListener('click', function() {
-            document.getElementById('deleteForm').submit();
-        });
-    }
     
     // Handle image modal
     const imageModal = document.getElementById('imageModal');
