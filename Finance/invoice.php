@@ -117,9 +117,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Insert invoice
-            $stmt = $pdo->prepare("INSERT INTO finance_invoice (receipt_no, date, location, supplier, total, image) 
-                                  VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$receipt_no, $date, $location_id, $supplier_id, $total, $image_path]);
+            // Insert invoice
+$stmt = $pdo->prepare("INSERT INTO finance_invoice (receipt_no, date, location_id, deporty_id, total_price, image, remark, created_by) 
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->execute([$receipt_no, $date, $location_id, $supplier_id, $total, $image_path, '', $_SESSION['user_id']]);
             
             // Log activity
             $location_name = $locations[array_search($location_id, array_column($locations, 'id'))]['name'];
@@ -194,9 +195,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Update invoice
-            $stmt = $pdo->prepare("UPDATE finance_invoice SET receipt_no = ?, date = ?, location = ?, 
-                                  supplier = ?, total = ?, image = ? WHERE id = ?");
-            $stmt->execute([$receipt_no, $date, $location_id, $supplier_id, $total, $image_path, $invoice_id]);
+            // Update invoice
+$stmt = $pdo->prepare("UPDATE finance_invoice SET receipt_no = ?, date = ?, location_id = ?, 
+deporty_id = ?, total_price = ?, image = ? WHERE id = ?");
+$stmt->execute([$receipt_no, $date, $location_id, $supplier_id, $total, $image_path, $invoice_id]);
             
             // Log activity
             $location_name = $locations[array_search($location_id, array_column($locations, 'id'))]['name'];
@@ -260,23 +262,24 @@ $limit = $per_page;
 $offset = ($page - 1) * $limit;
 
 // Build query for invoices
+// Build query for invoices
 $query = "SELECT 
     fi.id,
     fi.receipt_no,
     fi.date,
-    fi.location,
+    fi.location_id,
     fl.name as location_name,
-    fi.supplier,
+    fi.deporty_id,
     fs.name as supplier_name,
-    fi.total,
+    fi.total_price as total,
     fi.image,
     fi.created_at
 FROM 
     finance_invoice fi
 LEFT JOIN 
-    locations fl ON fi.location = fl.id
+    locations fl ON fi.location_id = fl.id
 LEFT JOIN 
-    deporty fs ON fi.supplier = fs.id
+    deporty fs ON fi.deporty_id = fs.id
 WHERE 1=1";
 
 $params = [];
@@ -296,13 +299,13 @@ if ($month_filter) {
 }
 
 if ($location_filter) {
-    $query .= " AND fi.location = :location_id";
+    $query .= " AND fi.location_id = :location_id";
     $params[':location_id'] = $location_filter;
     $count_params[':location_id'] = $location_filter;
 }
 
 if ($supplier_filter) {
-    $query .= " AND fi.supplier = :supplier_id";
+    $query .= " AND fi.deporty_id = :supplier_id";
     $params[':supplier_id'] = $supplier_filter;
     $count_params[':supplier_id'] = $supplier_filter;
 }
@@ -318,8 +321,8 @@ $query .= " ORDER BY $sort_by $sort_order";
 
 // Get total count
 $count_query = "SELECT COUNT(*) as total FROM finance_invoice fi
-                LEFT JOIN locations fl ON fi.location = fl.id
-                LEFT JOIN deporty fs ON fi.supplier = fs.id
+                LEFT JOIN locations fl ON fi.location_id = fl.id
+                LEFT JOIN deporty fs ON fi.deporty_id = fs.id
                 WHERE 1=1";
 
 foreach ($count_params as $key => $value) {
