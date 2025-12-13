@@ -60,8 +60,7 @@ FROM
 LEFT JOIN 
     finance_invoice fi ON fl.id = fi.location_id
     AND fi.date BETWEEN :start_date AND :end_date
-WHERE 1=1";
-
+WHERE fl.type = 'Construction Site'";
 // Add location filter if specified
 if ($location_filter) {
     $query .= " AND fl.id = :location_id";
