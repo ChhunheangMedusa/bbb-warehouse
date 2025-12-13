@@ -116,9 +116,9 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             FROM 
                 finance_invoice fi
             LEFT JOIN 
-                finance_location fl ON fi.location = fl.id
+                locations fl ON fi.location = fl.id
             LEFT JOIN 
-                finance_supplier fs ON fi.supplier = fs.id
+                deporty fs ON fi.supplier = fs.id
             WHERE 
                 fi.location = :location_id
                 AND fi.date BETWEEN :start_date AND :end_date
@@ -142,9 +142,9 @@ function generateReportData($pdo, $report_type, $location_id, $start_date, $end_
             FROM 
                 finance_invoice fi
             LEFT JOIN 
-                finance_location fl ON fi.location = fl.id
+                locations fl ON fi.location = fl.id
             LEFT JOIN 
-                finance_supplier fs ON fi.supplier = fs.id
+                deporty fs ON fi.supplier = fs.id
             WHERE 
                 fi.date BETWEEN :start_date AND :end_date
             ORDER BY 
