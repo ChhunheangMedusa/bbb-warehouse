@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->rollBack();
             $_SESSION['error'] = $e->getMessage();
         }
-    }elseif (isset($_POST['delete_invoice'])) {
+    } elseif (isset($_POST['delete_invoice'])) {
         $invoice_id = (int)$_POST['invoice_id'];
         
         try {
@@ -1892,28 +1892,32 @@ body {
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteConfirmModalLabel"><?php echo t('confirm_delete'); ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p><?php echo t('are_you_sure_delete_invoice'); ?></p>
-                <div id="deleteInvoiceInfo" class="alert alert-warning">
-                    <!-- Invoice info will be inserted here -->
+            <form method="POST" id="deleteForm">
+                <input type="hidden" name="delete_invoice" value="1">
+                <input type="hidden" name="invoice_id" id="deleteInvoiceId">
+                
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <p class="text-danger"><strong><?php echo t('delete_warning'); ?></strong></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo t('cancel'); ?></button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn"><?php echo t('delete'); ?></button>
-            </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this invoice?</p>
+                    <div id="deleteInvoiceInfo" class="alert alert-warning">
+                        <!-- Invoice info will be inserted here -->
+                    </div>
+                    <p class="text-danger"><strong>Warning: This action cannot be undone.</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <!-- Hidden form for delete -->
-<!-- Hidden form for delete -->
-<form method="POST" id="deleteForm" style="display: block; position: absolute; top: -1000px;">
+<form method="POST" id="deleteForm" style="display: none;">
     <input type="hidden" name="delete_invoice" value="1">
     <input type="hidden" name="invoice_id" id="deleteInvoiceId">
 </form>
@@ -1946,14 +1950,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Handle delete invoice button clicks
-    document.querySelectorAll('.delete-invoice').forEach(button => {
+     // Handle delete invoice button clicks
+     document.querySelectorAll('.delete-invoice').forEach(button => {
         button.addEventListener('click', function() {
-            console.log('Delete button clicked'); // 添加调试信息
             const invoiceId = this.dataset.id;
             const receiptNo = this.dataset.receipt;
-            
-            console.log('Invoice ID:', invoiceId, 'Receipt No:', receiptNo); // 调试
             
             // Update modal content
             document.getElementById('deleteInvoiceId').value = invoiceId;
@@ -1965,6 +1966,8 @@ document.addEventListener('DOMContentLoaded', function() {
             deleteModal.show();
         });
     });
+    
+    // Remove the confirmDeleteBtn event listener since form will auto-submit
 
     // Handle confirm delete button click
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
