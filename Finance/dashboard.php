@@ -1422,6 +1422,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartData = <?php echo json_encode(array_column($location_totals, 'total_amount')); ?>;
     const totalAmount = <?php echo $total_overall; ?>;
     
+    // Calculate percentages
+    const percentages = chartData.map(amount => 
+        totalAmount > 0 ? ((amount / totalAmount) * 100).toFixed(1) : 0
+    );
+    
     // Initialize bar chart
     const ctx = document.getElementById('locationPieChart').getContext('2d');
     const locationBarChart = new Chart(ctx, {
@@ -1434,120 +1439,160 @@ document.addEventListener('DOMContentLoaded', function() {
                 backgroundColor: <?php echo json_encode(array_slice($chart_colors, 0, count($chart_data))); ?>,
                 borderColor: '#fff',
                 borderWidth: 1,
-                borderRadius: 5
+                borderRadius: 5,
+                barPercentage: 0.7,
+                categoryPercentage: 0.8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            indexAxis: 'y',
+            indexAxis: 'y', // Horizontal bar chart
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: false
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `$${context.raw.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                            const amount = context.raw;
+                            const percentage = percentages[context.dataIndex];
+                            return [
+                                `Amount: $${amount.toLocaleString('en-US', {minimumFractionDigits: 2})}`,
+                                `Percentage: ${percentage}%`
+                            ];
+                        },
+                        afterLabel: function(context) {
+                            const invoiceCount = <?php echo json_encode(array_column($location_totals, 'invoice_count')); ?>[context.dataIndex];
+                            return `Invoices: ${invoiceCount}`;
                         }
                     }
+                },
+                datalabels: {
+                    display: false // We'll use custom labels
                 }
             },
             scales: {
                 x: {
                     beginAtZero: true,
+                    grid: {
+                        display: false
+                    },
                     ticks: {
                         callback: function(value) {
                             return '$' + value.toLocaleString('en-US');
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Amount ($)'
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 12
+                        }
                     }
                 }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
             }
-        }
+        },
+        plugins: [{
+            id: 'customLabels',
+            afterDraw: function(chart) {
+                const ctx = chart.ctx;
+                const meta = chart.getDatasetMeta(0);
+                
+                meta.data.forEach((bar, index) => {
+                    const value = chart.data.datasets[0].data[index];
+                    const percentage = percentages[index];
+                    
+                    // Draw amount on bar
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    
+                    const textX = bar.x + 10;
+                    const textY = bar.y;
+                    
+                    ctx.fillText(`$${value.toLocaleString('en-US', {minimumFractionDigits: 2})}`, textX, textY);
+                    
+                    // Draw percentage on right side
+                    ctx.fillStyle = '#666';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'right';
+                    
+                    const percentX = chart.chartArea.right - 10;
+                    ctx.fillText(`${percentage}%`, percentX, textY);
+                });
+            }
+        }]
     });
     <?php endif; ?>
     
-    // Time period buttons functionality
+    // Date range validation
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const endDateInput = document.querySelector('input[name="end_date"]');
+    
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', function() {
+            endDateInput.min = this.value;
+            if (new Date(endDateInput.value) < new Date(this.value)) {
+                endDateInput.value = this.value;
+            }
+        });
+        
+        endDateInput.addEventListener('change', function() {
+            startDateInput.max = this.value;
+            if (new Date(startDateInput.value) > new Date(this.value)) {
+                startDateInput.value = this.value;
+            }
+        });
+    }
+    
+    // Time period and location filter functionality
     const timePeriodButtons = document.querySelectorAll('.time-period');
-    
-    // Highlight current time period
-    const currentPeriod = "<?php echo $time_period; ?>";
-    timePeriodButtons.forEach(btn => {
-        if (btn.getAttribute('data-period') === currentPeriod) {
-            btn.classList.add('active');
-        }
-    });
-    
-    // Handle time period button clicks
     timePeriodButtons.forEach(button => {
         button.addEventListener('click', function() {
-            const period = this.getAttribute('data-period');
+            // Remove active class from all buttons
+            timePeriodButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
             
-            // Update URL with period
-            const url = new URL(window.location.href);
-            url.searchParams.set('period', period);
-            window.location.href = url.toString();
+            const period = this.getAttribute('data-period');
+            updateDateRange(period);
         });
     });
     
-    // Location filter functionality
+    // Location filter
     const locationDropdownItems = document.querySelectorAll('.dropdown-item[data-location]');
-    
-    // Highlight current location
-    const currentLocation = "<?php echo $location_filter ?: 'all'; ?>";
-    locationDropdownItems.forEach(item => {
-        if (item.getAttribute('data-location') === currentLocation.toString()) {
-            const dropdownButton = document.getElementById('locationFilterDropdown');
-            if (currentLocation === 'all') {
-                dropdownButton.innerHTML = '<i class="bi bi-geo-alt"></i> Location';
-            } else {
-                dropdownButton.innerHTML = `<i class="bi bi-geo-alt"></i> ${item.textContent.trim()}`;
-            }
-        }
-    });
-    
-    // Handle location dropdown clicks
     locationDropdownItems.forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
             const locationId = this.getAttribute('data-location');
+            const dropdownButton = document.getElementById('locationFilterDropdown');
+            
+            // Update button text
+            if (locationId === 'all') {
+                dropdownButton.innerHTML = '<i class="bi bi-geo-alt"></i> Location';
+            } else {
+                const locationName = this.textContent.trim();
+                dropdownButton.innerHTML = `<i class="bi bi-geo-alt"></i> ${locationName}`;
+            }
             
             // Update URL with location filter
-            const url = new URL(window.location.href);
-            if (locationId === 'all') {
-                url.searchParams.delete('location');
-            } else {
-                url.searchParams.set('location', locationId);
-            }
-            window.location.href = url.toString();
+            updateLocationFilter(locationId);
         });
     });
-    // Combine filters function
-    function applyFilters(period = null, locationId = null) {
-        const url = new URL(window.location.href);
-        
-        if (period) {
-            url.searchParams.set('period', period);
-        }
-        
-        if (locationId) {
-            if (locationId === 'all') {
-                url.searchParams.delete('location');
-            } else {
-                url.searchParams.set('location', locationId);
-            }
-        }
-        
-        window.location.href = url.toString();
-    }
     
-    // Auto-hide messages
-    setTimeout(() => {
-        document.querySelectorAll('.alert').forEach(alert => {
-            alert.style.transition = 'opacity 0.5s ease';
-            alert.style.opacity = '0';
-            setTimeout(() => alert.remove(), 500);
-        });
-    }, 5000);
-});
     // Function to update date range based on selected period
     // Function to update date range based on selected period
 function updateDateRange(period) {
