@@ -1230,6 +1230,40 @@ body {
             </div>
         </div>
     </div>
+    <h2 class="mb-4">Expense Overview</h2>
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2"><?php echo t('total_invoices'); ?></h6>
+                            <h3 class="stat-number text-primary"><?php echo number_format($total_invoices); ?></h3>
+                        </div>
+                        <div class="bg-primary rounded-circle p-3">
+                            <i class="bi bi-receipt text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2"><?php echo t('total_amount'); ?></h6>
+                            <h3 class="stat-number text-success">$<?php echo number_format($total_overall, 2); ?></h3>
+                        </div>
+                        <div class="bg-success rounded-circle p-3">
+                            <i class="bi bi-currency-dollar text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Filter Card -->
     <div class="card mb-4 date-range-card">
         <div class="card-header">
@@ -1272,39 +1306,7 @@ body {
         </div>
     </div>
     
-    <!-- Summary Stats -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2"><?php echo t('total_invoices'); ?></h6>
-                            <h3 class="stat-number text-primary"><?php echo number_format($total_invoices); ?></h3>
-                        </div>
-                        <div class="bg-primary rounded-circle p-3">
-                            <i class="bi bi-receipt text-white" style="font-size: 1.5rem;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2"><?php echo t('total_amount'); ?></h6>
-                            <h3 class="stat-number text-success">$<?php echo number_format($total_overall, 2); ?></h3>
-                        </div>
-                        <div class="bg-success rounded-circle p-3">
-                            <i class="bi bi-currency-dollar text-white" style="font-size: 1.5rem;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    
     
     <!-- Chart and Details Row -->
     <div class="row mb-4">
