@@ -478,12 +478,12 @@ $translations = [
 'invoice'=>'វិក័យបត្រ',
 'total_invoices'=>'វិក័យបត្រសរុប',
 'total_amount'=>'ទឹកប្រាក់សរុប',
-
+'calculate_expense'=>'គណនាចំណាយ'
     ],
 
 
     'en' => [
-       
+       'calculate_expense'=>'Calculate Expense',
         'total_invoices'=>'Total Invoice',
 'total_amount'=>'Total Amount',
         'invoice'=>'Invoice',

@@ -1365,18 +1365,11 @@ body {
                     <a href="location.php" class="card text-center text-decoration-none">
                         <div class="card-body">
                             <i class="bi bi-building fs-1 text-success"></i>
-                            <h6 class="mt-2"><?php echo t('locations_button'); ?></h6>
+                            <h6 class="mt-2"><?php echo t('calculate_expense'); ?></h6>
                         </div>
                     </a>
                 </div>
-                <div class="quick-action-card">
-                    <a href="supplier.php" class="card text-center text-decoration-none">
-                        <div class="card-body">
-                            <i class="bi bi-truck fs-1 text-warning"></i>
-                            <h6 class="mt-2"><?php echo t('deporty'); ?></h6>
-                        </div>
-                    </a>
-                </div>
+                
                 <div class="quick-action-card">
                     <a href="report.php" class="card text-center text-decoration-none">
                         <div class="card-body">
