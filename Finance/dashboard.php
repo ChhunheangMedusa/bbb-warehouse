@@ -1230,7 +1230,34 @@ body {
             </div>
         </div>
     </div>
-    <h2 class="mb-4">Expense Overview</h2>
+   <!-- Expense Overview Header with Filters -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Expense Overview</h2>
+    <div class="d-flex align-items-center gap-2">
+        <!-- Time Period Buttons -->
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm time-period" data-period="daily">Daily</button>
+            <button type="button" class="btn btn-outline-primary btn-sm time-period" data-period="weekly">Weekly</button>
+            <button type="button" class="btn btn-outline-primary btn-sm time-period active" data-period="monthly">Monthly</button>
+            <button type="button" class="btn btn-outline-primary btn-sm time-period" data-period="yearly">Yearly</button>
+        </div>
+        
+        <!-- Location Dropdown -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="locationFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-geo-alt"></i> Location
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="locationFilterDropdown">
+                <li><a class="dropdown-item" href="#" data-location="all">All Locations</a></li>
+                <?php foreach($locations as $location): ?>
+                    <li><a class="dropdown-item" href="#" data-location="<?php echo $location['id']; ?>">
+                        <?php echo htmlspecialchars($location['name']); ?>
+                    </a></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+</div>
     <!-- Summary Stats -->
     <div class="row mb-4">
         <div class="col-md-6">
@@ -1461,6 +1488,104 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Time period and location filter functionality
+    const timePeriodButtons = document.querySelectorAll('.time-period');
+    timePeriodButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            timePeriodButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const period = this.getAttribute('data-period');
+            updateDateRange(period);
+        });
+    });
+    
+    // Location filter
+    const locationDropdownItems = document.querySelectorAll('.dropdown-item[data-location]');
+    locationDropdownItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const locationId = this.getAttribute('data-location');
+            const dropdownButton = document.getElementById('locationFilterDropdown');
+            
+            // Update button text
+            if (locationId === 'all') {
+                dropdownButton.innerHTML = '<i class="bi bi-geo-alt"></i> Location';
+            } else {
+                const locationName = this.textContent.trim();
+                dropdownButton.innerHTML = `<i class="bi bi-geo-alt"></i> ${locationName}`;
+            }
+            
+            // Update URL with location filter
+            updateLocationFilter(locationId);
+        });
+    });
+    
+    // Function to update date range based on selected period
+    function updateDateRange(period) {
+        const today = new Date();
+        let startDate, endDate;
+        
+        switch(period) {
+            case 'daily':
+                startDate = formatDate(today);
+                endDate = formatDate(today);
+                break;
+            case 'weekly':
+                // Start of week (Monday)
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                startDate = formatDate(startDate);
+                endDate = formatDate(endDate);
+                break;
+            case 'monthly':
+                // Start of month
+                startDate = formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
+                // End of month
+                endDate = formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+                break;
+            case 'yearly':
+                // Start of year
+                startDate = formatDate(new Date(today.getFullYear(), 0, 1));
+                // End of year
+                endDate = formatDate(new Date(today.getFullYear(), 11, 31));
+                break;
+            default:
+                return;
+        }
+        
+        // Update URL with new date range
+        const url = new URL(window.location.href);
+        url.searchParams.set('start_date', startDate);
+        url.searchParams.set('end_date', endDate);
+        window.location.href = url.toString();
+    }
+    
+    // Function to update location filter
+    function updateLocationFilter(locationId) {
+        const url = new URL(window.location.href);
+        
+        if (locationId === 'all') {
+            url.searchParams.delete('location');
+        } else {
+            url.searchParams.set('location', locationId);
+        }
+        
+        window.location.href = url.toString();
+    }
+    
+    // Helper function to format date as YYYY-MM-DD
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
     // Auto-hide messages
     setTimeout(() => {
         document.querySelectorAll('.alert').forEach(alert => {
@@ -1469,6 +1594,94 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => alert.remove(), 500);
         });
     }, 5000);
+    
+    // Highlight current time period based on URL parameters
+    function highlightCurrentTimePeriod() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const startDateParam = urlParams.get('start_date');
+        const endDateParam = urlParams.get('end_date');
+        
+        if (!startDateParam || !endDateParam) {
+            return;
+        }
+        
+        const startDate = new Date(startDateParam);
+        const endDate = new Date(endDateParam);
+        const today = new Date();
+        
+        // Check for daily
+        if (isSameDay(startDate, endDate)) {
+            highlightPeriodButton('daily');
+            return;
+        }
+        
+        // Check for weekly (7 days)
+        const daysDifference = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        if (daysDifference === 7) {
+            highlightPeriodButton('weekly');
+            return;
+        }
+        
+        // Check for monthly
+        if (startDate.getDate() === 1 && 
+            endDate.getDate() === getDaysInMonth(endDate.getFullYear(), endDate.getMonth() + 1) &&
+            startDate.getMonth() === endDate.getMonth()) {
+            highlightPeriodButton('monthly');
+            return;
+        }
+        
+        // Check for yearly
+        if (startDate.getMonth() === 0 && startDate.getDate() === 1 &&
+            endDate.getMonth() === 11 && endDate.getDate() === 31) {
+            highlightPeriodButton('yearly');
+            return;
+        }
+    }
+    
+    // Helper function to check if two dates are the same day
+    function isSameDay(date1, date2) {
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getDate() === date2.getDate();
+    }
+    
+    // Helper function to get days in month
+    function getDaysInMonth(year, month) {
+        return new Date(year, month, 0).getDate();
+    }
+    
+    // Helper function to highlight period button
+    function highlightPeriodButton(period) {
+        timePeriodButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-period') === period) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    // Highlight current location filter from URL
+    function highlightCurrentLocation() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const locationId = urlParams.get('location');
+        const dropdownButton = document.getElementById('locationFilterDropdown');
+        
+        if (!locationId) {
+            return;
+        }
+        
+        // Find the location name
+        locationDropdownItems.forEach(item => {
+            if (item.getAttribute('data-location') === locationId) {
+                const locationName = item.textContent.trim();
+                dropdownButton.innerHTML = `<i class="bi bi-geo-alt"></i> ${locationName}`;
+            }
+        });
+    }
+    
+    // Initialize highlighting
+    highlightCurrentTimePeriod();
+    highlightCurrentLocation();
 });
 </script>
 <?php
