@@ -1984,7 +1984,7 @@ body {
         </div>
     </div>
 </div>
-<!-- Image Preview Modal - UPDATED -->
+<!-- Image Preview Modal - SIMPLIFIED -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -1992,7 +1992,7 @@ body {
                 <h5 class="modal-title"><?php echo t('image_preview'); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0 text-center bg-dark">
+            <div class="modal-body text-center p-0">
                 <img src="" class="img-fluid" id="modalImage" alt="Invoice Image" style="max-height: 70vh; width: auto;">
             </div>
             <div class="modal-footer">
@@ -2040,7 +2040,6 @@ function displayImagePreview(file) {
     const pdfFileName = document.getElementById('pdfFileName');
     const fileName = document.getElementById('fileName');
     const fileUploadArea = document.getElementById('fileUploadArea');
-    const fileInput = document.getElementById('fileInput');
     
     // Hide both previews initially
     imagePreviewContainer.style.display = 'none';
@@ -2105,7 +2104,6 @@ function displayEditImagePreview(file) {
     const fileName = document.getElementById('editFileName');
     const fileUploadArea = document.getElementById('editFileUploadArea');
     const currentImagePreview = document.getElementById('currentImagePreview');
-    const editFileInput = document.getElementById('editFileInput');
     
     // Hide both previews initially
     imagePreviewContainer.style.display = 'none';
@@ -2172,7 +2170,7 @@ function removeSelectedEditImage() {
     }
 }
 
-// Update the file upload event listeners
+// Main DOMContentLoaded event
 document.addEventListener('DOMContentLoaded', function() {
     // Set today's date in add modal
     document.getElementById('addInvoiceModal').addEventListener('shown.bs.modal', function() {
@@ -2185,97 +2183,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
 
-    fileUploadArea.addEventListener('click', function() {
-        fileInput.click();
-    });
+    if (fileUploadArea) {
+        fileUploadArea.addEventListener('click', function() {
+            fileInput.click();
+        });
 
-    fileInput.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            displayImagePreview(this.files[0]);
-        }
-    });
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                displayImagePreview(this.files[0]);
+            }
+        });
+    }
 
     // File upload functionality for edit modal
     const editFileUploadArea = document.getElementById('editFileUploadArea');
     const editFileInput = document.getElementById('editFileInput');
     const editFileName = document.getElementById('editFileName');
 
-    editFileUploadArea.addEventListener('click', function() {
-        editFileInput.click();
-    });
+    if (editFileUploadArea) {
+        editFileUploadArea.addEventListener('click', function() {
+            editFileInput.click();
+        });
 
-    editFileInput.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            displayEditImagePreview(this.files[0]);
-        }
-    });
-
-    // Add drag and drop functionality for add modal
-    fileUploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        this.style.borderColor = '#0d6efd';
-        this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
-    });
-
-    fileUploadArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        this.style.borderColor = '#dee2e6';
-        this.style.backgroundColor = 'transparent';
-    });
-
-    fileUploadArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        this.style.borderColor = '#dee2e6';
-        this.style.backgroundColor = 'transparent';
-        
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            displayImagePreview(e.dataTransfer.files[0]);
-        }
-    });
-
-    // Add drag and drop functionality for edit modal
-    editFileUploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        this.style.borderColor = '#0d6efd';
-        this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
-    });
-
-    editFileUploadArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        this.style.borderColor = '#dee2e6';
-        this.style.backgroundColor = 'transparent';
-    });
-
-    editFileUploadArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        this.style.borderColor = '#dee2e6';
-        this.style.backgroundColor = 'transparent';
-        
-        if (e.dataTransfer.files.length) {
-            editFileInput.files = e.dataTransfer.files;
-            displayEditImagePreview(e.dataTransfer.files[0]);
-        }
-    });
-
-    // Reset form when add modal is closed
-    document.getElementById('addInvoiceModal').addEventListener('hidden.bs.modal', function() {
-        removeSelectedImage();
-    });
-
-    // Reset edit form when modal is closed
-    document.getElementById('editInvoiceModal').addEventListener('hidden.bs.modal', function() {
-        // Don't reset everything, just the new file selection
-        const editFileInput = document.getElementById('editFileInput');
-        const editFileName = document.getElementById('editFileName');
-        const editFileUploadArea = document.getElementById('editFileUploadArea');
-        
-        editFileInput.value = '';
-        editFileName.textContent = '';
-        editFileUploadArea.style.display = 'block';
-        editFileUploadArea.style.borderColor = '#dee2e6';
-        editFileUploadArea.style.backgroundColor = 'transparent';
-    });
+        editFileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                displayEditImagePreview(this.files[0]);
+            }
+        });
+    }
 
     // Edit invoice button click
     document.querySelectorAll('.edit-invoice-btn').forEach(button => {
@@ -2338,49 +2273,38 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
- // Delete invoice button click
-document.querySelectorAll('.delete-invoice-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        const invoiceId = this.dataset.id;
-        const receiptNo = this.dataset.receipt;
+    // Delete invoice button click
+    document.querySelectorAll('.delete-invoice-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const invoiceId = this.dataset.id;
+            const receiptNo = this.dataset.receipt;
 
-        document.getElementById('delete_invoice_id').value = invoiceId;
-        
-        // Update modal content to match location-control.php style
-        document.getElementById('deleteInvoiceInfo').innerHTML = `
-           
-            <strong><?php echo t('item_invoice'); ?>:</strong> #${receiptNo}
-        `;
+            document.getElementById('delete_invoice_id').value = invoiceId;
+            
+            // Update modal content
+            document.getElementById('deleteInvoiceInfo').innerHTML = `
+                <strong><?php echo t('item_invoice'); ?>:</strong> #${receiptNo}
+            `;
 
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-        deleteModal.show();
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            deleteModal.show();
+        });
     });
-});
 
-    // Image modal with download button
+    // SIMPLE IMAGE PREVIEW FIX
     document.querySelectorAll('.invoice-image').forEach(img => {
         img.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
             const imageSrc = this.src;
+            console.log('Image clicked, src:', imageSrc); // Debug log
+            
             const modalImage = document.getElementById('modalImage');
             const downloadBtn = document.getElementById('downloadImage');
             
-            // Clear previous image
-            modalImage.src = '';
-            
-            // Set new image source
-            setTimeout(() => {
-                modalImage.src = imageSrc;
-                modalImage.onload = function() {
-                    // Image loaded successfully
-                };
-                modalImage.onerror = function() {
-                    console.error('Failed to load image:', imageSrc);
-                    modalImage.alt = 'Image failed to load';
-                };
-            }, 100);
+            // Set image source
+            modalImage.src = imageSrc;
             
             // Set download link
             if (downloadBtn) {
@@ -2389,36 +2313,11 @@ document.querySelectorAll('.delete-invoice-btn').forEach(button => {
             }
             
             // Show modal using Bootstrap
-            const imageModalElement = document.getElementById('imageModal');
-            const imageModal = new bootstrap.Modal(imageModalElement);
-            
-            // Clean up any existing modal backdrops
-            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
-            existingBackdrops.forEach(backdrop => backdrop.remove());
-            
-            // Remove any existing modal-open class
-            document.body.classList.remove('modal-open');
-            
-            // Show modal
+            const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
             imageModal.show();
         });
     });
-    
-    // Clean up when modal is closed
-    document.getElementById('imageModal').addEventListener('hidden.bs.modal', function() {
-        const modalImage = document.getElementById('modalImage');
-        modalImage.src = '';
-        
-        // Clean up any remaining backdrops
-        setTimeout(() => {
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(backdrop => backdrop.remove());
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }, 100);
-    });
-});
+
     // Handle entries per page change
     const perPageSelect = document.getElementById('per_page_select');
     if (perPageSelect) {
