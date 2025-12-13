@@ -17,7 +17,7 @@ if (!isAdmin() && !isFinanceStaff()) {
 }
 
 // Get locations for dropdown
-$location_stmt = $pdo->query("SELECT * FROM finance_location ORDER BY name");
+$location_stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
 $locations = $location_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Set default dates to current month
