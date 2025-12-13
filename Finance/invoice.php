@@ -288,33 +288,19 @@ $count_params = [];
 
 // Add filters
 if ($year_filter) {
-    $query .= " AND YEAR(fi.date) = :year";
-    $params[':year'] = $year_filter;
-    $count_params[':year'] = $year_filter;
+    $count_query .= " AND YEAR(fi.date) = :year";
 }
-
 if ($month_filter) {
-    $query .= " AND MONTH(fi.date) = :month";
-    $params[':month'] = $month_filter;
-    $count_params[':month'] = $month_filter;
+    $count_query .= " AND MONTH(fi.date) = :month";
 }
-
 if ($location_filter) {
-    $query .= " AND fi.location_id = :location_id";
-    $params[':location_id'] = $location_filter;
-    $count_params[':location_id'] = $location_filter;
+    $count_query .= " AND fi.location_id = :location_id";
 }
-
 if ($supplier_filter) {
-    $query .= " AND fi.deporty_id = :supplier_id";
-    $params[':supplier_id'] = $supplier_filter;
-    $count_params[':supplier_id'] = $supplier_filter;
+    $count_query .= " AND fi.deporty_id = :supplier_id";
 }
-
 if ($search_query) {
-    $query .= " AND (fi.receipt_no LIKE :search OR fl.name LIKE :search OR fs.name LIKE :search)";
-    $params[':search'] = "%$search_query%";
-    $count_params[':search'] = "%$search_query%";
+    $count_query .= " AND (fi.receipt_no LIKE :search OR fl.name LIKE :search OR fs.name LIKE :search)";
 }
 
 // Order by
